@@ -774,8 +774,28 @@ def data_file(filename: str, default_data: str = "{}") -> None:
         with open(filename, 'w') as file:
             file.write(default_data)
 
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"ok")
+
+    def log_message(self, format, *args):
+        return
+
+
+def start_health_server():
+    port = int(os.environ.get("PORT", "10000"))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    Thread(target=server.serve_forever, daemon=True).start()
+
+
 data_file(DATA_FILE, DEFAULT_DATA)
 data_file(ROLES_FILE, '{"vip_users": []}')
 
 if __name__ == "__main__":
+    if not ROOM_ID or not API_KEY:
+        raise RuntimeError("ROOM_ID y API_KEY deben estar configuradas en el entorno")
+    start_health_server()
     arun(Bot().run_bot(ROOM_ID, API_KEY))
