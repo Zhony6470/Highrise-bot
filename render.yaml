@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: highrise-bot
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: ROOM_ID
+        sync: false
+      - key: API_KEY
+        sync: false
