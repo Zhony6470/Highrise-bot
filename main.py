@@ -669,6 +669,9 @@ class Bot(BaseBot):
         if self.position_task:
             self.position_task.cancel()
         self.position_task = asyncio.create_task(self.place_bot())
+        if self.botdance_task:
+            self.botdance_task.cancel()
+        self.botdance_task = asyncio.create_task(self.random_dance_loop())
         if self.announcement_task:
             self.announcement_task.cancel()
         self.announcement_task = asyncio.create_task(announcement_loop(self))
@@ -714,9 +717,6 @@ class Bot(BaseBot):
                 if self.bot_position != Position(0, 0, 0, 'FrontRight'):
                     await self.highrise.teleport(self.bot_id, self.bot_position)
                     print(f"[POSITION] Bot restaurado en {self.bot_position}.")
-                    if self.botdance_task:
-                        self.botdance_task.cancel()
-                    self.botdance_task = asyncio.create_task(self.random_dance_loop())
                 return
             except Exception as e:
                 print(f"Error restaurando la posición (intento {attempt + 1}/5): {e}")

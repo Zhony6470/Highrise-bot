@@ -19,13 +19,12 @@ def load_json(file_path: str) -> dict:
     if _client:
         response = (
             _client.table("bot_files")
-            .select("content")
-            .filter("file_name", "eq", f'"{file_name}"')
-            .limit(1)
+            .select("file_name, content")
             .execute()
         )
-        if response.data:
-            return response.data[0]["content"]
+        matching_rows = [row for row in response.data if row.get("file_name") == file_name]
+        if matching_rows:
+            return matching_rows[0]["content"]
 
         data = _default_data(file_name)
         save_json(file_path, data)
@@ -57,10 +56,15 @@ def _default_data(file_name: str) -> dict:
 
 def save_json(file_path: str, data: dict) -> None:
     if _client:
-        _client.table("bot_files").upsert(
-            {"file_name": Path(file_path).name, "content": data},
-            returning="representation",
-        ).execute()
+        try:
+            _client.table("bot_files").upsert(
+                {"file_name": Path(file_path).name, "content": data},
+                returning="representation",
+            ).execute()
+            print(f"[STORAGE] Guardado en Supabase: {Path(file_path).name}")
+        except Exception as error:
+            print(f"[STORAGE ERROR] No se pudo guardar {Path(file_path).name}: {error}")
+            raise
         return
 
     with open(file_path, "w", encoding="utf-8") as file:
