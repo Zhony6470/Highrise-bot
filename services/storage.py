@@ -26,15 +26,23 @@ def load_json(file_path: str) -> dict:
         )
         if response.data:
             remote_data = response.data[0]["content"]
-            with open(file_path, "r", encoding="utf-8") as file:
-                local_data = json.load(file)
-            if _is_empty_data(file_name, remote_data) and not _is_empty_data(file_name, local_data):
+            if not _is_empty_data(file_name, remote_data):
+                return remote_data
+            try:
+                with open(file_path, "r", encoding="utf-8") as file:
+                    local_data = json.load(file)
+            except (FileNotFoundError, json.JSONDecodeError):
+                local_data = {}
+            if not _is_empty_data(file_name, local_data):
                 save_json(file_path, local_data)
                 return local_data
             return remote_data
 
-    with open(file_path, "r", encoding="utf-8") as file:
-        data = json.load(file)
+    try:
+        with open(file_path, "r", encoding="utf-8") as file:
+            data = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        data = {}
 
     if _client:
         save_json(file_path, data)
