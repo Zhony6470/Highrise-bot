@@ -67,5 +67,6 @@ def save_json(file_path: str, data: dict) -> None:
 
     if _client:
         _client.table("bot_files").upsert(
-            {"file_name": Path(file_path).name, "content": data}
+            {"file_name": Path(file_path).name, "content": data},
+            returning="representation",
         ).execute()
