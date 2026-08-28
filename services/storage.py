@@ -25,18 +25,7 @@ def load_json(file_path: str) -> dict:
             .execute()
         )
         if response.data:
-            remote_data = response.data[0]["content"]
-            if not _is_empty_data(file_name, remote_data):
-                return remote_data
-            try:
-                with open(file_path, "r", encoding="utf-8") as file:
-                    local_data = json.load(file)
-            except (FileNotFoundError, json.JSONDecodeError):
-                local_data = {}
-            if not _is_empty_data(file_name, local_data):
-                save_json(file_path, local_data)
-                return local_data
-            return remote_data
+            return response.data[0]["content"]
 
     try:
         with open(file_path, "r", encoding="utf-8") as file:
@@ -47,18 +36,6 @@ def load_json(file_path: str) -> dict:
     if _client:
         save_json(file_path, data)
     return data
-
-
-def _is_empty_data(file_name: str, data: dict) -> bool:
-    if file_name == "data.json":
-        return not data.get("users") and data.get("bot_position") == {
-            "x": 0, "y": 0, "z": 0, "facing": "FrontRight"
-        }
-    if file_name == "posiciones.json":
-        return not data.get("posiciones")
-    if file_name == "roles.json":
-        return not data.get("users") and not data.get("vip_users")
-    return not data
 
 
 def save_json(file_path: str, data: dict) -> None:
