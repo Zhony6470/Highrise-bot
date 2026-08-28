@@ -50,16 +50,20 @@ def _search_track(query: str) -> dict[str, Any] | None:
         "no_warnings": True,
         "skip_download": True,
         "extract_flat": False,
+        "noplaylist": True,
+        "default_search": "ytsearch",
     }
     try:
         with yt_dlp.YoutubeDL(options) as downloader:
-            result = downloader.extract_info(f"ytsearch1:{query}", download=False)
+            search_term = query if query.startswith(("http://", "https://")) else f"ytsearch1:{query}"
+            result = downloader.extract_info(search_term, download=False)
     except Exception as error:
         print(f"[MUSIC ERROR] No se pudo buscar '{query}': {error}")
         return None
 
     entries = result.get("entries") or []
     if not entries:
+        print(f"[MUSIC] Sin resultados para: {query}")
         return None
     video = entries[0]
     return {
