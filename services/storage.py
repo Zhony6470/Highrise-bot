@@ -20,7 +20,7 @@ def load_json(file_path: str) -> dict:
         response = (
             _client.table("bot_files")
             .select("content")
-            .eq("file_name", file_name)
+            .filter("file_name", "eq", f'"{file_name}"')
             .limit(1)
             .execute()
         )
