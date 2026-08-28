@@ -3,6 +3,17 @@ from typing import Any
 
 import yt_dlp
 
+from config import RADIO_STREAM_URL
+
+
+async def handle_radio(bot, user, message: str) -> str:
+    stream_url = getattr(bot, "radio_stream_url", RADIO_STREAM_URL)
+    return (
+        "🎵 STREAM DE RADIO 🎵\n"
+        f"URL: {stream_url}\n"
+        "Usa esta dirección en Highrise para comenzar a escuchar."
+    )
+
 
 async def handle_play(bot, user, message: str) -> str | None:
     parts = message.split(maxsplit=1)
@@ -87,4 +98,8 @@ COMMANDS = {
     "!play": handle_play,
     "/queue": handle_queue,
     "!queue": handle_queue,
+    "/radio": handle_radio,
+    "!radio": handle_radio,
+    "/stream": handle_radio,
+    "!stream": handle_radio,
 }

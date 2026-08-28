@@ -7,7 +7,16 @@ import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from random import choice, randint
 from threading import Thread
-from config import API_KEY, DATA_FILE, DEFAULT_DATA, EMOTES_FILE, POSITIONS_FILE, ROOM_ID, ROLES_FILE
+from config import (
+    API_KEY,
+    DATA_FILE,
+    DEFAULT_DATA,
+    EMOTES_FILE,
+    POSITIONS_FILE,
+    RADIO_STREAM_URL,
+    ROOM_ID,
+    ROLES_FILE,
+)
 from commands.owner import handle_owner_command
 from commands.dispatcher import CommandDispatcher
 from services.positions import PositionManager
@@ -29,7 +38,8 @@ class Bot(BaseBot):
         self.role_manager = RoleManager(ROLES_FILE)
         self.command_dispatcher = CommandDispatcher()
         self.bot_position = None
-        
+        self.radio_stream_url = RADIO_STREAM_URL
+
         # Estado de seguimiento
         self.following = False
         self.follow_task = None
