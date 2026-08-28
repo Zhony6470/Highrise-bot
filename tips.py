@@ -1,6 +1,7 @@
 from json import dump, load
 
 from highrise import CurrencyItem, Item, User
+from services.storage import load_json, save_json
 
 
 TIP_BARS = {
@@ -167,18 +168,14 @@ class TipManager:
         return None
 
     def _load_tip_data(self) -> dict:
-        with open(self.data_file, "r", encoding="utf-8") as file:
-            return load(file)["users"]
+        return load_json(self.data_file)["users"]
 
     def _write_tip_data(self, user: User, tip: int) -> None:
-        with open(self.data_file, "r+", encoding="utf-8") as file:
-            data = load(file)
-            user_data = data["users"].get(
-                user.id, {"total_tips": 0, "username": user.username}
-            )
-            user_data["total_tips"] += tip
-            user_data["username"] = user.username
-            data["users"][user.id] = user_data
-            file.seek(0)
-            dump(data, file)
-            file.truncate()
+        data = load_json(self.data_file)
+        user_data = data["users"].get(
+            user.id, {"total_tips": 0, "username": user.username}
+        )
+        user_data["total_tips"] += tip
+        user_data["username"] = user.username
+        data["users"][user.id] = user_data
+        save_json(self.data_file, data)

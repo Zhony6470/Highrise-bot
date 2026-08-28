@@ -1,6 +1,6 @@
 import asyncio
-from json import dump, load
 from highrise import Position, User
+from services.storage import load_json, save_json
 
 
 TRACK_KEY = "pista_emotes"
@@ -8,21 +8,18 @@ TRACK_KEY = "pista_emotes"
 
 def _load_track(bot) -> dict | None:
     try:
-        with open(bot.position_manager.positions_file, "r", encoding="utf-8") as file:
-            return load(file).get(TRACK_KEY)
+        return load_json(bot.position_manager.positions_file).get(TRACK_KEY)
     except (FileNotFoundError, KeyError, TypeError):
         return None
 
 
 def _save_track(bot, track: dict | None) -> None:
-    with open(bot.position_manager.positions_file, "r", encoding="utf-8") as file:
-        data = load(file)
+    data = load_json(bot.position_manager.positions_file)
     if track is None:
         data.pop(TRACK_KEY, None)
     else:
         data[TRACK_KEY] = track
-    with open(bot.position_manager.positions_file, "w", encoding="utf-8") as file:
-        dump(data, file, indent=4)
+    save_json(bot.position_manager.positions_file, data)
 
 
 def _is_inside(position: Position, track: dict) -> bool:

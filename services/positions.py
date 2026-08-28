@@ -2,6 +2,7 @@ from json import dump, load
 
 from highrise import Position, User
 from services.roles import has_role
+from services.storage import load_json, save_json
 
 
 class PositionManager:
@@ -14,8 +15,7 @@ class PositionManager:
         if not position:
             return "<#FF6666>📍 No pude obtener tu posición actual."
 
-        with open(self.positions_file, "r", encoding="utf-8") as file:
-            data = load(file)
+        data = load_json(self.positions_file)
         data.setdefault("posiciones", {})[position_name.lower()] = {
             "x": position.x,
             "y": position.y,
@@ -23,24 +23,20 @@ class PositionManager:
             "facing": position.facing,
             "access": access,
         }
-        with open(self.positions_file, "w", encoding="utf-8") as file:
-            dump(data, file, indent=4)
+        save_json(self.positions_file, data)
         return f"<#66FF99>📍 Posición '{position_name.lower()}' guardada correctamente."
 
     def get_named_position_data(self, position_name: str) -> dict | None:
-        with open(self.positions_file, "r", encoding="utf-8") as file:
-            return load(file).get("posiciones", {}).get(position_name.lower())
+        return load_json(self.positions_file).get("posiciones", {}).get(position_name.lower())
 
     def delete_named_position(self, position_name: str) -> str:
         position_name = position_name.lower()
-        with open(self.positions_file, "r", encoding="utf-8") as file:
-            data = load(file)
+        data = load_json(self.positions_file)
         positions = data.setdefault("posiciones", {})
         if position_name not in positions:
             return f"<#FFCC66>🔎 No existe una posición guardada con el nombre '{position_name}'."
         del positions[position_name]
-        with open(self.positions_file, "w", encoding="utf-8") as file:
-            dump(data, file, indent=4)
+        save_json(self.positions_file, data)
         return f"<#66FF99>🗑️ Posición '{position_name}' eliminada correctamente."
 
     def position_from_data(self, position_data: dict) -> Position:
@@ -52,18 +48,14 @@ class PositionManager:
         return await has_role(bot, user, {"owner", "mod", "vip"})
 
     def save_bot_position(self, position: Position) -> None:
-        with open(self.data_file, "r+", encoding="utf-8") as file:
-            data = load(file)
-            data["bot_position"] = {
-                "x": position.x, "y": position.y, "z": position.z, "facing": position.facing
-            }
-            file.seek(0)
-            dump(data, file)
-            file.truncate()
+        data = load_json(self.data_file)
+        data["bot_position"] = {
+            "x": position.x, "y": position.y, "z": position.z, "facing": position.facing
+        }
+        save_json(self.data_file, data)
 
     def get_bot_position(self) -> Position:
-        with open(self.data_file, "r", encoding="utf-8") as file:
-            position = load(file)["bot_position"]
+        position = load_json(self.data_file)["bot_position"]
         return Position(position["x"], position["y"], position["z"], position["facing"])
 
     async def set_bot_position(self, bot, user_id: str) -> str:

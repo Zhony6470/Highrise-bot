@@ -1,1 +1,2 @@
 highrise-bot-sdk
+supabase

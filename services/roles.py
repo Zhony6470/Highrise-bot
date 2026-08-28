@@ -2,6 +2,7 @@ from json import dump, load
 from typing import Literal
 
 from highrise import User
+from services.storage import load_json, save_json
 
 
 Role = Literal["owner", "mod", "vip", "user"]
@@ -57,25 +58,21 @@ class RoleManager:
 
     def _load_roles(self) -> dict[str, Role]:
         try:
-            with open(self.roles_file, "r", encoding="utf-8") as file:
-                data = load(file)
-                self._legacy_vip_users = set(data.get("vip_users", []))
-                return {
-                    username.lower(): role
-                    for username, role in data.get("users", {}).items()
-                    if role in ("mod", "vip", "user")
-                }
+            data = load_json(self.roles_file)
+            self._legacy_vip_users = set(data.get("vip_users", []))
+            return {
+                username.lower(): role
+                for username, role in data.get("users", {}).items()
+                if role in ("mod", "vip", "user")
+            }
         except (FileNotFoundError, KeyError, TypeError):
             self._legacy_vip_users = set()
             return {}
 
     def _save_roles(self) -> None:
-        with open(self.roles_file, "r+", encoding="utf-8") as file:
-            data = load(file)
-            data["users"] = self.roles
-            file.seek(0)
-            dump(data, file)
-            file.truncate()
+        data = load_json(self.roles_file)
+        data["users"] = self.roles
+        save_json(self.roles_file, data)
 
 
 async def get_user_role(bot, user: User) -> Role:
