@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-apt-get update
-apt-get install -y icecast2 ffmpeg
-
 cat > /etc/icecast2/icecast.xml <<'EOF'
 <icecast>
   <hostname>localhost</hostname>

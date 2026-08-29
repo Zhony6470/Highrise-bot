@@ -1,13 +1,10 @@
 services:
   - type: web
     name: highrise-bot
-    runtime: python
+    runtime: docker
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: bash start.sh
+    dockerfilePath: ./Dockerfile
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.9
       - key: ROOM_ID
         sync: false
       - key: API_KEY
