@@ -20,6 +20,7 @@ from commands.owner import handle_owner_command
 from commands.dispatcher import CommandDispatcher
 from services.positions import PositionManager
 from services.roles import RoleManager, get_user_role
+from services.track import handle_track_command
 from tips import TipManager
 from anuncios import announcement_loop
 from diversion import handle_diversion_command
@@ -37,6 +38,8 @@ class Bot(BaseBot):
         self.command_dispatcher = CommandDispatcher()
         self.bot_position = None
         self.user_positions = {}
+        self.track_monitor_task = None
+        self.track_emote_tasks = {}
 
         # Estado de seguimiento
         self.following = False
@@ -62,6 +65,9 @@ class Bot(BaseBot):
             if response:
                 for section in response:
                     await self.highrise.send_whisper(user.id, section)
+            return
+
+        if await handle_track_command(self, user, message):
             return
 
         if msg_lower == "!reset":
