@@ -36,6 +36,7 @@ class Bot(BaseBot):
         self.role_manager = RoleManager(ROLES_FILE)
         self.command_dispatcher = CommandDispatcher()
         self.bot_position = None
+        self.user_positions = {}
 
         # Estado de seguimiento
         self.following = False
@@ -513,6 +514,12 @@ class Bot(BaseBot):
                 return pos
         return None
 
+    async def update_user(self, user: User, position: Position | AnchorPosition) -> None:
+        """Guarda la última posición conocida del usuario para controlar su movimiento."""
+        if not isinstance(position, Position):
+            return
+        self.user_positions[user.id] = position
+
     async def on_whisper(self, user: User, message: str) -> None:
         print(f"[WHISPER] {user.username}: {message}")
         response = await self.command_dispatcher.handle(self, user, message)
@@ -644,7 +651,7 @@ class Bot(BaseBot):
             f"<#66CCFF>🎭 Tu rol es: {role}. ¡Disfruta tu estancia! ✨"
         )
         if isinstance(position, Position):
-            await update_user(self, user, position)
+            await self.update_user(user, position)
 
     async def on_user_leave(self, user: User) -> None:
         print(f"[LEAVE  ] {user.username} salió de la sala.")
@@ -656,7 +663,7 @@ class Bot(BaseBot):
         self, user: User, destination: Position | AnchorPosition
     ) -> None:
         if isinstance(destination, Position):
-            await update_user(self, user, destination)
+            await self.update_user(user, destination)
 
     async def on_start(self, session_metadata: SessionMetadata) -> None:
         print("[START  ] Bot conectado correctamente.")
