@@ -11,7 +11,6 @@ ROOM_ANNOUNCEMENTS = [
     "<#FFFF66>😂 Si tu avatar empieza a bailar solo, no te preocupes... probablemente tiene mejor ritmo que nosotros.",
     "<#FF9966>🍕 Se busca: una persona que diga ‘solo cinco minutos más’ y se quede toda la noche. 👀",
     "<#99FF66>🌈 Regla no oficial de la sala: quien entre con mal humor debe pagar una ronda de risas. 😄",
-    "<#CC66FF>🪩 ¡Pista imaginaria abierta! Trae tu mejor pose, tu peor chiste y cero vergüenza. ✨",
     "<#FFCCFF>🐸 Un aplauso para todos los que llegaron a la sala sin saber qué hacer y terminaron haciendo amigos. 👏",
     "<#66FFCC>🎤 Micrófono invisible disponible: canta en tu mente y presume que todos te están aplaudiendo. 😎",
     "<#FF6666>🚨 Alerta de diversión: se recomienda sonreír, bailar y culpar al lag si sale mal. 📶",

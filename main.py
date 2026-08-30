@@ -13,7 +13,6 @@ from config import (
     DEFAULT_DATA,
     EMOTES_FILE,
     POSITIONS_FILE,
-    RADIO_STREAM_URL,
     ROOM_ID,
     ROLES_FILE,
 )
@@ -24,7 +23,6 @@ from services.roles import RoleManager, get_user_role
 from tips import TipManager
 from anuncios import announcement_loop
 from diversion import handle_diversion_command
-from pista import handle_track_command, start_track_monitor, update_user
 
 
 class Bot(BaseBot):
@@ -38,7 +36,6 @@ class Bot(BaseBot):
         self.role_manager = RoleManager(ROLES_FILE)
         self.command_dispatcher = CommandDispatcher()
         self.bot_position = None
-        self.radio_stream_url = RADIO_STREAM_URL
 
         # Estado de seguimiento
         self.following = False
@@ -49,8 +46,6 @@ class Bot(BaseBot):
         self.reset_task = None
         self.announcement_task = None
         self.fight_tasks = set()
-        self.track_emote_tasks = {}
-        self.track_monitor_task = None
         self.current_bot_emote = None
         self.current_bot_emote_duration = 0
         
@@ -79,9 +74,6 @@ class Bot(BaseBot):
                 await self.highrise.send_whisper(
                     user.id, "🔒 Solo el dueño o los moderadores pueden reiniciar el bot."
                 )
-            return
-
-        if await handle_track_command(self, user, msg):
             return
 
         if msg_lower in ["!stop", "stop"]:
@@ -608,8 +600,6 @@ class Bot(BaseBot):
                     "<#FFFFFF>• !tipall cantidad - Enviar oro a todos",
                     "<#FFFFFF>• !ubi nombre priv|publi - Guardar una posición",
                     "<#FFFFFF>• !ubi delete nombre - Eliminar una posición",
-                    "<#FFFFFF>• !pista rad 5 - Crear una pista en tu posición",
-                    "<#FFFFFF>• !deletepista - Eliminar la pista de emotes",
                 ]),
                 "\n".join([
                     "<#FF6666>⚔️ MODERACIÓN",
@@ -661,9 +651,6 @@ class Bot(BaseBot):
         emote_task = self.emote_tasks.pop(user.id, None)
         if emote_task:
             emote_task.cancel()
-        track_task = self.track_emote_tasks.pop(user.id, None)
-        if track_task:
-            track_task.cancel()
 
     async def on_user_move(
         self, user: User, destination: Position | AnchorPosition
@@ -685,9 +672,6 @@ class Bot(BaseBot):
         if self.announcement_task:
             self.announcement_task.cancel()
         self.announcement_task = asyncio.create_task(announcement_loop(self))
-        if self.track_monitor_task:
-            self.track_monitor_task.cancel()
-        await start_track_monitor(self)
         await self.highrise.chat(
             "<#66FF99>✅ ¡El bot se ha conectado correctamente a la sala!"
         )
