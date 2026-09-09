@@ -23,6 +23,7 @@ from services.roles import RoleManager, get_user_role
 from services.track import handle_track_command, start_track_monitor
 from services.storage import load_json
 from services.youtube import YouTubeSearchError, search_video
+from services.radio import RadioRequestError, request_playback
 from tips import TipManager
 from anuncios import announcement_loop
 from diversion import handle_diversion_command
@@ -81,9 +82,14 @@ class Bot(BaseBot):
                 return
             try:
                 video = await search_video(query)
+                try:
+                    await request_playback(video["video_id"])
+                    playback_message = "<#66FF99>▶️ Solicitud enviada a la radio."
+                except RadioRequestError as error:
+                    playback_message = f"<#FFCC66>ℹ️ {error}"
                 await self.highrise.chat(
                     f"<#66FF99>🎵 @{user.username} encontró: {video['title']} "
-                    f"({video['channel']})"
+                    f"({video['channel']})\n{playback_message}"
                 )
                 await self.highrise.send_whisper(
                     user.id,

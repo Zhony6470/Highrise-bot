@@ -42,6 +42,7 @@ async def search_video(query: str) -> dict:
         raise YouTubeSearchError("YouTube devolvió un resultado incompleto.")
 
     return {
+        "video_id": video_id,
         "title": snippet["title"],
         "channel": snippet.get("channelTitle", "Canal desconocido"),
         "url": f"https://www.youtube.com/watch?v={video_id}",
