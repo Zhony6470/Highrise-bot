@@ -476,13 +476,25 @@ class Bot(BaseBot):
         try:
             while True:
                 emote = choice(public_emotes)
-                await self.highrise.send_emote(emote["emote"], user_id)
+                try:
+                    await self.highrise.send_emote(emote["emote"], user_id)
+                except Exception as error:
+                    public_emotes.remove(emote)
+                    print(
+                        f"Emote no disponible para {user_id}: "
+                        f"{emote['emote']} ({error})"
+                    )
+                    if not public_emotes:
+                        break
+                    continue
                 await asyncio.sleep(max(float(emote.get("duration", 1)), 0.1))
         except asyncio.CancelledError:
             pass
         except Exception as e:
             self.emote_tasks.pop(user_id, None)
             print(f"Error en el bucle de emotes aleatorios: {e}")
+        finally:
+            self.emote_tasks.pop(user_id, None)
 
     async def random_dance_loop(self):
         dances = [
@@ -501,7 +513,17 @@ class Bot(BaseBot):
                 self.current_bot_emote_duration = max(
                     float(dance.get("duration", 1)), 0.1
                 )
-                await self.highrise.send_emote(dance["emote"], self.bot_id)
+                try:
+                    await self.highrise.send_emote(dance["emote"], self.bot_id)
+                except Exception as error:
+                    dances.remove(dance)
+                    print(
+                        f"Baile no disponible para el bot: "
+                        f"{dance['emote']} ({error})"
+                    )
+                    if not dances:
+                        break
+                    continue
                 await asyncio.sleep(self.current_bot_emote_duration)
         except asyncio.CancelledError:
             pass
