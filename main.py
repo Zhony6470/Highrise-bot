@@ -22,6 +22,7 @@ from services.positions import PositionManager
 from services.roles import RoleManager, get_user_role
 from services.track import handle_track_command, start_track_monitor
 from services.storage import load_json
+from services.youtube import YouTubeSearchError, search_video
 from tips import TipManager
 from anuncios import announcement_loop
 from diversion import handle_diversion_command
@@ -69,6 +70,34 @@ class Bot(BaseBot):
             return
 
         if await handle_track_command(self, user, message):
+            return
+
+        if msg_lower.startswith(("!play", "/play")):
+            query = msg[5:].strip()
+            if not query:
+                await self.highrise.send_whisper(
+                    user.id, "<#FFCC66>🎵 Uso: !play nombre de la canción"
+                )
+                return
+            try:
+                video = await search_video(query)
+                await self.highrise.chat(
+                    f"<#66FF99>🎵 @{user.username} encontró: {video['title']} "
+                    f"({video['channel']})"
+                )
+                await self.highrise.send_whisper(
+                    user.id,
+                    "<#66FF99>🔎 Resultado encontrado:\n"
+                    f"<#FFFFFF>🎵 {video['title']}\n"
+                    f"<#CC99FF>👤 {video['channel']}\n"
+                    f"<#66CCFF>🔗 {video['url']}\n"
+                    "<#FFCC66>ℹ️ Solo se reproducen contenidos propios, "
+                    "libres de derechos o autorizados.",
+                )
+            except YouTubeSearchError as error:
+                await self.highrise.send_whisper(
+                    user.id, f"<#FF6666>⚠️ {error}"
+                )
             return
 
         if msg_lower == "!reset":
