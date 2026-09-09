@@ -167,7 +167,9 @@ async def track_emote_loop(bot, user_id: str) -> None:
     try:
         while True:
             track = _load_track(bot)
-            position = await bot.get_user_position(user_id)
+            position = bot.user_positions.get(user_id)
+            if position is None:
+                position = await bot.get_user_position(user_id)
             if not track or not position or not _is_inside(position, track):
                 break
             emote_id = bot.current_bot_emote
@@ -180,7 +182,7 @@ async def track_emote_loop(bot, user_id: str) -> None:
                         f"Emote de pista no disponible para {user_id}: "
                         f"{emote_id} ({error})"
                     )
-            await asyncio.sleep(0.25)
+            await asyncio.sleep(0.05)
     except asyncio.CancelledError:
         pass
     except Exception as error:
