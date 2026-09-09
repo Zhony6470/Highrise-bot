@@ -1,4 +1,5 @@
 import asyncio
+import hmac
 import json
 import os
 import re
@@ -12,6 +13,8 @@ from urllib.request import urlopen
 HOST = os.environ.get("RADIO_HOST", "127.0.0.1")
 PORT = int(os.environ.get("RADIO_PORT", "8090"))
 TOKEN = os.environ["RADIO_PLAYER_TOKEN"]
+if not TOKEN:
+    raise RuntimeError("RADIO_PLAYER_TOKEN no está configurado")
 YOUTUBE_API_KEY = os.environ["YOUTUBE_API_KEY"]
 ICECAST_URL = os.environ.get(
     "ICECAST_URL", "icecast://source:CHANGE_ME@127.0.0.1:8000/radio.mp3"
@@ -69,7 +72,12 @@ def worker() -> None:
 
 class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
-        if self.path != "/play" or self.headers.get("Authorization") != f"Bearer {TOKEN}":
+        authorization = self.headers.get("Authorization", "")
+        expected_authorization = f"Bearer {TOKEN}"
+        if (
+            self.path != "/play"
+            or not hmac.compare_digest(authorization, expected_authorization)
+        ):
             self.send_error(401)
             return
         try:
