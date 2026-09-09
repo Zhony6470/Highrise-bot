@@ -187,4 +187,7 @@ async def track_emote_loop(bot, user_id: str) -> None:
         print(f"Error en la pista de emotes: {error}")
     finally:
         bot.track_emote_tasks.pop(user_id, None)
-        await bot.highrise.send_emote("", user_id)
+        try:
+            await bot.highrise.send_emote("", user_id)
+        except Exception as error:
+            print(f"No se pudo limpiar el emote de pista de {user_id}: {error}")

@@ -88,7 +88,13 @@ class Bot(BaseBot):
             emote_task = self.emote_tasks.pop(user.id, None)
             if emote_task:
                 emote_task.cancel()
-            await self.highrise.send_emote("", user.id)
+            track_task = self.track_emote_tasks.pop(user.id, None)
+            if track_task:
+                track_task.cancel()
+            try:
+                await self.highrise.send_emote("", user.id)
+            except Exception as error:
+                print(f"No se pudo detener el emote de {user.id}: {error}")
             await self.highrise.send_whisper(
                 user.id, "<#FF6666>🛑 Tu emote se detuvo."
             )
