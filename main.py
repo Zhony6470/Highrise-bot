@@ -510,8 +510,7 @@ class Bot(BaseBot):
         try:
             while True:
                 dance = choice(dances)
-                self.current_bot_emote = dance["emote"]
-                self.current_bot_emote_duration = max(
+                dance_duration = max(
                     float(dance.get("duration", 1)), 0.1
                 )
                 try:
@@ -525,6 +524,8 @@ class Bot(BaseBot):
                     if not dances:
                         break
                     continue
+                self.current_bot_emote = dance["emote"]
+                self.current_bot_emote_duration = dance_duration
                 await asyncio.sleep(self.current_bot_emote_duration)
         except asyncio.CancelledError:
             pass

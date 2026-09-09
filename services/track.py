@@ -172,8 +172,14 @@ async def track_emote_loop(bot, user_id: str) -> None:
                 break
             emote_id = bot.current_bot_emote
             if emote_id and emote_id != last_emote:
-                await bot.highrise.send_emote(emote_id, user_id)
                 last_emote = emote_id
+                try:
+                    await bot.highrise.send_emote(emote_id, user_id)
+                except Exception as error:
+                    print(
+                        f"Emote de pista no disponible para {user_id}: "
+                        f"{emote_id} ({error})"
+                    )
             await asyncio.sleep(0.25)
     except asyncio.CancelledError:
         pass
