@@ -1,2306 +1,284 @@
 [
-    {
-        "command": "Advanced Shy",
-        "emote": "emote-shy2",
-        "duration": 4.8,
-        "auth": "public"
-    },
-    {
-        "command": "Aerobics",
-        "emote": "idle-loop-aerobics",
-        "duration": 8.5,
-        "auth": "public"
-    },
-    {
-        "command": "Amused",
-        "emote": "emote-laughing2",
-        "duration": 5.1,
-        "auth": "public"
-    },
-    {
-        "command": "Angry",
-        "emote": "emoji-angry",
-        "duration": 6.4,
-        "auth": "public"
-    },
-    {
-        "command": "Anime",
-        "emote": "dance-anime3",
-        "duration": 10.5,
-        "auth": "public"
-    },
-    {
-        "command": "Anime Dance",
-        "emote": "dance-anime",
-        "duration": 7.8,
-        "auth": "public"
-    },
-    {
-        "command": "Annoyed",
-        "emote": "idle-loop-annoyed",
-        "duration": 17.1,
-        "auth": "public"
-    },
-    {
-        "command": "Apart",
-        "emote": "emote-apart",
-        "duration": 4.8,
-        "auth": "public"
-    },
-    {
-        "command": "Armcannon",
-        "emote": "emote-armcannon",
-        "duration": 7.3,
-        "auth": "public"
-    },
-    {
-        "command": "Arrogance",
-        "emote": "emoji-arrogance",
-        "duration": 6.9,
-        "auth": "public"
-    },
-    {
-        "command": "Astronaut",
-        "emote": "emote-astronaut",
-        "duration": 14.4,
-        "auth": "public"
-    },
-    {
-        "command": "At Attention",
-        "emote": "emote-salute",
-        "duration": 3.0,
-        "auth": "public"
-    },
-    {
-        "command": "Attention",
-        "emote": "emote-attention",
-        "duration": 4.4,
-        "auth": "public"
-    },
-    {
-        "command": "Attentive",
-        "emote": "idle_layingdown",
-        "duration": 24.6,
-        "auth": "public"
-    },
-    {
-        "command": "Baseball",
-        "emote": "emote-baseball",
-        "duration": 7.3,
-        "auth": "public"
-    },
-    {
-        "command": "Blackpink Dance",
-        "emote": "dance-blackpink",
-        "duration": 6.4,
-        "auth": "public"
-    },
-    {
-        "command": "Blastoff",
-        "emote": "emote-disappear",
-        "duration": 6.2,
-        "auth": "public"
-    },
-    {
-        "command": "Boo",
-        "emote": "emote-boo",
-        "duration": 4.5,
-        "auth": "public"
-    },
-    {
-        "command": "Bow",
-        "emote": "emote-bow",
-        "duration": 2.8,
-        "auth": "public"
-    },
-    {
-        "command": "Boxer",
-        "emote": "emote-boxer",
-        "duration": 6.6,
-        "auth": "public"
-    },
-    {
-        "command": "Breakdance",
-        "emote": "dance-breakdance",
-        "duration": 17.6,
-        "auth": "public"
-    },
-    {
-        "command": "Breakscreen",
-        "emote": "profile-breakscreen",
-        "duration": 10.9,
-        "auth": "public"
-    },
-    {
-        "command": "Bummed",
-        "emote": "idle-loop-sad",
-        "duration": 6.1,
-        "auth": "public"
-    },
-    {
-        "command": "Bunny Hop",
-        "emote": "emote-bunnyhop",
-        "duration": 12.4,
-        "auth": "public"
-    },
-    {
-        "command": "Cartwheel",
-        "emote": "emote-cartwheel",
-        "duration": 5.0,
-        "auth": "public"
-    },
-    {
-        "command": "Casual Dance",
-        "emote": "idle-dance-casual",
-        "duration": 8.8,
-        "auth": "public"
-    },
-    {
-        "command": "Celebrate",
-        "emote": "emote-swing-celebrate",
-        "duration": 1.6,
-        "auth": "public"
-    },
-    {
-        "command": "Celebrateidle",
-        "emote": "emote-swing-celebrate-idle",
-        "duration": 1.6,
-        "auth": "public"
-    },
-    {
-        "command": "Celebrating",
-        "emote": "emoji-celebrate",
-        "duration": 3.0,
-        "auth": "public"
-    },
-    {
-        "command": "Celebration Step",
-        "emote": "emote-celebrationstep",
-        "duration": 3.0,
-        "auth": "public"
-    },
-    {
-        "command": "Charging",
-        "emote": "emote-charging",
-        "duration": 7.6,
-        "auth": "public"
-    },
-    {
-        "command": "Chillin",
-        "emote": "idle-loop-happy",
-        "duration": 18.8,
-        "auth": "public"
-    },
-    {
-        "command": "Clap",
-        "emote": "emoji-clapping",
-        "duration": 2.2,
-        "auth": "public"
-    },
-    {
-        "command": "Clumsy",
-        "emote": "emote-fail2",
-        "duration": 6.5,
-        "auth": "public"
-    },
-    {
-        "command": "Cold",
-        "emote": "idle-cold",
-        "duration": 16.7,
-        "auth": "public"
-    },
-    {
-        "command": "Cold",
-        "emote": "emote-cold",
-        "duration": 3.7,
-        "auth": "public"
-    },
-    {
-        "command": "Collapse",
-        "emote": "emote-death2",
-        "duration": 4.9,
-        "auth": "public"
-    },
-    {
-        "command": "Confused",
-        "emote": "emote-confused",
-        "duration": 8.1,
-        "auth": "public"
-    },
-    {
-        "command": "Coolguy",
-        "emote": "emote-coolguy",
-        "duration": 4.0,
-        "auth": "public"
-    },
-    {
-        "command": "Cozynap",
-        "emote": "idle-floorsleeping",
-        "duration": 13.9,
-        "auth": "public"
-    },
-    {
-        "command": "Creepy Cute",
-        "emote": "emote-creepycute",
-        "duration": 7.3,
-        "auth": "public"
-    },
-    {
-        "command": "Creepy Puppet Dance",
-        "emote": "dance-creepypuppet",
-        "duration": 5.9,
-        "auth": "public"
-    },
-    {
-        "command": "Crying",
-        "emote": "emoji-crying",
-        "duration": 3.7,
-        "auth": "public"
-    },
-    {
-        "command": "Cursing",
-        "emote": "emoji-cursing",
-        "duration": 2.4,
-        "auth": "public"
-    },
-    {
-        "command": "Curtsy",
-        "emote": "emote-curtsy",
-        "duration": 2.2,
-        "auth": "public"
-    },
-    {
-        "command": "Cute",
-        "emote": "emote-cute",
-        "duration": 3.3,
-        "auth": "public"
-    },
-    {
-        "command": "Cute Salute",
-        "emote": "emote-cutesalute",
-        "duration": 2.4,
-        "auth": "public"
-    },
-    {
-        "command": "Cutey",
-        "emote": "emote-cutey",
-        "duration": 2.7,
-        "auth": "public"
-    },
-    {
-        "command": "Dab",
-        "emote": "emote-dab",
-        "duration": 2.7,
-        "auth": "public"
-    },
-    {
-        "command": "Dance Zombie",
-        "emote": "dance-zombie",
-        "duration": 12.9,
-        "auth": "public"
-    },
-    {
-        "command": "Dinner",
-        "emote": "emote-dinner",
-        "duration": 12.3,
-        "auth": "public"
-    },
-    {
-        "command": "Disco",
-        "emote": "emote-disco",
-        "duration": 5.4,
-        "auth": "public"
-    },
-    {
-        "command": "Dizzy",
-        "emote": "emoji-dizzy",
-        "duration": 4.1,
-        "auth": "public"
-    },
-    {
-        "command": "Donttouch",
-        "emote": "dance-tiktok13",
-        "duration": 7.7,
-        "auth": "public"
-    },
-    {
-        "command": "Dramatic",
-        "emote": "emote-dramatic",
-        "duration": 7.7,
-        "auth": "public"
-    },
-    {
-        "command": "Dropped",
-        "emote": "emote-fail3",
-        "duration": 6.7,
-        "auth": "public"
-    },
-    {
-        "command": "Duck Walk",
-        "emote": "dance-duckwalk",
-        "duration": 11.7,
-        "auth": "public"
-    },
-    {
-        "command": "Elbowbump",
-        "emote": "emote-elbowbump",
-        "duration": 3.8,
-        "auth": "public"
-    },
-    {
-        "command": "Electrified",
-        "emote": "emote-electrified",
-        "duration": 4.3,
-        "auth": "public"
-    },
-    {
-        "command": "Embarrassed",
-        "emote": "emote-embarrassed",
-        "duration": 7.4,
-        "auth": "public"
-    },
-    {
-        "command": "Energy Ball",
-        "emote": "emote-energyball",
-        "duration": 7.2,
-        "auth": "public"
-    },
-    {
-        "command": "Enthusiastic",
-        "emote": "idle-enthusiastic",
-        "duration": 15.2,
-        "auth": "public"
-    },
-    {
-        "command": "Exasperated",
-        "emote": "emote-exasperated",
-        "duration": 2.4,
-        "auth": "public"
-    },
-    {
-        "command": "Eyeroll",
-        "emote": "emoji-eyeroll",
-        "duration": 3.0,
-        "auth": "public"
-    },
-    {
-        "command": "Face Palm",
-        "emote": "emote-exasperatedb",
-        "duration": 2.7,
-        "auth": "public"
-    },
-    {
-        "command": "Fading",
-        "emote": "emote-fading",
-        "duration": 12.6,
-        "auth": "public"
-    },
-    {
-        "command": "Faint",
-        "emote": "emote-fainting",
-        "duration": 18.4,
-        "auth": "public"
-    },
-    {
-        "command": "Faintdrop",
-        "emote": "emote-deathdrop",
-        "duration": 3.8,
-        "auth": "public"
-    },
-    {
-        "command": "Fairyfloat",
-        "emote": "idle-floating",
-        "duration": 26.1,
-        "auth": "public"
-    },
-    {
-        "command": "Fairytwirl",
-        "emote": "emote-looping",
-        "duration": 8.6,
-        "auth": "public"
-    },
-    {
-        "command": "Fall",
-        "emote": "emote-fail1",
-        "duration": 5.6,
-        "auth": "public"
-    },
-    {
-        "command": "Fashionista",
-        "emote": "emote-fashionista",
-        "duration": 5.1,
-        "auth": "public"
-    },
-    {
-        "command": "Feelbeat",
-        "emote": "idle-dance-headbobbing",
-        "duration": 25.4,
-        "auth": "public"
-    },
-    {
-        "command": "Feeling Hot",
-        "emote": "emote-hot",
-        "duration": 4.4,
-        "auth": "public"
-    },
-    {
-        "command": "Fightidle",
-        "emote": "idle-fighter",
-        "duration": 17.2,
-        "auth": "public"
-    },
-    {
-        "command": "Firelunge",
-        "emote": "emoji-hadoken",
-        "duration": 2.7,
-        "auth": "public"
-    },
-    {
-        "command": "Fireworks",
-        "emote": "emote-fireworks",
-        "duration": 11.4,
-        "auth": "public"
-    },
-    {
-        "command": "Fishingcast",
-        "emote": "fishing-cast",
-        "duration": 1.5,
-        "auth": "public"
-    },
-    {
-        "command": "Fishingidle",
-        "emote": "fishing-idle",
-        "duration": 16.0,
-        "auth": "public"
-    },
-    {
-        "command": "Fishingpull",
-        "emote": "fishing-pull",
-        "duration": 1.0,
-        "auth": "public"
-    },
-    {
-        "command": "Fishingpullsmall",
-        "emote": "fishing-pull-small",
-        "duration": 1.0,
-        "auth": "public"
-    },
-    {
-        "command": "Flexing",
-        "emote": "emoji-flex",
-        "duration": 2.1,
-        "auth": "public"
-    },
-    {
-        "command": "Flirt",
-        "emote": "emote-flirt",
-        "duration": 6.6,
-        "auth": "public"
-    },
-    {
-        "command": "Floating",
-        "emote": "emote-float",
-        "duration": 8.1,
-        "auth": "public"
-    },
-    {
-        "command": "Floss Dance",
-        "emote": "dance-floss",
-        "duration": 21.3,
-        "auth": "public"
-    },
-    {
-        "command": "Fruity Dance",
-        "emote": "dance-fruity",
-        "duration": 17.6,
-        "auth": "public"
-    },
-    {
-        "command": "Frog",
-        "emote": "emote-frog",
-        "duration": 14.1,
-        "auth": "private"
-    },
-    {
-        "command": "Frustrated",
-        "emote": "emote-frustrated",
-        "duration": 5.6,
-        "auth": "public"
-    },
-    {
-        "command": "Gagging",
-        "emote": "emoji-gagging",
-        "duration": 5.7,
-        "auth": "public"
-    },
-    {
-        "command": "Gangnam",
-        "emote": "emote-gangnam",
-        "duration": 7.3,
-        "auth": "public"
-    },
-    {
-        "command": "Ghost",
-        "emote": "emoji-ghost",
-        "duration": 3.5,
-        "auth": "public"
-    },
-    {
-        "command": "Ghostfloat",
-        "emote": "emote-ghost-idle",
-        "duration": 19.6,
-        "auth": "public"
-    },
-    {
-        "command": "Gift",
-        "emote": "emote-gift",
-        "duration": 4.5,
-        "auth": "public"
-    },
-    {
-        "command": "Giveup",
-        "emote": "emoji-give-up",
-        "duration": 5.4,
-        "auth": "public"
-    },
-    {
-        "command": "Gooey",
-        "emote": "emote-gooey",
-        "duration": 4.8,
-        "auth": "public"
-    },
-    {
-        "command": "Gravity",
-        "emote": "emote-gravity",
-        "duration": 8.5,
-        "auth": "public"
-    },
-    {
-        "command": "Greedy",
-        "emote": "emote-greedy",
-        "duration": 4.2,
-        "auth": "public"
-    },
-    {
-        "command": "Guitar",
-        "emote": "idle-guitar",
-        "duration": 13.5,
-        "auth": "public"
-    },
-    {
-        "command": "Hands In Air",
-        "emote": "dance-handsup",
-        "duration": 22.3,
-        "auth": "public"
-    },
-    {
-        "command": "Handstand",
-        "emote": "emote-handstand",
-        "duration": 4.0,
-        "auth": "public"
-    },
-    {
-        "command": "Handwalk",
-        "emote": "emote-handwalk",
-        "duration": 6.0,
-        "auth": "public"
-    },
-    {
-        "command": "Happy",
-        "emote": "emote-happy",
-        "duration": 3.5,
-        "auth": "public"
-    },
-    {
-        "command": "Harlem Shake",
-        "emote": "emote-harlemshake",
-        "duration": 13.6,
-        "auth": "public"
-    },
-    {
-        "command": "Head Blowup",
-        "emote": "emote-headblowup",
-        "duration": 11.3,
-        "auth": "private"
-    },
-    {
-        "command": "Headless",
-        "emote": "idle-headless",
-        "duration": 43.9,
-        "auth": "public"
-    },
-    {
-        "command": "Heart Eyes",
-        "emote": "emote-hearteyes",
-        "duration": 4.0,
-        "auth": "public"
-    },
-    {
-        "command": "Heart Fingers",
-        "emote": "emote-heartfingers",
-        "duration": 4.0,
-        "auth": "public"
-    },
-    {
-        "command": "Heart Shape",
-        "emote": "emote-heartshape",
-        "duration": 6.2,
-        "auth": "public"
-    },
-    {
-        "command": "Hello",
-        "emote": "emote-hello",
-        "duration": 2.5,
-        "auth": "public"
-    },
-    {
-        "command": "Hero",
-        "emote": "emote-hero",
-        "duration": 5.0,
-        "auth": "public"
-    },
-    {
-        "command": "Heropose",
-        "emote": "idle-hero",
-        "duration": 21.9,
-        "auth": "public"
-    },
-    {
-        "command": "Hiphopdance",
-        "emote": "dance-hiphop",
-        "duration": 26.3,
-        "auth": "public"
-    },
-    {
-        "command": "Hipshake",
-        "emote": "dance-hipshake",
-        "duration": 12.0,
-        "auth": "public"
-    },
-    {
-        "command": "Hopscotch",
-        "emote": "emote-hopscotch",
-        "duration": 4.2,
-        "auth": "public"
-    },
-    {
-        "command": "Howl1",
-        "emote": "emote-howl",
-        "duration": 10.0,
-        "auth": "private"
-    },
-    {
-        "command": "Howl2",
-        "emote": "idle-howl",
-        "duration": 10.0,
-        "auth": "private"
-    },
-    {
-        "command": "Hug",
-        "emote": "emote-hug",
-        "duration": 3.5,
-        "auth": "public"
-    },
-    {
-        "command": "Hugyourself",
-        "emote": "emote-hugyourself",
-        "duration": 5.0,
-        "auth": "public"
-    },
-    {
-        "command": "Hyped",
-        "emote": "emote-hyped",
-        "duration": 7.0,
-        "auth": "public"
-    },
-    {
-        "command": "Ice Cream Dance",
-        "emote": "dance-icecream",
-        "duration": 6.3,
-        "auth": "public"
-    },
-    {
-        "command": "Ice Skating",
-        "emote": "emote-iceskating",
-        "duration": 7.0,
-        "auth": "public"
-    },
-    {
-        "command": "Idlespace",
-        "emote": "idle-space",
-        "duration": 36.2,
-        "auth": "public"
-    },
-    {
-        "command": "Irritated",
-        "emote": "idle-angry",
-        "duration": 25.4,
-        "auth": "public"
-    },
-    {
-        "command": "Jetpack",
-        "emote": "emote-jetpack",
-        "duration": 16.8,
-        "auth": "public"
-    },
-    {
-        "command": "Jinglebell",
-        "emote": "dance-jinglebell",
-        "duration": 10.6,
-        "auth": "public"
-    },
-    {
-        "command": "Judochop",
-        "emote": "emote-judochop",
-        "duration": 2.4,
-        "auth": "public"
-    },
-    {
-        "command": "Juggling",
-        "emote": "emote-juggling",
-        "duration": 4.4,
-        "auth": "public"
-    },
-    {
-        "command": "Jump",
-        "emote": "emote-jumpb",
-        "duration": 3.6,
-        "auth": "public"
-    },
-    {
-        "command": "Karate Dance",
-        "emote": "dance-martial-artist",
-        "duration": 13.3,
-        "auth": "public"
-    },
-    {
-        "command": "Kawaii Dance",
-        "emote": "dance-kawai",
-        "duration": 9.7,
-        "auth": "public"
-    },
-    {
-        "command": "Kawaii Go Go",
-        "emote": "emote-kawaiigogo",
-        "duration": 10.0,
-        "auth": "public"
-    },
-    {
-        "command": "Kid",
-        "emote": "dance-kid",
-        "duration": 9.6,
-        "auth": "public"
-    },
-    {
-        "command": "Kiss",
-        "emote": "emote-kiss",
-        "duration": 2.4,
-        "auth": "public"
-    },
-    {
-        "command": "Laid2",
-        "emote": "sit-idle-sleep",
-        "duration": 17.3,
-        "auth": "public"
-    },
-    {
-        "command": "Laughing",
-        "emote": "emote-laughing",
-        "duration": 2.5,
-        "auth": "public"
-    },
-    {
-        "command": "Launch",
-        "emote": "emote-launch",
-        "duration": 8.4,
-        "auth": "public"
-    },
-    {
-        "command": "Level Up",
-        "emote": "emote-levelup",
-        "duration": 6.1,
-        "auth": "public"
-    },
-    {
-        "command": "Levitate",
-        "emote": "emoji-halo",
-        "duration": 5.8,
-        "auth": "public"
-    },
-    {
-        "command": "Lust",
-        "emote": "emote-lust",
-        "duration": 4.7,
-        "auth": "public"
-    },
-    {
-        "command": "Lying",
-        "emote": "emoji-lying",
-        "duration": 6.3,
-        "auth": "public"
-    },
-    {
-        "command": "Macarena Dance",
-        "emote": "dance-macarena",
-        "duration": 11.7,
-        "auth": "public"
-    },
-    {
-        "command": "Maniac",
-        "emote": "emote-maniac",
-        "duration": 4.5,
-        "auth": "public"
-    },
-    {
-        "command": "Mind Blown",
-        "emote": "emoji-mind-blown",
-        "duration": 2.4,
-        "auth": "public"
-    },
-    {
-        "command": "Miningfail",
-        "emote": "mining-fail",
-        "duration": 2.8,
-        "auth": "public"
-    },
-    {
-        "command": "Miningmine",
-        "emote": "mining-mine",
-        "duration": 3.0,
-        "auth": "public"
-    },
-    {
-        "command": "Miningsuccess",
-        "emote": "mining-success",
-        "duration": 2.5,
-        "auth": "public"
-    },
-    {
-        "command": "Modeling",
-        "emote": "emote-model",
-        "duration": 5.9,
-        "auth": "public"
-    },
-    {
-        "command": "Monsterfail",
-        "emote": "emote-monster_fail",
-        "duration": 4.6,
-        "auth": "public"
-    },
-    {
-        "command": "Moonwalk",
-        "emote": "emote-gordonshuffle",
-        "duration": 8.1,
-        "auth": "public"
-    },
-    {
-        "command": "Musclepose",
-        "emote": "emote-pose4",
-        "duration": 4.2,
-        "auth": "public"
-    },
-    {
-        "command": "Naughty",
-        "emote": "emoji-naughty",
-        "duration": 4.3,
-        "auth": "public"
-    },
-    {
-        "command": "Nervous",
-        "emote": "idle-nervous",
-        "duration": 22.6,
-        "auth": "public"
-    },
-    {
-        "command": "Night Fever",
-        "emote": "emote-nightfever",
-        "duration": 5.5,
-        "auth": "public"
-    },
-    {
-        "command": "Ninja Run",
-        "emote": "emote-ninjarun",
-        "duration": 4.8,
-        "auth": "public"
-    },
-    {
-        "command": "No",
-        "emote": "emote-no",
-        "duration": 2.3,
-        "auth": "public"
-    },
-    {
-        "command": "Oops",
-        "emote": "emote-oops",
-        "duration": 6.4,
-        "auth": "public"
-    },
-    {
-        "command": "Opera",
-        "emote": "emote-opera",
-        "duration": 4.6,
-        "auth": "public"
-    },
-    {
-        "command": "Orange Justice",
-        "emote": "dance-orangejustice",
-        "duration": 6.5,
-        "auth": "public"
-    },
-    {
-        "command": "Outfit",
-        "emote": "emote-outfit",
-        "duration": 12.2,
-        "auth": "public"
-    },
-    {
-        "command": "Outfit2",
-        "emote": "emote-outfit2",
-        "duration": 10.5,
-        "auth": "public"
-    },
-    {
-        "command": "Panic",
-        "emote": "emote-panic",
-        "duration": 2.9,
-        "auth": "public"
-    },
-    {
-        "command": "Partytime",
-        "emote": "emote-celebrate",
-        "duration": 3.9,
-        "auth": "public"
-    },
-    {
-        "command": "Passionatesmooch",
-        "emote": "emote-kissing-passionate",
-        "duration": 9.2,
-        "auth": "public"
-    },
-    {
-        "command": "Peace",
-        "emote": "emote-peace",
-        "duration": 5.8,
-        "auth": "public"
-    },
-    {
-        "command": "Peekaboo",
-        "emote": "emote-peekaboo",
-        "duration": 3.6,
-        "auth": "public"
-    },
-    {
-        "command": "Penguin Dance",
-        "emote": "dance-pinguin",
-        "duration": 10.8,
-        "auth": "public"
-    },
-    {
-        "command": "Pennywise Dance",
-        "emote": "dance-pennywise",
-        "duration": 0.7,
-        "auth": "private"
-    },
-    {
-        "command": "Point",
-        "emote": "emoji-there",
-        "duration": 2.1,
-        "auth": "public"
-    },
-    {
-        "command": "Pokedance",
-        "emote": "dance-tiktok12",
-        "duration": 13.8,
-        "auth": "public"
-    },
-    {
-        "command": "Ponder",
-        "emote": "idle-lookup",
-        "duration": 22.3,
-        "auth": "public"
-    },
-    {
-        "command": "Pose 1",
-        "emote": "emote-pose1",
-        "duration": 2.3,
-        "auth": "public"
-    },
-    {
-        "command": "Pose 10",
-        "emote": "emote-pose10",
-        "duration": 3.5,
-        "auth": "public"
-    },
-    {
-        "command": "Pose 3",
-        "emote": "emote-pose3",
-        "duration": 4.5,
-        "auth": "public"
-    },
-    {
-        "command": "Pose 5",
-        "emote": "emote-pose5",
-        "duration": 4.2,
-        "auth": "public"
-    },
-    {
-        "command": "Pose 7",
-        "emote": "emote-pose7",
-        "duration": 4.0,
-        "auth": "public"
-    },
-    {
-        "command": "Pose 8",
-        "emote": "emote-pose8",
-        "duration": 4.8,
-        "auth": "public"
-    },
-    {
-        "command": "Pose 9",
-        "emote": "emote-pose9",
-        "duration": 4.0,
-        "auth": "public"
-    },
-    {
-        "command": "Pose11",
-        "emote": "emote-pose11",
-        "duration": 3.6,
-        "auth": "public"
-    },
-    {
-        "command": "Pose12",
-        "emote": "emote-pose12",
-        "duration": 4.1,
-        "auth": "public"
-    },
-    {
-        "command": "Posh",
-        "emote": "idle-posh",
-        "duration": 21.9,
-        "auth": "public"
-    },
-    {
-        "command": "Pouty Face",
-        "emote": "idle-sad",
-        "duration": 24.4,
-        "auth": "public"
-    },
-    {
-        "command": "Pray",
-        "emote": "emoji-pray",
-        "duration": 4.5,
-        "auth": "public"
-    },
-    {
-        "command": "Propose",
-        "emote": "emote-proposing",
-        "duration": 4.3,
-        "auth": "public"
-    },
-    {
-        "command": "Punch",
-        "emote": "emoji-punch",
-        "duration": 1.8,
-        "auth": "public"
-    },
-    {
-        "command": "Punk Guitar",
-        "emote": "emote-punkguitar",
-        "duration": 8.7,
-        "auth": "public"
-    },
-    {
-        "command": "Puppet",
-        "emote": "emote-puppet",
-        "duration": 16.3,
-        "auth": "public"
-    },
-    {
-        "command": "Purr",
-        "emote": "emote-pose2",
-        "duration": 4.5,
-        "auth": "public"
-    },
-    {
-        "command": "Push It Dance",
-        "emote": "dance-employee",
-        "duration": 6.5,
-        "auth": "public"
-    },
-    {
-        "command": "Push Ups",
-        "emote": "dance-aerobics",
-        "duration": 8.8,
-        "auth": "public"
-    },
-    {
-        "command": "Rainbow",
-        "emote": "emote-rainbow",
-        "duration": 2.8,
-        "auth": "public"
-    },
-    {
-        "command": "Receivehappy",
-        "emote": "emote-receive-happy",
-        "duration": 4.3,
-        "auth": "public"
-    },
-    {
-        "command": "Receivesad",
-        "emote": "emote-receive-disappointed",
-        "duration": 5.3,
-        "auth": "public"
-    },
-    {
-        "command": "Relaxed",
-        "emote": "idle_layingdown2",
-        "duration": 21.5,
-        "auth": "public"
-    },
-    {
-        "command": "Relaxing",
-        "emote": "idle-floorsleeping2",
-        "duration": 17.3,
-        "auth": "public"
-    },
-    {
-        "command": "Repose",
-        "emote": "emote-repose",
-        "duration": 1.1,
-        "auth": "public"
-    },
-    {
-        "command": "Rest",
-        "emote": "sit-idle-cute",
-        "duration": 16.85,
-        "auth": "public"
-    },
-    {
-        "command": "Revival",
-        "emote": "emote-death",
-        "duration": 6.6,
-        "auth": "public"
-    },
-    {
-        "command": "Riflethrow",
-        "emote": "emote-rifle-throw",
-        "duration": 6.6,
-        "auth": "public"
-    },
-    {
-        "command": "Ring On It",
-        "emote": "dance-singleladies",
-        "duration": 21.2,
-        "auth": "public"
-    },
-    {
-        "command": "Robot",
-        "emote": "emote-robot",
-        "duration": 7.6,
-        "auth": "public"
-    },
-    {
-        "command": "Robotic Dance",
-        "emote": "dance-robotic",
-        "duration": 17.8,
-        "auth": "public"
-    },
-    {
-        "command": "Rock Out",
-        "emote": "dance-metal",
-        "duration": 15.1,
-        "auth": "public"
-    },
-    {
-        "command": "Rofl",
-        "emote": "emote-rofl",
-        "duration": 6.3,
-        "auth": "public"
-    },
-    {
-        "command": "Roll",
-        "emote": "emote-roll",
-        "duration": 3.6,
-        "auth": "public"
-    },
-    {
-        "command": "Ropepull",
-        "emote": "emote-ropepull",
-        "duration": 8.8,
-        "auth": "public"
-    },
-    {
-        "command": "Rough",
-        "emote": "idle_tough",
-        "duration": 26.7,
-        "auth": "public"
-    },
-    {
-        "command": "Runforward",
-        "emote": "run-vertical",
-        "duration": 1.0,
-        "auth": "public"
-    },
-    {
-        "command": "Runhop",
-        "emote": "emote-runhop",
-        "duration": 6.5,
-        "auth": "public"
-    },
-    {
-        "command": "Russian Dance",
-        "emote": "dance-russian",
-        "duration": 9.6,
-        "auth": "public"
-    },
-    {
-        "command": "Sad",
-        "emote": "emote-sad",
-        "duration": 5.4,
-        "auth": "public"
-    },
-    {
-        "command": "Scared",
-        "emote": "emoji-scared",
-        "duration": 3.0,
-        "auth": "public"
-    },
-    {
-        "command": "Scritchy",
-        "emote": "idle-wild",
-        "duration": 26.6,
-        "auth": "private"
-    },
-    {
-        "command": "Scuba Dance",
-        "emote": "emote-scuba-dance",
-        "duration": 10.0,
-        "auth": "public"
-    },
-    {
-        "command": "Secretshake",
-        "emote": "emote-secrethandshake",
-        "duration": 3.9,
-        "auth": "public"
-    },
-    {
-        "command": "Sexy Dance",
-        "emote": "dance-sexy",
-        "duration": 12.3,
-        "auth": "public"
-    },
-    {
-        "command": "Sheephop",
-        "emote": "emote-sheephop",
-        "duration": 2.4,
-        "auth": "public"
-    },
-    {
-        "command": "Shocked",
-        "emote": "emote-shocked",
-        "duration": 4.0,
-        "auth": "public"
-    },
-    {
-        "command": "Shopping Cart Dance",
-        "emote": "dance-shoppingcart",
-        "duration": 3.7,
-        "auth": "public"
-    },
-    {
-        "command": "Shrink",
-        "emote": "emote-shrink",
-        "duration": 8.7,
-        "auth": "public"
-    },
-    {
-        "command": "Shuffle",
-        "emote": "dance-shuffle",
-        "duration": 7.6,
-        "auth": "public"
-    },
-    {
-        "command": "Shush",
-        "emote": "emoji-shush",
-        "duration": 1.8,
-        "auth": "public"
-    },
-    {
-        "command": "Shy",
-        "emote": "emote-shy",
-        "duration": 3.9,
-        "auth": "public"
-    },
-    {
-        "command": "Shy2",
-        "emote": "idle-loop-shy",
-        "duration": 16.5,
-        "auth": "public"
-    },
-    {
-        "command": "Sick",
-        "emote": "emoji-sick",
-        "duration": 5.1,
-        "auth": "public"
-    },
-    {
-        "command": "Singing",
-        "emote": "idle_singing",
-        "duration": 9.8,
-        "auth": "public"
-    },
-    {
-        "command": "Sit Open",
-        "emote": "sit-open",
-        "duration": 26.0,
-        "auth": "public"
-    },
-    {
-        "command": "Sit Relaxed",
-        "emote": "sit-relaxed",
-        "duration": 29.6,
-        "auth": "public"
-    },
-    {
-        "command": "Sitchair",
-        "emote": "sit-chair",
-        "duration": 1.7,
-        "auth": "public"
-    },
-    {
-        "command": "Sitting",
-        "emote": "idle-loop-sitfloor",
-        "duration": 21.7,
-        "auth": "public"
-    },
-    {
-        "command": "Slap",
-        "emote": "emote-slap",
-        "duration": 2.7,
-        "auth": "public"
-    },
-    {
-        "command": "Sleepy",
-        "emote": "idle-sleep",
-        "duration": 22.6,
-        "auth": "public"
-    },
-    {
-        "command": "Sleigh",
-        "emote": "emote-sleigh",
-        "duration": 11.1,
-        "auth": "public"
-    },
-    {
-        "command": "Smirk",
-        "emote": "emoji-smirking",
-        "duration": 4.8,
-        "auth": "public"
-    },
-    {
-        "command": "Smooch",
-        "emote": "emote-kissing-bound",
-        "duration": 5.8,
-        "auth": "private"
-    },
-    {
-        "command": "Smoothwalk",
-        "emote": "dance-smoothwalk",
-        "duration": 6.7,
-        "auth": "public"
-    },
-    {
-        "command": "Snake",
-        "emote": "emote-snake",
-        "duration": 4.7,
-        "auth": "private"
-    },
-    {
-        "command": "Sneeze",
-        "emote": "emoji-sneeze",
-        "duration": 3.0,
-        "auth": "public"
-    },
-    {
-        "command": "Snow Angel",
-        "emote": "emote-snowangel",
-        "duration": 5.5,
-        "auth": "public"
-    },
-    {
-        "command": "Snowball Fight",
-        "emote": "emote-snowball",
-        "duration": 4.6,
-        "auth": "public"
-    },
-    {
-        "command": "Splits",
-        "emote": "emote-splitsdrop",
-        "duration": 4.5,
-        "auth": "public"
-    },
-    {
-        "command": "Star Gaze",
-        "emote": "emote-stargaze",
-        "duration": 1.1,
-        "auth": "public"
-    },
-    {
-        "command": "Stargaze",
-        "emote": "emote-stargazer",
-        "duration": 6.5,
-        "auth": "public"
-    },
-    {
-        "command": "Stinky",
-        "emote": "emoji-poop",
-        "duration": 4.8,
-        "auth": "public"
-    },
-    {
-        "command": "Sumo Fight",
-        "emote": "emote-sumo",
-        "duration": 10.9,
-        "auth": "public"
-    },
-    {
-        "command": "Super Punch",
-        "emote": "emote-superpunch",
-        "duration": 3.8,
-        "auth": "public"
-    },
-    {
-        "command": "Super Run",
-        "emote": "emote-superrun",
-        "duration": 6.3,
-        "auth": "public"
-    },
-    {
-        "command": "Superkick",
-        "emote": "emote-kicking",
-        "duration": 4.9,
-        "auth": "public"
-    },
-    {
-        "command": "Superpose",
-        "emote": "emote-superpose",
-        "duration": 5.3,
-        "auth": "public"
-    },
-    {
-        "command": "Surf",
-        "emote": "emote-surf",
-        "duration": 17.0,
-        "auth": "public"
-    },
-    {
-        "command": "Surprise Big",
-        "emote": "emote-pose6",
-        "duration": 5.0,
-        "auth": "public"
-    },
-    {
-        "command": "Sweet Smooch",
-        "emote": "emote-kissing",
-        "duration": 5.0,
-        "auth": "public"
-    },
-    {
-        "command": "Swingnet1",
-        "emote": "emote-swing-net",
-        "duration": 2.6,
-        "auth": "public"
-    },
-    {
-        "command": "Swingnet2",
-        "emote": "emote-swing-net-2",
-        "duration": 2.5,
-        "auth": "public"
-    },
-    {
-        "command": "Swingnet3",
-        "emote": "emote-swing-net-3",
-        "duration": 2.0,
-        "auth": "public"
-    },
-    {
-        "command": "Swingsneak",
-        "emote": "emote-swing-sneak-Idle",
-        "duration": 2.5,
-        "auth": "public"
-    },
-    {
-        "command": "Swordfight",
-        "emote": "emote-swordfight",
-        "duration": 5.3,
-        "auth": "public"
-    },
-    {
-        "command": "Tap Dance",
-        "emote": "emote-tapdance",
-        "duration": 11.1,
-        "auth": "public"
-    },
-    {
-        "command": "Tap Loop",
-        "emote": "idle-loop-tapdance",
-        "duration": 6.3,
-        "auth": "public"
-    },
-    {
-        "command": "Telekinesis",
-        "emote": "emote-telekinesis",
-        "duration": 9.6,
-        "auth": "public"
-    },
-    {
-        "command": "Teleporting",
-        "emote": "emote-teleporting",
-        "duration": 11.5,
-        "auth": "public"
-    },
-    {
-        "command": "Theatrical",
-        "emote": "emote-theatrical",
-        "duration": 8.6,
-        "auth": "public"
-    },
-    {
-        "command": "Thief",
-        "emote": "emote-thief",
-        "duration": 4.6,
-        "auth": "public"
-    },
-    {
-        "command": "Think",
-        "emote": "emote-think",
-        "duration": 3.7,
-        "auth": "public"
-    },
-    {
-        "command": "Thumbs Up",
-        "emote": "emoji-thumbsup",
-        "duration": 2.3,
-        "auth": "public"
-    },
-    {
-        "command": "Thumbsuck",
-        "emote": "emote-suckthumb",
-        "duration": 4.2,
-        "auth": "public"
-    },
-    {
-        "command": "TikTok 7",
-        "emote": "idle-dance-tiktok7",
-        "duration": 13.0,
-        "auth": "public"
-    },
-    {
-        "command": "TikTok Dance 10",
-        "emote": "dance-tiktok10",
-        "duration": 7.5,
-        "auth": "public"
-    },
-    {
-        "command": "TikTok Dance 2",
-        "emote": "dance-tiktok2",
-        "duration": 10.0,
-        "auth": "public"
-    },
-    {
-        "command": "TikTok Dance 4",
-        "emote": "idle-dance-tiktok4",
-        "duration": 15.1,
-        "auth": "public"
-    },
-    {
-        "command": "TikTok Dance 8",
-        "emote": "dance-tiktok8",
-        "duration": 10.2,
-        "auth": "public"
-    },
-    {
-        "command": "TikTok Dance 9",
-        "emote": "dance-tiktok9",
-        "duration": 11.5,
-        "auth": "public"
-    },
-    {
-        "command": "Tiktok1",
-        "emote": "dance-tiktok1",
-        "duration": 11.0,
-        "auth": "public"
-    },
-    {
-        "command": "Tiktok15",
-        "emote": "dance-tiktok15",
-        "duration": 13.6,
-        "auth": "public"
-    },
-    {
-        "command": "Tiktok16",
-        "emote": "dance-tiktok16",
-        "duration": 8.8,
-        "auth": "public"
-    },
-    {
-        "command": "Tiktok3",
-        "emote": "dance-tiktok3",
-        "duration": 8.9,
-        "auth": "public"
-    },
-    {
-        "command": "Tiktok5",
-        "emote": "dance-tiktok5",
-        "duration": 11.3,
-        "auth": "public"
-    },
-    {
-        "command": "Tiktok6",
-        "emote": "dance-tiktok6",
-        "duration": 10.4,
-        "auth": "public"
-    },
-    {
-        "command": "Tiktok7",
-        "emote": "dance-tiktok7",
-        "duration": 12.6,
-        "auth": "public"
-    },
-    {
-        "command": "Time Jump",
-        "emote": "emote-timejump",
-        "duration": 3.5,
-        "auth": "public"
-    },
-    {
-        "command": "Tired",
-        "emote": "emote-tired",
-        "duration": 4.4,
-        "auth": "public"
-    },
-    {
-        "command": "Tired",
-        "emote": "idle-loop-tired",
-        "duration": 22.0,
-        "auth": "public"
-    },
-    {
-        "command": "Toilet",
-        "emote": "idle-toilet",
-        "duration": 31.9,
-        "auth": "private"
-    },
-    {
-        "command": "Touch Dance",
-        "emote": "dance-touch",
-        "duration": 11.3,
-        "auth": "public"
-    },
-    {
-        "command": "Trampoline",
-        "emote": "emote-trampoline",
-        "duration": 15.0,
-        "auth": "private"
-    },
-    {
-        "command": "Twitched",
-        "emote": "emote-twitched",
-        "duration": 7.5,
-        "auth": "public"
-    },
-    {
-        "command": "UwU",
-        "emote": "idle-uwu",
-        "duration": 24.8,
-        "auth": "private"
-    },
-    {
-        "command": "Vogue Hands",
-        "emote": "dance-voguehands",
-        "duration": 9.2,
-        "auth": "public"
-    },
-    {
-        "command": "Walkforward",
-        "emote": "walk-vertical",
-        "duration": 1.0,
-        "auth": "public"
-    },
-    {
-        "command": "Wave",
-        "emote": "emote-wave",
-        "duration": 2.5,
-        "auth": "public"
-    },
-    {
-        "command": "Wavey",
-        "emote": "emote-wavey",
-        "duration": 10.7,
-        "auth": "public"
-    },
-    {
-        "command": "Weird Dance",
-        "emote": "dance-weird",
-        "duration": 21.1,
-        "auth": "public"
-    },
-    {
-        "command": "Wings",
-        "emote": "emote-wings",
-        "duration": 13.1,
-        "auth": "public"
-    },
-    {
-        "command": "Winkpose",
-        "emote": "emote-pose13",
-        "duration": 5.0,
-        "auth": "public"
-    },
-    {
-        "command": "Wop Dance",
-        "emote": "dance-tiktok11",
-        "duration": 9.2,
-        "auth": "public"
-    },
-    {
-        "command": "Wrong Dance",
-        "emote": "dance-wrong",
-        "duration": 11.9,
-        "auth": "public"
-    },
-    {
-        "command": "Yes",
-        "emote": "emote-yes",
-        "duration": 1.9,
-        "auth": "public"
-    },
-    {
-        "command": "Yoga Flow",
-        "emote": "dance-spiritual",
-        "duration": 15.8,
-        "auth": "public"
-    },
-    {
-        "command": "Zombie Idle",
-        "emote": "idle_zombie",
-        "duration": 28.8,
-        "auth": "public"
-    },
-    {
-        "command": "Zombie Run",
-        "emote": "emote-zombierun",
-        "duration": 8.7,
-        "auth": "public"
-    },
-    {
-        "command": "Boogie Swing",
-        "emote": "idle-dance-swinging",
-        "duration": 13.2,
-        "auth": "public"
-    },
-    {
-        "command": "Headball",
-        "emote": "emote-headball",
-        "duration": 10.1,
-        "auth": "public"
-    },
-    {
-        "command": "Graceful",
-        "emote": "emote-graceful",
-        "duration": 3.8,
-        "auth": "public"
-    },
-    {
-        "command": "Frolic",
-        "emote": "emote-frollicking",
-        "duration": 3.7,
-        "auth": "public"
-    },
-    {
-        "command": "Laugh Alt",
-        "emote": "emote-lagughing",
-        "duration": 1.1,
-        "auth": "public"
-    },
-    {
-        "command": "Karma Dance",
-        "emote": "dance-wild",
-        "duration": 20.0,
-        "auth": "public"
-    },
-    {
-        "command": "Diva Moment",
-        "emote": "emote-threadexchange-posing",
-        "duration": 24.0,
-        "auth": "public"
-    },
-    {
-        "command": "Sugar Stun",
-        "emote": "emote-outfit3",
-        "duration": 15.0,
-        "auth": "public"
-    },
-    {
-        "command": "Guitar",
-        "emote": "emote-guitar",
-        "duration": 10.0,
-        "auth": "public"
-    },
-    {
-        "command": "Cute Sit",
-        "emote": "sit-cute",
-        "duration": 15.0,
-        "auth": "public"
-    },
-    {
-        "command": "Ground Sit Crossed",
-        "emote": "sit-ground-crossed",
-        "duration": 20.0,
-        "auth": "public"
-    },
-    {
-        "command": "Ground Sit Relaxed",
-        "emote": "sit-ground-relaxed",
-        "duration": 20.0,
-        "auth": "public"
-    },
-    {
-        "command": "Bloom Flutter",
-        "emote": "emote-bloomify-pose1",
-        "duration": 6.5,
-        "auth": "public"
-    },
-    {
-        "command": "Bloom Charm",
-        "emote": "emote-bloomify-pose2",
-        "duration": 7.5,
-        "auth": "public"
-    },
-    {
-        "command": "Bloom Radiance",
-        "emote": "emote-bloomify-pose3",
-        "duration": 4.0,
-        "auth": "public"
-    },
-    {
-        "command": "Storm Groove",
-        "emote": "emote-rainstruck-success",
-        "duration": 5.5,
-        "auth": "public"
-    },
-    {
-        "command": "Storm Mood",
-        "emote": "emote-rainstruck-fail",
-        "duration": 6.5,
-        "auth": "public"
-    },
-    {
-        "command": "Stand Pose 1",
-        "emote": "emote-pose-stand1",
-        "duration": 4.0,
-        "auth": "public"
-    },
-    {
-        "command": "Stand Pose 2",
-        "emote": "emote-pose-stand2",
-        "duration": 5.0,
-        "auth": "public"
-    },
-    {
-        "command": "Petal Perch",
-        "emote": "emote-pose-sit",
-        "duration": 6.0,
-        "auth": "public"
-    },
-    {
-        "command": "Tree Pose",
-        "emote": "emote-yoga-treePose",
-        "duration": 5.0,
-        "auth": "public"
-    },
-    {
-        "command": "Warrior 2",
-        "emote": "emote-yoga-warrior2",
-        "duration": 5.0,
-        "auth": "public"
-    },
-    {
-        "command": "Warrior 3",
-        "emote": "emote-yoga-warrior3",
-        "duration": 5.5,
-        "auth": "public"
-    },
-    {
-        "command": "Chaos Cutie",
-        "emote": "emote-punkandlaces-pose1",
-        "duration": 3.5,
-        "auth": "public"
-    },
-    {
-        "command": "Rebel Darling",
-        "emote": "emote-punkandlaces-pose2",
-        "duration": 3.5,
-        "auth": "public"
-    },
-    {
-        "command": "Sweet Tease",
-        "emote": "emote-punkandlaces-pose3",
-        "duration": 3.5,
-        "auth": "public"
-    },
-    {
-        "command": "Sweet Strike",
-        "emote": "emote-sugarbite-pose1",
-        "duration": 10.5,
-        "auth": "public"
-    },
-    {
-        "command": "Sweet Fix",
-        "emote": "emote-sugarbite-pose2",
-        "duration": 10.6,
-        "auth": "public"
-    },
-    {
-        "command": "Sweet Lure",
-        "emote": "emote-sugarbite-pose3",
-        "duration": 10.5,
-        "auth": "public"
-    },
-    {
-        "command": "Midnight Poise",
-        "emote": "emote-pose-goth1",
-        "duration": 10.0,
-        "auth": "public"
-    },
-    {
-        "command": "Midnight Strut",
-        "emote": "emote-pose-goth2",
-        "duration": 10.0,
-        "auth": "public"
-    },
-    {
-        "command": "Midnight Allure",
-        "emote": "emote-pose-goth3",
-        "duration": 10.0,
-        "auth": "public"
-    },
-    {
-        "command": "Spring Sun",
-        "emote": "sit-idle-springSun",
-        "duration": 10.0,
-        "auth": "public"
-    },
-    {
-        "command": "Silently Judging",
-        "emote": "emote-threadexchange-floating",
-        "duration": 16.3,
-        "auth": "public"
-    },
-    {
-        "command": "Come Here",
-        "emote": "emote-offdutyangels-comehere",
-        "duration": 5.8,
-        "auth": "public"
-    },
-    {
-        "command": "Back Off",
-        "emote": "emote-offdutyangels-backoff",
-        "duration": 5.8,
-        "auth": "public"
-    },
-    {
-        "command": "Just Vibing",
-        "emote": "emote-jewelrise-vibing",
-        "duration": 12.3,
-        "auth": "public"
-    },
-    {
-        "command": "Daydreaming",
-        "emote": "emote-idle-daydreaming",
-        "duration": 11.4,
-        "auth": "public"
-    },
-    {
-        "command": "Cheerleader",
-        "emote": "dance-cheerleader",
-        "duration": 11.5,
-        "auth": "public"
-    },
-    {
-        "command": "TikTok Dance 14",
-        "emote": "dance-tiktok14",
-        "duration": 10.5,
-        "auth": "public"
-    },
-    {
-        "command": "On Phone",
-        "emote": "idle-phone",
-        "duration": 13.0,
-        "auth": "public"
-    },
-    {
-        "command": "Phone Camera",
-        "emote": "idle-phone-camera",
-        "duration": 11.0,
-        "auth": "public"
-    },
-    {
-        "command": "Laying Phone Talk",
-        "emote": "idle-laying-phone-talking",
-        "duration": 22.0,
-        "auth": "public"
-    },
-    {
-        "command": "Ballet Bliss",
-        "emote": "dance-ballet",
-        "duration": 7.8,
-        "auth": "public"
-    },
-    {
-        "command": "Pure Heart",
-        "emote": "dance-true-heart",
-        "duration": 11.0,
-        "auth": "public"
-    },
-    {
-        "command": "Mine Dance",
-        "emote": "dance-mine",
-        "duration": 11.0,
-        "auth": "public"
-    },
-    {
-        "command": "Popular Vibe",
-        "emote": "dance-popularvibe",
-        "duration": 11.0,
-        "auth": "public"
-    },
-    {
-        "command": "Swag Bounce",
-        "emote": "dance-swagbounce",
-        "duration": 11.0,
-        "auth": "public"
-    },
-    {
-        "command": "Woah",
-        "emote": "dance-woah",
-        "duration": 8.0,
-        "auth": "public"
-    },
-    {
-        "command": "Rest and Text",
-        "emote": "sit-idle-phone-text",
-        "duration": 15.0,
-        "auth": "public"
-    },
-    {
-        "command": "Infinite Scroll",
-        "emote": "idle-laying-phone-texting",
-        "duration": 22.0,
-        "auth": "public"
-    },
-    {
-        "command": "The Fresh Step",
-        "emote": "dance-freshprince",
-        "duration": 11.0,
-        "auth": "public"
-    },
-    {
-        "command": "Twerk It Out",
-        "emote": "dance-twerk",
-        "duration": 11.0,
-        "auth": "public"
-    },
-    {
-        "command": "Knock Knock",
-        "emote": "emote-knocking-screen",
-        "duration": 5.0,
-        "auth": "public"
-    },
-    {
-        "command": "Phone Talking",
-        "emote": "idle-phone-talking",
-        "duration": 13.0,
-        "auth": "public"
-    },
-    {
-        "command": "Wait Dance",
-        "emote": "dance-wait",
-        "duration": 9.0,
-        "auth": "public"
-    },
-    {
-        "command": "Crouched",
-        "emote": "idle-crouched",
-        "duration": 15.0,
-        "auth": "public"
-    },
-    {
-        "command": "Doomscroll",
-        "emote": "emote-phone",
-        "duration": 15.0,
-        "auth": "public"
-    },
-    {
-        "command": "Tactical Flex",
-        "emote": "emote-rifle",
-        "duration": 5.0,
-        "auth": "public"
-    },
-    {
-        "command": "Thought",
-        "emote": "emote-thought",
-        "duration": 5.0,
-        "auth": "public"
-    },
-    {
-        "command": "Ignition Boost",
-        "emote": "hcc-jetpack",
-        "duration": 8.0,
-        "auth": "public"
-    },
-    {
-        "command": "Hanging Around",
-        "emote": "emote-spiderman",
-        "duration": 10.0,
-        "auth": "public"
-    },
-    {
-        "command": "Star Power",
-        "emote": "emote-threadexchange-star",
-        "duration": 16.0,
-        "auth": "public"
-    },
-    {
-        "command": "confused2",
-        "emote": "emote-confused2",
-        "duration": 7.1,
-        "auth": "public"
-    },
-    {
-        "command": "nova",
-        "emote": "emote-tune-accept",
-        "duration": 4,
-        "auth": "public"
-    },
-    {
-        "command": "runningman",
-        "emote": "dance-running-man",
-        "duration": 10.2,
-        "auth": "public"
-    },
-    {
-        "command": "yogasurprise",
-        "emote": "emote-yogaSurprise",
-        "duration": 16,
-        "auth": "public"
-    },
-    {
-        "command": "yog",
-        "emote": "emote-yogaSurprise",
-        "duration": 1.1,
-        "auth": "public"
-    },
-    {
-        "command": "crowd jammer",
-        "emote": "emote-sicklycute-sing-fast",
-        "duration": 11,
-        "auth": "public"
-    },
-    {
-        "command": "sweet jammer",
-        "emote": "emote-sicklycute-sing-slow",
-        "duration": 10,
-        "auth": "public"
-    },
-    {
-        "command": "kawaiipose",
-        "emote": "emote-kawaiipose",
-        "duration": 7.0,
-        "auth": "public"
-    },
-    {
-        "command": "celebration",
-        "emote": "emote-collab-celebrate-right",
-        "duration": 5.88,
-        "auth": "public"
-    },
-    {
-        "command": "kicking back",
-        "emote": "sit-idle-laidBack",
-        "duration": 20.0,
-        "auth": "public"
-    },
-    {
-        "command": "blowing kisses",
-        "emote": "emote-blowkisses",
-        "duration": 20.0,
-        "auth": "public"
-    },
-    {
-        "command": "gwiddy",
-        "emote": "dance-griddy",
-        "duration": 20.0,
-        "auth": "public"
-    },
-    {
-        "command": "tiktok6",
-        "emote": "idle-dance-tiktok6",
-        "duration": 20.0,
-        "auth": "public"
-    },
-    {
-        "command": "alice-shrink",
-        "emote": "emote-alice-shrink",
-        "duration": 15.0,
-        "auth": "public"
-    },
-    {
-        "command": "zen mode",
-        "emote": "emote-meditate-idle",
-        "duration": 20.0,
-        "auth": "public"
-    },
-    {
-        "command": "collab-photo-right",
-        "emote": "emote-collab-photo-right",
-        "duration": 20.0,
-        "auth": "public"
-    },
-    {
-        "command": "collab-photo-left",
-        "emote": "emote-collab-photo-left",
-        "duration": 20.0,
-        "auth": "public"
-    },
-    {
-        "command": "AFK",
-        "emote": "emote-afk-idle",
-        "duration": 16.6,
-        "auth": "public"
-    },
-    {
-        "command": "mood swing",
-        "emote": "emote-inside-out",
-        "duration": 16.6,
-        "auth": "public"
-    },
-    {
-        "emote": "emote-adoringfans",
-        "command": "Adoring Fans",
-        "duration": 12.18,
-        "auth": "public"
-    },
-    {
-        "emote": "emote-sixseven",
-        "command": "six seven",
-        "duration": 2.81,
-        "auth": "public"
-    },
-    {
-        "emote": "emote-sixseve-noimg",
-        "command": "six seven six seven",
-        "duration": 2.81,
-        "auth": "public"
-    }
+{"command":"Advanced Shy","emote":"emote-shy2","duration":4.8,"auth":"public"},
+{"command":"Aerobics","emote":"idle-loop-aerobics","duration":8.5,"auth":"public"},
+{"command":"Air Guitar","emote":"idle-guitar","duration":13.5,"auth":"public"},
+{"command":"Amused","emote":"emote-laughing2","duration":5.1,"auth":"public"},
+{"command":"Angry","emote":"emoji-angry","duration":6.4,"auth":"public"},
+{"command":"Anime Dance","emote":"dance-anime","duration":7.8,"auth":"public"},
+{"command":"Annoyed","emote":"idle-loop-annoyed","duration":17.1,"auth":"public"},
+{"command":"Arrogance","emote":"emoji-arrogance","duration":6.9,"auth":"public"},
+{"command":"Astronaut","emote":"emote-astronaut","duration":14.4,"auth":"public"},
+{"command":"Attention","emote":"emote-attention","duration":4.4,"auth":"public"},
+{"command":"Attentive","emote":"idle_layingdown","duration":24.6,"auth":"public"},
+{"command":"Back Off","emote":"emote-offdutyangels-backoff","duration":5.8,"auth":"public"},
+{"command":"Ballet Bliss","emote":"dance-ballet","duration":7.8,"auth":"public"},
+{"command":"Blast Off","emote":"emote-disappear","duration":6.2,"auth":"public"},
+{"command":"Bloom Charm","emote":"emote-bloomify-pose2","duration":7.5,"auth":"public"},
+{"command":"Bloom Flutter","emote":"emote-bloomify-pose1","duration":6.5,"auth":"public"},
+{"command":"Bloom Radiance","emote":"emote-bloomify-pose3","duration":4,"auth":"public"},
+{"command":"Blossom Reach","emote":"emote-pose-stand1","duration":4,"auth":"public"},
+{"command":"Boo","emote":"emote-boo","duration":4.5,"auth":"public"},
+{"command":"Bow","emote":"emote-bow","duration":2.8,"auth":"public"},
+{"command":"Boxer","emote":"emote-boxer","duration":6.6,"auth":"public"},
+{"command":"Bummed","emote":"idle-loop-sad","duration":6.1,"auth":"public"},
+{"command":"Bunny Hop","emote":"emote-bunnyhop","duration":12.4,"auth":"public"},
+{"command":"Casual Dance","emote":"idle-dance-casual","duration":8.8,"auth":"public"},
+{"command":"Celebrateidle","emote":"emote-swing-celebrate-idle","duration":1.6,"auth":"public"},
+{"command":"celebration","emote":"emote-collab-celebrate-right","duration":7,"auth":"public"},
+{"command":"Celebration Step","emote":"emote-celebrationstep","duration":3,"auth":"public"},
+{"command":"Chaos Cutie","emote":"emote-punkandlaces-pose1","duration":3.5,"auth":"public"},
+{"command":"Charging","emote":"emote-charging","duration":7.6,"auth":"public"},
+{"command":"Cheer","emote":"dance-cheerleader","duration":11.5,"auth":"public"},
+{"command":"Chillin'","emote":"idle-loop-happy","duration":18.8,"auth":"public"},
+{"command":"Clap","emote":"emote-clap","duration":5.1,"auth":"public"},
+{"command":"Clumsy","emote":"emote-fail2","duration":5.7,"auth":"public"},
+{"command":"Cold","emote":"emote-cold","duration":3.6,"auth":"public"},
+{"command":"Confused","emote":"emote-confused","duration":8.7,"auth":"public"},
+{"command":"Cozy Nap","emote":"idle-floorsleeping","duration":15.5,"auth":"public"},
+{"command":"Crawl","emote":"emote-crawl","duration":7.8,"auth":"public"},
+{"command":"Creepy Puppet","emote":"dance-creepypuppet","duration":6.4,"auth":"public"},
+{"command":"Crying","emote":"emote-crying","duration":3.7,"auth":"public"},
+{"command":"Curtsy","emote":"emote-curtsy","duration":2.4,"auth":"public"},
+{"command":"Cute","emote":"emote-cute","duration":6.3,"auth":"public"},
+{"command":"Cute Bow","emote":"emote-bow-formal","duration":3,"auth":"public"},
+{"command":"Cute Salute","emote":"emote-cutesalute","duration":3.5,"auth":"public"},
+{"command":"Cute Waiter","emote":"emote-cutewaiter","duration":4.5,"auth":"public"},
+{"command":"Cutey","emote":"emote-cutey","duration":3.3,"auth":"public"},
+{"command":"Dab","emote":"emote-dab","duration":3,"auth":"public"},
+{"command":"Dance 1","emote":"dance-aerobics","duration":7,"auth":"public"},
+{"command":"Dance 2","emote":"dance-icecream","duration":14,"auth":"public"},
+{"command":"Dance 3","emote":"dance-tiktok2","duration":10.3,"auth":"public"},
+{"command":"Dance 4","emote":"dance-blackpink","duration":6.8,"auth":"public"},
+{"command":"Dance 6","emote":"dance-duckwalk","duration":12.3,"auth":"public"},
+{"command":"Dance 7","emote":"dance-tiktok10","duration":8.2,"auth":"public"},
+{"command":"Dance 8","emote":"dance-tiktok9","duration":11.8,"auth":"public"},
+{"command":"Dance 9","emote":"dance-russian","duration":10.3,"auth":"public"},
+{"command":"Dance Zombie","emote":"dance-zombie","duration":14,"auth":"public"},
+{"command":"Dainty Dash","emote":"walk-dainty","duration":1,"auth":"public"},
+{"command":"Dainty Sit","emote":"sit-dainty","duration":4,"auth":"public"},
+{"command":"Dainty Slumber","emote":"sleep-dainty","duration":5,"auth":"public"},
+{"command":"Desperate","emote":"emote-frustrated","duration":5.5,"auth":"public"},
+{"command":"Disco","emote":"emote-disco","duration":4.8,"auth":"public"},
+{"command":"Dizzy","emote":"emote-dizzy","duration":4.1,"auth":"public"},
+{"command":"Doggy","emote":"emote-frog","duration":14.5,"auth":"public"},
+{"command":"Don't Start Now","emote":"dance-tiktok2","duration":10.4,"auth":"public"},
+{"command":"Dont Look Down","emote":"emote-cliffhanger","duration":1.8,"auth":"public"},
+{"command":"Dot","emote":"dance-praisethesun","duration":5.5,"auth":"public"},
+{"command":"Double Slash","emote":"emote-doubleslash","duration":4,"auth":"public"},
+{"command":"Dragon Stance","emote":"idle-dragonstance","duration":12,"auth":"public"},
+{"command":"Dreamy","emote":"emote-daydreaming","duration":18.9,"auth":"public"},
+{"command":"Duck Walk","emote":"dance-duckwalk","duration":12.3,"auth":"public"},
+{"command":"Elbow Bump","emote":"emote-elbowbump","duration":3.7,"auth":"public"},
+{"command":"Elegant","emote":"emote-pose6","duration":5.3,"auth":"public"},
+{"command":"Energetic","emote":"idle-energetic","duration":17.5,"auth":"public"},
+{"command":"Enthusiastic","emote":"idle-enthusiastic","duration":15.4,"auth":"public"},
+{"command":"Exasperated","emote":"emote-exasperated","duration":2.3,"auth":"public"},
+{"command":"Exasperated 2","emote":"emote-exasperatedb","duration":2.6,"auth":"public"},
+{"command":"Facepalm","emote":"emote-exasperated","duration":2.5,"auth":"public"},
+{"command":"Fairy Float","emote":"idle-floating","duration":24.3,"auth":"public"},
+{"command":"Falling Apart","emote":"emote-apart","duration":4.9,"auth":"public"},
+{"command":"Fashion Pose","emote":"emote-fashionista","duration":5.5,"auth":"public"},
+{"command":"Fashionista","emote":"emote-fashionista","duration":5.5,"auth":"public"},
+{"command":"Fast","emote":"emote-superrun","duration":6.8,"auth":"public"},
+{"command":"Feeling Hot","emote":"emote-hot","duration":4.3,"auth":"public"},
+{"command":"Fierce","emote":"emote-gothpose","duration":5.4,"auth":"public"},
+{"command":"Fiery Heart","emote":"emote-fireheart","duration":5.5,"auth":"public"},
+{"command":"Firebird","emote":"emote-firebird","duration":5.5,"auth":"public"},
+{"command":"Flee","emote":"emote-panic","duration":3,"auth":"public"},
+{"command":"Float","emote":"idle-floating","duration":24.3,"auth":"public"},
+{"command":"Flirty Wink","emote":"emote-wink","duration":3.6,"auth":"public"},
+{"command":"Floor Sleep","emote":"idle-floorsleeping","duration":15.5,"auth":"public"},
+{"command":"Flow","emote":"emote-mindblown","duration":3,"auth":"public"},
+{"command":"Free Floating","emote":"idle-floating","duration":24.3,"auth":"public"},
+{"command":"Freeze","emote":"emote-freeze","duration":4.5,"auth":"public"},
+{"command":"Frightened","emote":"emote-scared","duration":8.8,"auth":"public"},
+{"command":"Frustrated","emote":"emote-frustrated","duration":5.5,"auth":"public"},
+{"command":"Gangnam Style","emote":"emote-gangnam","duration":7.5,"auth":"public"},
+{"command":"Ghost","emote":"emote-ghost-idle","duration":18.5,"auth":"public"},
+{"command":"Ghost Float","emote":"emote-ghost-idle","duration":18.5,"auth":"public"},
+{"command":"Give Up","emote":"emote-givingup","duration":4.5,"auth":"public"},
+{"command":"Gloomy","emote":"idle-loop-sad","duration":6.1,"auth":"public"},
+{"command":"Good Vibes","emote":"dance-tiktok11","duration":9.2,"auth":"public"},
+{"command":"Gordon Shuffle","emote":"emote-gordonshuffle","duration":8.5,"auth":"public"},
+{"command":"Grumpy","emote":"idle-loop-annoyed","duration":17.1,"auth":"public"},
+{"command":"Guitar Solo","emote":"idle-guitar","duration":13.5,"auth":"public"},
+{"command":"Handstand","emote":"emote-handstand","duration":4.3,"auth":"public"},
+{"command":"Happy","emote":"emote-happy","duration":3.4,"auth":"public"},
+{"command":"Harlem Shake","emote":"emote-harlemshake","duration":13.7,"auth":"public"},
+{"command":"Heart Eyes","emote":"emote-hearteyes","duration":3.9,"auth":"public"},
+{"command":"Heart Fingers","emote":"emote-heartshape","duration":4.3,"auth":"public"},
+{"command":"Heavy Sigh","emote":"emote-sigh","duration":3.2,"auth":"public"},
+{"command":"Hello","emote":"emote-hello","duration":2.8,"auth":"public"},
+{"command":"Hesitant","emote":"idle-loop-shy","duration":16.5,"auth":"public"},
+{"command":"High Five","emote":"emote-highfive","duration":3.2,"auth":"public"},
+{"command":"Hip Hop Dance","emote":"dance-hiphop","duration":9.5,"auth":"public"},
+{"command":"Hold Hands","emote":"emote-holdhands","duration":4.5,"auth":"public"},
+{"command":"Home Run","emote":"emote-baseball","duration":6,"auth":"public"},
+{"command":"Hug","emote":"emote-hug","duration":3.5,"auth":"public"},
+{"command":"Hula Hoop","emote":"emote-hulahoop","duration":7.5,"auth":"public"},
+{"command":"Hyped","emote":"emote-hyped","duration":7.5,"auth":"public"},
+{"command":"Ice Cream Dance","emote":"dance-icecream","duration":14,"auth":"public"},
+{"command":"Idle Chill","emote":"idle-chill","duration":18,"auth":"public"},
+{"command":"Idle Cute","emote":"idle-cute","duration":15.5,"auth":"public"},
+{"command":"Idle Phone","emote":"idle-phone","duration":14,"auth":"public"},
+{"command":"Imaginary Jetpack","emote":"emote-jetpack","duration":17.9,"auth":"public"},
+{"command":"In Love","emote":"emote-hearteyes","duration":3.9,"auth":"public"},
+{"command":"Irritated","emote":"idle-angry","duration":25.4,"auth":"public"},
+{"command":"Jingle Bell","emote":"dance-jinglebell","duration":10.8,"auth":"public"},
+{"command":"Joyful","emote":"emote-happy","duration":3.4,"auth":"public"},
+{"command":"Jump","emote":"emote-jump","duration":2.8,"auth":"public"},
+{"command":"Jump Shot","emote":"emote-basketball","duration":5.5,"auth":"public"},
+{"command":"K-Pop Glow","emote":"dance-blackpink","duration":6.8,"auth":"public"},
+{"command":"Kick","emote":"emote-kicking","duration":4.8,"auth":"public"},
+{"command":"Kiss","emote":"emote-kiss","duration":2.4,"auth":"public"},
+{"command":"Laughing","emote":"emote-laughing","duration":3.2,"auth":"public"},
+{"command":"Laying Phone","emote":"idle-laying-phone-talking","duration":20,"auth":"public"},
+{"command":"Lazy","emote":"idle-sleep","duration":22.6,"auth":"public"},
+{"command":"Levitate","emote":"emote-levitate","duration":8.5,"auth":"public"},
+{"command":"Look Around","emote":"emote-lookaround","duration":4.5,"auth":"public"},
+{"command":"Lost","emote":"emote-confused","duration":8.7,"auth":"public"},
+{"command":"Lying","emote":"emoji-lying","duration":6.5,"auth":"public"},
+{"command":"Macarena","emote":"dance-macarena","duration":12,"auth":"public"},
+{"command":"Magic Trick","emote":"emote-magic","duration":5,"auth":"public"},
+{"command":"Maniac","emote":"emote-maniac","duration":4.8,"auth":"public"},
+{"command":"Marching","emote":"walk-marching","duration":1,"auth":"public"},
+{"command":"Martial Art","emote":"emote-swordfight","duration":5.8,"auth":"public"},
+{"command":"Meditate","emote":"idle-meditate","duration":18,"auth":"public"},
+{"command":"Melt","emote":"emote-melt","duration":5.2,"auth":"public"},
+{"command":"Mind Blown","emote":"emote-mindblown","duration":3,"auth":"public"},
+{"command":"Model Pose","emote":"emote-model","duration":6.2,"auth":"public"},
+{"command":"Monster","emote":"idle_zombie","duration":28.8,"auth":"public"},
+{"command":"Moonwalk","emote":"dance-moonwalk","duration":8.2,"auth":"public"},
+{"command":"Nervous","emote":"idle-nervous","duration":18,"auth":"public"},
+{"command":"Night Fever","emote":"emote-nightfever","duration":5.3,"auth":"public"},
+{"command":"Ninja Run","emote":"emote-ninjarun","duration":4.5,"auth":"public"},
+{"command":"No","emote":"emote-no","duration":2.6,"auth":"public"},
+{"command":"Nostalgia","emote":"emote-reminisce","duration":5.5,"auth":"public"},
+{"command":"Panic","emote":"emote-panic","duration":3,"auth":"public"},
+{"command":"Peekaboo!","emote":"emote-peekaboo","duration":3.5,"auth":"public"},
+{"command":"Penguin","emote":"dance-penguin","duration":10.5,"auth":"public"},
+{"command":"Pet","emote":"emote-pet","duration":4,"auth":"public"},
+{"command":"Phone Call","emote":"idle-phone","duration":14,"auth":"public"},
+{"command":"Pirate","emote":"emote-pirate","duration":6.5,"auth":"public"},
+{"command":"Poetkitange (Pennywise)","emote":"dance-pennywise","duration":4.2,"auth":"public"},
+{"command":"Point","emote":"emote-point","duration":2.5,"auth":"public"},
+{"command":"Ponder","emote":"emote-think","duration":4.2,"auth":"public"},
+{"command":"Posh","emote":"idle-posh","duration":21.9,"auth":"public"},
+{"command":"Pouty Face","emote":"idle-sad","duration":24.4,"auth":"public"},
+{"command":"Pray","emote":"emote-pray","duration":4.8,"auth":"public"},
+{"command":"Princess Wave","emote":"emote-princess","duration":4.5,"auth":"public"},
+{"command":"Proud","emote":"emote-proud","duration":4.8,"auth":"public"},
+{"command":"Punch","emote":"emoji-punch","duration":4.2,"auth":"public"},
+{"command":"Puppet","emote":"dance-creepypuppet","duration":6.4,"auth":"public"},
+{"command":"Push Ups","emote":"dance-aerobics","duration":7,"auth":"public"},
+{"command":"Quick Bow","emote":"emote-bow","duration":2.8,"auth":"public"},
+{"command":"Rage","emote":"emoji-angry","duration":6.4,"auth":"public"},
+{"command":"Rainbow","emote":"emote-rainbow","duration":3,"auth":"public"},
+{"command":"Relaxed","emote":"idle_layingdown2","duration":21.5,"auth":"public"},
+{"command":"Relaxing","emote":"idle-floorsleeping2","duration":18,"auth":"public"},
+{"command":"Relieved","emote":"emote-relieved","duration":3.8,"auth":"public"},
+{"command":"ROFL!","emote":"emote-rofl","duration":5.8,"auth":"public"},
+{"command":"Robot","emote":"emote-robot","duration":7.5,"auth":"public"},
+{"command":"Rock Paper Scissors","emote":"emote-rockpaperscissors","duration":4,"auth":"public"},
+{"command":"Roll","emote":"emote-roll","duration":3.5,"auth":"public"},
+{"command":"Running","emote":"walk-run","duration":1,"auth":"public"},
+{"command":"Russian Dance","emote":"dance-russian","duration":10.3,"auth":"public"},
+{"command":"Sad","emote":"emote-sad","duration":5.4,"auth":"public"},
+{"command":"Salsa","emote":"dance-salsa","duration":8.8,"auth":"public"},
+{"command":"Salute","emote":"emote-salute","duration":3,"auth":"public"},
+{"command":"Samba","emote":"dance-samba","duration":9.2,"auth":"public"},
+{"command":"Savage Dance","emote":"dance-tiktok8","duration":10.5,"auth":"public"},
+{"command":"Scared","emote":"emote-scared","duration":8.8,"auth":"public"},
+{"command":"Scream","emote":"emote-scream","duration":4.2,"auth":"public"},
+{"command":"Secret Handshake","emote":"emote-secrethandshake","duration":4.2,"auth":"public"},
+{"command":"Seductive","emote":"emote-pose7","duration":5.4,"auth":"public"},
+{"command":"Shiver","emote":"emote-cold","duration":3.6,"auth":"public"},
+{"command":"Shocked","emote":"emote-shocked","duration":4.5,"auth":"public"},
+{"command":"Show Off","emote":"emote-flexing-hard","duration":5,"auth":"public"},
+{"command":"Shy","emote":"idle-loop-shy","duration":16.5,"auth":"public"},
+{"command":"Sick","emote":"emote-sick","duration":5.5,"auth":"public"},
+{"command":"Sigh","emote":"emote-sigh","duration":3.2,"auth":"public"},
+{"command":"Sing","emote":"dance-singing","duration":10.8,"auth":"public"},
+{"command":"Sit","emote":"idle-loop-sitfloor","duration":21.7,"auth":"public"},
+{"command":"Sit Chair","emote":"sit-chair","duration":18,"auth":"public"},
+{"command":"Sit Crossed","emote":"sit-ground-crossed","duration":18,"auth":"public"},
+{"command":"Sit Relaxed","emote":"sit-relaxed","duration":18,"auth":"public"},
+{"command":"Skater","emote":"emote-skateboarding","duration":7.2,"auth":"public"},
+{"command":"Sleepy","emote":"idle-sleep","duration":22.6,"auth":"public"},
+{"command":"Slide","emote":"emote-slide","duration":3.5,"auth":"public"},
+{"command":"Slap","emote":"emote-slap","duration":3,"auth":"public"},
+{"command":"Smooth Walk","emote":"walk-smooth","duration":1,"auth":"public"},
+{"command":"Sneaky","emote":"walk-sneaky","duration":1,"auth":"public"},
+{"command":"Snow Angel","emote":"emote-snowangel","duration":6.2,"auth":"public"},
+{"command":"Snowball Fight!","emote":"emote-snowball","duration":5.5,"auth":"public"},
+{"command":"Sparkle","emote":"emote-sparkle","duration":4.2,"auth":"public"},
+{"command":"Spin","emote":"emote-spin","duration":3.8,"auth":"public"},
+{"command":"Spooky","emote":"dance-spooky","duration":8.5,"auth":"public"},
+{"command":"Sprint","emote":"walk-sprint","duration":1,"auth":"public"},
+{"command":"Stargaze","emote":"emote-stargaze","duration":4.5,"auth":"public"},
+{"command":"Stargazer","emote":"emote-stargazer","duration":6.5,"auth":"public"},
+{"command":"Step Dance","emote":"dance-step","duration":8.2,"auth":"public"},
+{"command":"Stretch","emote":"emote-stretch","duration":5.5,"auth":"public"},
+{"command":"Stumble","emote":"emote-stumble","duration":4,"auth":"public"},
+{"command":"Super Kick","emote":"emote-kicking","duration":4.8,"auth":"public"},
+{"command":"Super Run","emote":"emote-superrun","duration":6.8,"auth":"public"},
+{"command":"Surprised","emote":"emote-surprised","duration":3.5,"auth":"public"},
+{"command":"Swagger","emote":"walk-swagger","duration":1,"auth":"public"},
+{"command":"Sweep","emote":"emote-sweep","duration":5.5,"auth":"public"},
+{"command":"Swing","emote":"dance-swing","duration":9.5,"auth":"public"},
+{"command":"Sword Fight","emote":"emote-swordfight","duration":5.8,"auth":"public"},
+{"command":"Tap Dance","emote":"emote-tapdance","duration":6.3,"auth":"public"},
+{"command":"Tap Loop","emote":"idle-loop-tapdance","duration":6.3,"auth":"public"},
+{"command":"Taunt","emote":"emote-taunt","duration":4.5,"auth":"public"},
+{"command":"Teleport","emote":"emote-teleporting","duration":6.5,"auth":"public"},
+{"command":"Thank You","emote":"emote-bow","duration":2.8,"auth":"public"},
+{"command":"The Wave","emote":"emote-wave","duration":2.8,"auth":"public"},
+{"command":"Think","emote":"emote-think","duration":4.2,"auth":"public"},
+{"command":"Thumbs Up","emote":"emote-thumbsup","duration":2.8,"auth":"public"},
+{"command":"TikTok 2","emote":"dance-tiktok2","duration":10.4,"auth":"public"},
+{"command":"TikTok 8","emote":"dance-tiktok8","duration":10.5,"auth":"public"},
+{"command":"TikTok 9","emote":"dance-tiktok9","duration":11.8,"auth":"public"},
+{"command":"TikTok 10","emote":"dance-tiktok10","duration":8.2,"auth":"public"},
+{"command":"TikTok 11","emote":"dance-tiktok11","duration":9.2,"auth":"public"},
+{"command":"Tired","emote":"idle-sleep","duration":22.6,"auth":"public"},
+{"command":"Toilet","emote":"idle-toilet","duration":18,"auth":"public"},
+{"command":"Touchdown","emote":"emote-touchdown","duration":6,"auth":"public"},
+{"command":"Trendy Dance","emote":"dance-trendy","duration":9,"auth":"public"},
+{"command":"Twerk","emote":"dance-twerk","duration":8.5,"auth":"public"},
+{"command":"Twist","emote":"dance-twist","duration":8.8,"auth":"public"},
+{"command":"Umbrella","emote":"emote-umbrella","duration":7.5,"auth":"public"},
+{"command":"Unhappy","emote":"emote-sad","duration":5.4,"auth":"public"},
+{"command":"Upmmm","emote":"emote-thought","duration":5,"auth":"public"},
+{"command":"UwU","emote":"idle-uwu","duration":24.8,"auth":"public"},
+{"command":"Victory","emote":"emote-victory","duration":5.2,"auth":"public"},
+{"command":"Vogue","emote":"dance-vogue","duration":8.8,"auth":"public"},
+{"command":"Vogue Hands","emote":"dance-voguehands","duration":9.2,"auth":"public"},
+{"command":"Wait","emote":"dance-wait","duration":9,"auth":"public"},
+{"command":"Walk","emote":"walk-standard","duration":1,"auth":"public"},
+{"command":"Walk Vertical","emote":"walk-vertical","duration":1,"auth":"public"},
+{"command":"Warm Up","emote":"dance-aerobics","duration":7,"auth":"public"},
+{"command":"Warrior II","emote":"emote-yoga-warrior2","duration":5,"auth":"public"},
+{"command":"Warrior III","emote":"emote-yoga-warrior3","duration":5.5,"auth":"public"},
+{"command":"Wave","emote":"emote-wave","duration":2.8,"auth":"public"},
+{"command":"Wavey","emote":"emote-wavey","duration":10.7,"auth":"public"},
+{"command":"Weird Dance","emote":"dance-weird","duration":21.1,"auth":"public"},
+{"command":"Whisper","emote":"emote-whisper","duration":4,"auth":"public"},
+{"command":"Wild","emote":"dance-wild","duration":20,"auth":"public"},
+{"command":"Wings","emote":"emote-wings","duration":12.5,"auth":"public"},
+{"command":"Wink","emote":"emote-wink","duration":3.6,"auth":"public"},
+{"command":"Woah","emote":"dance-woah","duration":8,"auth":"public"},
+{"command":"Wop Dance","emote":"dance-tiktok11","duration":9.2,"auth":"public"},
+{"command":"Worry","emote":"idle-nervous","duration":18,"auth":"public"},
+{"command":"Wrong Dance","emote":"dance-wrong","duration":11.9,"auth":"public"},
+{"command":"Yawn","emote":"emote-yawn","duration":4.2,"auth":"public"},
+{"command":"Yes","emote":"emote-yes","duration":1.9,"auth":"public"},
+{"command":"Yoga Balance","emote":"emote-yoga-balance","duration":5.5,"auth":"public"},
+{"command":"Yoga Flow 2","emote":"emote-yoga-flow","duration":6,"auth":"public"},
+{"command":"Yoga Surprise","emote":"emote-yogaSurprise","duration":17,"auth":"public"},
+{"command":"You","emote":"emote-point","duration":2.5,"auth":"public"},
+{"command":"Zero Gravity","emote":"emote-gravity","duration":8.5,"auth":"public"},
+{"command":"ZeroGravity Chill","emote":"idle-space","duration":36.2,"auth":"public"},
+{"command":"Zombie","emote":"idle_zombie","duration":28.8,"auth":"public"},
+{"command":"Zombie Run","emote":"emote-zombierun","duration":8.7,"auth":"public"},
+{"command":"Zombie Stumble","emote":"walk-zombie","duration":1,"auth":"public"}
 ]
