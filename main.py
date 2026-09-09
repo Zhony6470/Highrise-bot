@@ -20,7 +20,8 @@ from commands.owner import handle_owner_command
 from commands.dispatcher import CommandDispatcher
 from services.positions import PositionManager
 from services.roles import RoleManager, get_user_role
-from services.track import handle_track_command
+from services.track import handle_track_command, start_track_monitor
+from services.storage import load_json
 from tips import TipManager
 from anuncios import announcement_loop
 from diversion import handle_diversion_command
@@ -698,6 +699,8 @@ class Bot(BaseBot):
         self.bot_id = session_metadata.user_id
         self.owner_id = session_metadata.room_info.owner_id
         self.bot_status = True
+        if load_json(self.position_manager.positions_file).get("pista_emotes"):
+            await start_track_monitor(self)
         if self.position_task:
             self.position_task.cancel()
         self.position_task = asyncio.create_task(self.place_bot())
