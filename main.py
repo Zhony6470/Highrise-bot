@@ -20,6 +20,7 @@ from commands.owner import handle_owner_command
 from commands.dispatcher import CommandDispatcher
 from services.positions import PositionManager
 from services.roles import RoleManager, get_user_role
+from services.emotes import EmotesManager
 from services.track import handle_track_command, start_track_monitor
 from services.storage import load_json
 from services.youtube import YouTubeSearchError, search_video
@@ -58,6 +59,7 @@ class Bot(BaseBot):
         
         # Cargar lista de emotes desde emotes.json
         self.emotes_list = self.load_emotes_data()
+        self.emotes_manager = EmotesManager(self.emotes_list)
 
     async def on_chat(self, user: User, message: str) -> None:
         msg = message.strip()
@@ -343,14 +345,9 @@ class Bot(BaseBot):
         matched_emote = None
         if emote_text.isdigit():
             emote_index = int(emote_text) - 1
-            if 0 <= emote_index < len(self.emotes_list):
-                matched_emote = self.emotes_list[emote_index]
+            matched_emote = self.emotes_manager.get_by_index(emote_index)
         else:
-            matched_emote = next(
-                (emote for emote in self.emotes_list
-                 if emote["command"].lower() == emote_text),
-                None,
-            )
+            matched_emote = self.emotes_manager.get_by_name(emote_text)
 
         if matched_emote:
             # Verificar permisos si el emote requiere auth especial
