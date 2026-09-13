@@ -802,7 +802,22 @@ class Bot(BaseBot):
         if os.path.exists(EMOTES_FILE):
             try:
                 with open(EMOTES_FILE, "r", encoding="utf-8") as file:
-                    return load(file)
+                    emotes = load(file)
+                normalized_emotes = []
+                for emote in emotes:
+                    emote_id = emote.get("emote", emote.get("id"))
+                    command = emote.get("command", emote.get("name"))
+                    if not emote_id or not command:
+                        continue
+                    normalized_emotes.append(
+                        {
+                            "command": str(command).strip(),
+                            "emote": emote_id,
+                            "duration": max(float(emote.get("duration", 1)), 0.1),
+                            "auth": emote.get("auth", "public"),
+                        }
+                    )
+                return normalized_emotes
             except Exception as e:
                 print(f"Error al cargar emotes.json: {e}")
         return []
