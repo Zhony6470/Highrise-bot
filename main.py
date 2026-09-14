@@ -30,6 +30,25 @@ from anuncios import announcement_loop
 from diversion import handle_diversion_command
 
 
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path != "/health":
+            self.send_error(404)
+            return
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"ok\n")
+
+    def log_message(self, *_):
+        return
+
+
+def start_health_server():
+    port = int(os.environ.get("PORT", "10000"))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    server.serve_forever()
+
+
 class Bot(BaseBot):
     def __init__(self):
         super().__init__()
@@ -567,5 +586,6 @@ class Bot(BaseBot):
 if __name__ == "__main__":
     if not ROOM_ID or not API_KEY:
         raise RuntimeError("ROOM_ID y API_KEY deben estar configuradas en el entorno")
+    Thread(target=start_health_server, daemon=True).start()
     definitions = [BotDefinition(Bot(), ROOM_ID, API_KEY)]
     arun(__main__.main(definitions))
