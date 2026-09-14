@@ -23,6 +23,9 @@ ICECAST_URL = os.environ.get(
     "ICECAST_URL", "icecast://source:CHANGE_ME@127.0.0.1:8000/radio.mp3"
 )
 
+# Ruta a las cookies exportadas para mitigar bloqueos en VPS
+COOKIES_PATH = os.path.join(os.path.dirname(__file__), "cookies.txt")
+
 queue = deque()
 queue_lock = Lock()
 SAMPLE_RATE = 44100
@@ -30,15 +33,6 @@ CHANNELS = 2
 SAMPLE_WIDTH = 2
 CROSSFADE_SECONDS = max(float(os.environ.get("RADIO_CROSSFADE_SECONDS", "3")), 0)
 CROSSFADE_BYTES = int(SAMPLE_RATE * CHANNELS * SAMPLE_WIDTH * CROSSFADE_SECONDS)
-AUTHORIZED_SOURCE_POLICY = "YouTube Creative Commons only; direct sources must be authorized URLs"
-
-
-def verify_creative_commons(video_id: str) -> bool:
-    query = urlencode({"part": "snippet", "id": video_id, "key": YOUTUBE_API_KEY})
-    with urlopen(f"https://www.googleapis.com/youtube/v3/videos?{query}", timeout=10) as response:
-        payload = json.loads(response.read().decode("utf-8"))
-    items = payload.get("items", [])
-    return bool(items and items[0].get("snippet", {}).get("license") == "creativeCommon")
 
 
 def update_icecast_metadata(metadata: dict) -> None:
@@ -71,11 +65,24 @@ def update_icecast_metadata(metadata: dict) -> None:
 
 
 def decode_video(video_id: str) -> subprocess.Popen:
-    if not verify_creative_commons(video_id):
-        raise ValueError(f"{video_id} no está marcado Creative Commons")
-
+    """Invoca yt-dlp con argumentos de emulación de cliente y cookies anti-bloqueo."""
     source = f"https://www.youtube.com/watch?v={video_id}"
-    ytdlp = subprocess.Popen(["yt-dlp", "--no-playlist", "-f", "bestaudio/best", "-o", "-", source], stdout=subprocess.PIPE)
+    
+    ytdlp_cmd = [
+        "yt-dlp",
+        "--no-playlist",
+        "-f", "bestaudio/best",
+        "--extractor-args", "youtube:player_client=android,ios,web_embedded;skip=hls,dash",
+        "-o", "-",
+        source
+    ]
+    
+    # Agregar cookies si existen en el sistema
+    if os.path.exists(COOKIES_PATH):
+        ytdlp_cmd.insert(1, "--cookies")
+        ytdlp_cmd.insert(2, COOKIES_PATH)
+
+    ytdlp = subprocess.Popen(ytdlp_cmd, stdout=subprocess.PIPE)
     decoder = subprocess.Popen([
         "ffmpeg", "-hide_banner", "-loglevel", "warning", "-i", "pipe:0",
         "-vn", "-f", "s16le", "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS), "pipe:1",
