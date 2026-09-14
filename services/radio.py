@@ -9,15 +9,19 @@ class RadioRequestError(Exception):
     pass
 
 
-async def request_playback(video_id: str) -> None:
+async def request_playback(video_id: str, metadata: dict | None = None) -> None:
     endpoint = environ.get("RADIO_PLAYER_URL", "")
     token = environ.get("RADIO_PLAYER_TOKEN", "")
     if not endpoint or not token:
         raise RadioRequestError("La radio no está configurada en el bot.")
 
+    payload = {"video_id": video_id}
+    if metadata:
+        payload["metadata"] = metadata
+
     request = Request(
         endpoint.rstrip("/") + "/play",
-        data=dumps({"video_id": video_id}).encode("utf-8"),
+        data=dumps(payload).encode("utf-8"),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {token}",

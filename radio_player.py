@@ -1,73 +1,175 @@
-import asyncio
 import hmac
 import json
 import os
 import re
 import subprocess
+import time
+from array import array
+from base64 import b64encode
 from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Lock, Thread
-from urllib.parse import urlencode
-from urllib.request import urlopen
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote, urlencode, urlparse
+from urllib.request import Request, urlopen
 
 HOST = os.environ.get("RADIO_HOST", "127.0.0.1")
 PORT = int(os.environ.get("RADIO_PORT", "8090"))
-TOKEN = os.environ["RADIO_PLAYER_TOKEN"]
+TOKEN = os.environ.get("RADIO_PLAYER_TOKEN", "")
 if not TOKEN:
     raise RuntimeError("RADIO_PLAYER_TOKEN no está configurado")
-YOUTUBE_API_KEY = os.environ["YOUTUBE_API_KEY"]
+YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
 ICECAST_URL = os.environ.get(
     "ICECAST_URL", "icecast://source:CHANGE_ME@127.0.0.1:8000/radio.mp3"
 )
 
 queue = deque()
 queue_lock = Lock()
+SAMPLE_RATE = 44100
+CHANNELS = 2
+SAMPLE_WIDTH = 2
+CROSSFADE_SECONDS = max(float(os.environ.get("RADIO_CROSSFADE_SECONDS", "3")), 0)
+CROSSFADE_BYTES = int(SAMPLE_RATE * CHANNELS * SAMPLE_WIDTH * CROSSFADE_SECONDS)
+AUTHORIZED_SOURCE_POLICY = "YouTube Creative Commons only; direct sources must be authorized URLs"
 
 
 def verify_creative_commons(video_id: str) -> bool:
-    query = urlencode({
-        "part": "snippet",
-        "id": video_id,
-        "key": YOUTUBE_API_KEY,
-    })
+    query = urlencode({"part": "snippet", "id": video_id, "key": YOUTUBE_API_KEY})
     with urlopen(f"https://www.googleapis.com/youtube/v3/videos?{query}", timeout=10) as response:
         payload = json.loads(response.read().decode("utf-8"))
     items = payload.get("items", [])
     return bool(items and items[0].get("snippet", {}).get("license") == "creativeCommon")
 
 
-def play_video(video_id: str) -> None:
-    if not verify_creative_commons(video_id):
-        print(f"Rechazado: {video_id} no está marcado Creative Commons")
+def update_icecast_metadata(metadata: dict) -> None:
+    title = metadata.get("title", "").strip()
+    channel = metadata.get("channel", "").strip()
+    if not title:
         return
 
+    parsed = urlparse(ICECAST_URL)
+    if not parsed.hostname or not parsed.username or not parsed.password:
+        print("Metadatos Icecast omitidos: ICECAST_URL no contiene credenciales")
+        return
+
+    song = f"{title} - {channel}" if channel else title
+    admin_scheme = os.environ.get("ICECAST_ADMIN_SCHEME", "http")
+    metadata_url = (
+        f"{admin_scheme}://{parsed.hostname}:{parsed.port or 80}/admin/metadata?"
+        f"mount=/{quote(parsed.path.lstrip('/'))}&mode=updinfo&song={quote(song)}"
+    )
+    credentials = f"{parsed.username}:{parsed.password}".encode("utf-8")
+    request = Request(
+        metadata_url,
+        headers={"Authorization": f"Basic {b64encode(credentials).decode('ascii')}"},
+    )
+    try:
+        with urlopen(request, timeout=5):
+            pass
+    except (HTTPError, URLError, TimeoutError) as error:
+        print(f"No se pudieron actualizar los metadatos de Icecast: {error}")
+
+
+def decode_video(video_id: str) -> subprocess.Popen:
+    if not verify_creative_commons(video_id):
+        raise ValueError(f"{video_id} no está marcado Creative Commons")
+
     source = f"https://www.youtube.com/watch?v={video_id}"
-    command = [
-        "yt-dlp", "--no-playlist", "-f", "bestaudio/best", "-o", "-", source,
-    ]
-    ytdlp = subprocess.Popen(command, stdout=subprocess.PIPE)
-    ffmpeg = subprocess.Popen([
+    ytdlp = subprocess.Popen(["yt-dlp", "--no-playlist", "-f", "bestaudio/best", "-o", "-", source], stdout=subprocess.PIPE)
+    decoder = subprocess.Popen([
         "ffmpeg", "-hide_banner", "-loglevel", "warning", "-i", "pipe:0",
-        "-vn", "-c:a", "libmp3lame", "-b:a", "128k",
-        "-content_type", "audio/mpeg", "-f", "mp3", ICECAST_URL,
-    ], stdin=ytdlp.stdout)
+        "-vn", "-f", "s16le", "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS), "pipe:1",
+    ], stdin=ytdlp.stdout, stdout=subprocess.PIPE)
     ytdlp.stdout.close()
-    ffmpeg.wait()
-    if ytdlp.poll() is None:
-        ytdlp.terminate()
+    decoder.ytdlp = ytdlp
+    return decoder
+
+
+def mix_pcm(left: bytes, right: bytes) -> bytes:
+    left_samples = array("h")
+    right_samples = array("h")
+    left_samples.frombytes(left[:len(left) - len(left) % SAMPLE_WIDTH])
+    right_samples.frombytes(right[:len(right) - len(right) % SAMPLE_WIDTH])
+    count = min(len(left_samples), len(right_samples))
+    mixed = array("h")
+    for index in range(count):
+        fade_in = index / max(count - 1, 1)
+        value = int(left_samples[index] * (1 - fade_in) + right_samples[index] * fade_in)
+        mixed.append(max(-32768, min(32767, value)))
+    return mixed.tobytes()
+
+
+def stop_decoder(decoder: subprocess.Popen | None) -> None:
+    if decoder and decoder.stdout:
+        decoder.stdout.close()
+    for process in (decoder, getattr(decoder, "ytdlp", None)):
+        if process and process.poll() is None:
+            process.terminate()
+
+
+def stream_track(decoder, output, tail: bytearray) -> bytearray:
+    while True:
+        chunk = decoder.read(64 * 1024)
+        if not chunk:
+            break
+        if CROSSFADE_BYTES == 0:
+            output.write(chunk)
+        else:
+            tail.extend(chunk)
+            if len(tail) > CROSSFADE_BYTES:
+                output.write(tail[:-CROSSFADE_BYTES])
+                del tail[:-CROSSFADE_BYTES]
+    output.flush()
+    return tail
+
+
+def play_queue() -> None:
+    output = subprocess.Popen([
+        "ffmpeg", "-hide_banner", "-loglevel", "warning", "-re",
+        "-f", "s16le", "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS), "-i", "pipe:0",
+        "-c:a", "libmp3lame", "-b:a", "128k", "-content_type", "audio/mpeg",
+        "-f", "mp3", ICECAST_URL,
+    ], stdin=subprocess.PIPE)
+    current = None
+    try:
+        while True:
+            with queue_lock:
+                item = queue.popleft() if queue else None
+            if item is None:
+                time.sleep(0.25)
+                continue
+            try:
+                update_icecast_metadata(item["metadata"])
+                current = decode_video(item["video_id"])
+                while current is not None:
+                    tail = stream_track(current.stdout, output.stdin, bytearray())
+                    with queue_lock:
+                        next_item = queue.popleft() if queue else None
+                    if next_item is None:
+                        output.stdin.write(tail)
+                        output.stdin.flush()
+                        break
+                    update_icecast_metadata(next_item["metadata"])
+                    next_decoder = decode_video(next_item["video_id"])
+                    prefix = next_decoder.stdout.read(CROSSFADE_BYTES) if CROSSFADE_BYTES else b""
+                    output.stdin.write(mix_pcm(bytes(tail), prefix) if CROSSFADE_BYTES else prefix)
+                    if len(prefix) > len(tail):
+                        output.stdin.write(prefix[len(tail):])
+                    output.stdin.flush()
+                    stop_decoder(current)
+                    current = next_decoder
+            except Exception as error:
+                print(f"Error reproduciendo {item['video_id']}: {error}")
+            finally:
+                stop_decoder(current)
+                current = None
+    finally:
+        stop_decoder(current)
+        output.terminate()
 
 
 def worker() -> None:
-    while True:
-        with queue_lock:
-            video_id = queue.popleft() if queue else None
-        if video_id:
-            try:
-                play_video(video_id)
-            except Exception as error:
-                print(f"Error reproduciendo {video_id}: {error}")
-        else:
-            asyncio.run(asyncio.sleep(1))
+    play_queue()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -86,8 +188,15 @@ class Handler(BaseHTTPRequestHandler):
             video_id = payload["video_id"]
             if not isinstance(video_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
                 raise ValueError("video_id inválido")
+            metadata = payload.get("metadata", {})
+            if not isinstance(metadata, dict):
+                raise ValueError("metadata inválida")
+            metadata = {
+                key: value for key, value in metadata.items()
+                if key in {"title", "channel", "url"} and isinstance(value, str)
+            }
             with queue_lock:
-                queue.append(video_id)
+                queue.append({"video_id": video_id, "metadata": metadata})
             self.send_response(202)
             self.end_headers()
             self.wfile.write(b"queued\n")

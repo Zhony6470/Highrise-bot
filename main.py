@@ -85,7 +85,14 @@ class Bot(BaseBot):
             try:
                 video = await search_video(query)
                 try:
-                    await request_playback(video["video_id"])
+                    await request_playback(
+                        video["video_id"],
+                        {
+                            "title": video["title"],
+                            "channel": video["channel"],
+                            "url": video["url"],
+                        },
+                    )
                     playback_message = "<#66FF99>▶️ Solicitud enviada a la radio."
                 except RadioRequestError as error:
                     playback_message = f"<#FFCC66>ℹ️ {error}"
