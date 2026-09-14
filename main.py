@@ -141,9 +141,19 @@ class Bot(BaseBot):
 
     async def random_dance_loop(self):
         """Ejecuta bailes aleatorios continuos únicamente para el bot."""
+        public_emotes = [
+            emote for emote in self.emotes_list
+            if isinstance(emote, dict)
+            and emote.get("auth") == "public"
+            and isinstance(emote.get("emote"), str)
+        ]
+        if not public_emotes:
+            print("No hay emotes públicos válidos para el baile automático.")
+            return
+
         while True:
             try:
-                random_emote = choice(self.emotes_list)
+                random_emote = choice(public_emotes)
                 self.current_bot_emote = random_emote["emote"]
                 self.current_bot_emote_duration = random_emote.get("duration", 3)
                 await self.highrise.send_emote(self.current_bot_emote, self.bot_id)
