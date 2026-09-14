@@ -84,6 +84,15 @@ class Bot(BaseBot):
         """Carga la configuración de emotes desde el archivo JSON."""
         return load_json(EMOTES_FILE, [])
 
+    async def get_command_help(self, user_id: str) -> list[str]:
+        commands = sorted(self.command_dispatcher.handlers)
+        command_list = "\n".join(commands)
+        return [
+            "<#66CCFF>Comandos disponibles:\n<#FFFFFF>"
+            f"{command_list}\n"
+            "<#FFFFFF>También puedes usar !play nombre de canción."
+        ]
+
     async def is_mod(self, user_id: str) -> bool:
         """Verifica si un usuario posee rol de moderador o superior."""
         role = self.role_manager.get_user_role(user_id)
@@ -195,7 +204,7 @@ class Bot(BaseBot):
                 )
                 return
             try:
-                video = await search_video(query)
+                video = await asyncio.to_thread(search_youtube, query)
                 try:
                     await request_playback(
                         video["video_id"],
