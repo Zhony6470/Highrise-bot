@@ -564,7 +564,7 @@ class Bot(BaseBot):
                 )
             return
 
-
 if __name__ == "__main__":
-    from highrise.__main__ import main
-    main()
+    if not ROOM_ID or not API_KEY:
+        raise RuntimeError("ROOM_ID y API_KEY deben estar configuradas en el entorno")
+    arun(Bot().run_bot(ROOM_ID, API_KEY))
