@@ -14,7 +14,7 @@ _client: Client | None = (
 )
 
 
-def load_json(file_path: str) -> dict:
+def load_json(file_path: str, default=None):
     file_name = Path(file_path).name
     if _client:
         response = (
@@ -26,7 +26,7 @@ def load_json(file_path: str) -> dict:
         if matching_rows:
             return matching_rows[0]["content"]
 
-        data = _default_data(file_name)
+        data = _default_data(file_name, default)
         save_json(file_path, data)
         return data
 
@@ -34,14 +34,14 @@ def load_json(file_path: str) -> dict:
         with open(file_path, "r", encoding="utf-8") as file:
             data = json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
-        data = {}
+        data = _default_data(file_name, default)
 
     if _client:
         save_json(file_path, data)
     return data
 
 
-def _default_data(file_name: str) -> dict:
+def _default_data(file_name: str, default=None):
     if file_name == "data.json":
         return {
             "users": {},
@@ -51,7 +51,7 @@ def _default_data(file_name: str) -> dict:
         return {"posiciones": {}}
     if file_name == "roles.json":
         return {"vip_users": [], "users": {}}
-    return {}
+    return default if default is not None else {}
 
 
 def save_json(file_path: str, data: dict) -> None:
