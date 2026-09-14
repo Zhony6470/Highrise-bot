@@ -1,3 +1,4 @@
 highrise-bot-sdk
 supabase
 yt-dlp
+google-api-python-client
