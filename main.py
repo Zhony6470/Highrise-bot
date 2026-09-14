@@ -178,7 +178,12 @@ class Bot(BaseBot):
         self.bot_id = session_metadata.user_id
         self.owner_id = session_metadata.room_info.owner_id
         print(f"Bot conectado exitosamente. Bot ID: {self.bot_id} | Owner ID: {self.owner_id}")
-        
+
+        await self.highrise.chat(
+            "<#66FF99>🤖 ¡Bot conectado! Escribe !help para ver los comandos."
+        )
+        if self.emotes_list and not self.botdance_task:
+            self.botdance_task = asyncio.create_task(self.random_dance_loop())
         if not self.announcement_task:
             self.announcement_task = asyncio.create_task(announcement_loop(self))
 
