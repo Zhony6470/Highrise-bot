@@ -567,4 +567,5 @@ class Bot(BaseBot):
 if __name__ == "__main__":
     if not ROOM_ID or not API_KEY:
         raise RuntimeError("ROOM_ID y API_KEY deben estar configuradas en el entorno")
-    arun(Bot().run_bot(ROOM_ID, API_KEY))
+    definitions = [BotDefinition(Bot(), ROOM_ID, API_KEY)]
+    arun(__main__.main(definitions))
