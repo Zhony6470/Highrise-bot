@@ -147,7 +147,7 @@ class Bot(BaseBot):
         os._exit(0)
 
     async def on_start(self, session_metadata: SessionMetadata) -> None:
-        self.bot_id = session_metadata.my_user_id
+        self.bot_id = session_metadata.user_id
         self.owner_id = session_metadata.room_info.owner_id
         print(f"Bot conectado exitosamente. Bot ID: {self.bot_id} | Owner ID: {self.owner_id}")
         
