@@ -82,7 +82,27 @@ class Bot(BaseBot):
 
     def load_emotes_data(self):
         """Carga la configuración de emotes desde el archivo JSON."""
-        return load_json(EMOTES_FILE, [])
+        try:
+            with open(EMOTES_FILE, "r", encoding="utf-8") as file:
+                emotes = load(file)
+            normalized_emotes = []
+            for emote in emotes:
+                if not isinstance(emote, dict):
+                    continue
+                emote_id = emote.get("emote", emote.get("id"))
+                command = emote.get("command", emote.get("name"))
+                if not emote_id or not command:
+                    continue
+                normalized_emotes.append({
+                    "command": str(command).strip(),
+                    "emote": str(emote_id),
+                    "duration": max(float(emote.get("duration", 1)), 0.1),
+                    "auth": emote.get("auth", "public"),
+                })
+            return normalized_emotes
+        except (OSError, TypeError, ValueError) as error:
+            print(f"Error al cargar emotes.json: {error}")
+            return []
 
     async def get_command_help(self, user_id: str) -> list[str]:
         commands = sorted(self.command_dispatcher.handlers)
@@ -95,8 +115,14 @@ class Bot(BaseBot):
 
     async def is_mod(self, user_id: str) -> bool:
         """Verifica si un usuario posee rol de moderador o superior."""
-        role = self.role_manager.get_user_role(user_id)
-        return role in ["mod", "owner"]
+        if user_id == self.owner_id:
+            return True
+        try:
+            permissions = await self.highrise.get_room_privilege(user_id)
+            return bool(getattr(permissions, "moderator", False))
+        except Exception as error:
+            print(f"Error comprobando permisos de {user_id}: {error}")
+            return False
 
     async def get_user_id(self, username: str) -> str | None:
         """Busca el ID de un usuario por su nombre de usuario en la sala."""
@@ -184,18 +210,40 @@ class Bot(BaseBot):
         await asyncio.sleep(1)
         os._exit(0)
 
+    async def place_bot(self):
+        await asyncio.sleep(5)
+        try:
+            self.bot_position = self.position_manager.get_bot_position()
+            if self.bot_position != Position(0, 0, 0, "FrontRight"):
+                await self.highrise.teleport(self.bot_id, self.bot_position)
+                print(f"[POSITION] Bot restaurado en {self.bot_position}.")
+        except Exception as error:
+            print(f"Error restaurando la posición del bot: {error}")
+
     async def on_start(self, session_metadata: SessionMetadata) -> None:
         self.bot_id = session_metadata.user_id
         self.owner_id = session_metadata.room_info.owner_id
+        self.bot_status = True
         print(f"Bot conectado exitosamente. Bot ID: {self.bot_id} | Owner ID: {self.owner_id}")
 
         await self.highrise.chat(
             "<#66FF99>🤖 ¡Bot conectado! Escribe !help para ver los comandos."
         )
-        if self.emotes_list and not self.botdance_task:
-            self.botdance_task = asyncio.create_task(self.random_dance_loop())
-        if not self.announcement_task:
-            self.announcement_task = asyncio.create_task(announcement_loop(self))
+        if self.position_task:
+            self.position_task.cancel()
+        self.position_task = asyncio.create_task(self.place_bot())
+        if self.botdance_task:
+            self.botdance_task.cancel()
+        self.botdance_task = asyncio.create_task(self.random_dance_loop())
+        if self.announcement_task:
+            self.announcement_task.cancel()
+        self.announcement_task = asyncio.create_task(announcement_loop(self))
+        try:
+            positions = load_json(self.position_manager.positions_file)
+            if positions.get("pista_emotes"):
+                await start_track_monitor(self)
+        except (AttributeError, TypeError, ValueError) as error:
+            print(f"No se pudo iniciar el monitor de pista: {error}")
 
     async def on_chat(self, user: User, message: str) -> None:
         msg = message.strip()
