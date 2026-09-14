@@ -23,7 +23,7 @@ from services.roles import RoleManager, get_user_role
 from services.emotes import EmotesManager
 from services.track import handle_track_command, start_track_monitor
 from services.storage import load_json
-from services.youtube import YouTubeSearchError, search_video
+from services.youtube import YouTubeSearchError, search_youtube
 from services.radio import RadioRequestError, request_playback
 from tips import TipManager
 from anuncios import announcement_loop
