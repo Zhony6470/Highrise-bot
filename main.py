@@ -315,11 +315,13 @@ class Bot(BaseBot):
         msg = message.strip()
         msg_lower = msg.lower()
 
-        if msg_lower == "!help":
-            response = await self.command_dispatcher.handle(self, user, msg)
-            if response:
+        response = await self.command_dispatcher.handle(self, user, msg)
+        if response is not None:
+            if isinstance(response, list):
                 for section in response:
                     await self.highrise.send_whisper(user.id, section)
+            else:
+                await self.highrise.send_whisper(user.id, response)
             return
 
         if await handle_track_command(self, user, message):

@@ -3,7 +3,7 @@ import pkgutil
 from collections.abc import Awaitable, Callable
 
 
-CommandHandler = Callable[..., Awaitable[str | None]]
+CommandHandler = Callable[..., Awaitable[str | list[str] | None]]
 
 
 class CommandDispatcher:
@@ -21,7 +21,7 @@ class CommandDispatcher:
             for command, handler in getattr(module, "COMMANDS", {}).items():
                 self.handlers[command.lower()] = handler
 
-    async def handle(self, bot, user, message: str) -> str | None:
+    async def handle(self, bot, user, message: str) -> str | list[str] | None:
         command_name = message.strip().split(maxsplit=1)[0].lower()
         handler = self.handlers.get(command_name)
         if handler is None:
