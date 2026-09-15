@@ -3,28 +3,30 @@ from highrise import BaseBot, User
 
 async def handle_userinfo(bot: BaseBot, user: User, message: str) -> str:
     parts = message.split()
-    if len(parts) != 2:
-        return "<#FFCC66>👤 Uso: !userinfo <@usuario>"
+    if len(parts) == 1:
+        user_id = user.id
+    elif len(parts) == 2:
+        username = parts[1].lstrip("@")
+        if not username:
+            return "<#FFCC66>👤 Debes indicar un usuario válido."
 
-    username = parts[1].lstrip("@")
-    if not username:
-        return "<#FFCC66>👤 Debes indicar un usuario válido."
+        try:
+            room_users = (await bot.highrise.get_room_users()).content
+            room_user = next(
+                (room_user for room_user, _ in room_users
+                 if room_user.username.lower() == username.lower()),
+                None,
+            )
+        except Exception as error:
+            print(f"Error buscando usuarios en la sala: {error}")
+            return "<#FF6666>⚠️ No se pudo buscar ese usuario en la sala."
 
-    try:
-        room_users = (await bot.highrise.get_room_users()).content
-        room_user = next(
-            (room_user for room_user, _ in room_users
-             if room_user.username.lower() == username.lower()),
-            None,
-        )
-    except Exception as error:
-        print(f"Error buscando usuarios en la sala: {error}")
-        return "<#FF6666>⚠️ No se pudo buscar ese usuario en la sala."
+        if room_user is None:
+            return "<#FFCC66>🔎 Usuario no encontrado en la sala."
+        user_id = room_user.id
+    else:
+        return "<#FFCC66>👤 Uso: !userinfo o !userinfo @usuario"
 
-    if room_user is None:
-        return "<#FFCC66>🔎 Usuario no encontrado en la sala."
-
-    user_id = room_user.id
     try:
         user_response = await bot.webapi.get_user(user_id)
         user_data = user_response.user

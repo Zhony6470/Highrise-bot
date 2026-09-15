@@ -135,7 +135,8 @@ class Bot(BaseBot):
             ]),
             "\n".join([
                 "<#CC99FF>👤 INFORMACIÓN",
-                "<#FFFFFF>• !userinfo @usuario - Ver información",
+                "<#FFFFFF>• !userinfo - Ver tu información",
+                "<#FFFFFF>• !userinfo @usuario - Ver información de otro usuario",
                 "<#FFFFFF>• !play canción - Añadir música a la radio",
             ]),
         ]
