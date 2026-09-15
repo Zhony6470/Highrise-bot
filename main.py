@@ -104,14 +104,80 @@ class Bot(BaseBot):
             print(f"Error al cargar emotes.json: {error}")
             return []
 
-    async def get_command_help(self, user_id: str) -> list[str]:
-        commands = sorted(self.command_dispatcher.handlers)
-        command_list = "\n".join(commands)
-        return [
-            "<#66CCFF>Comandos disponibles:\n<#FFFFFF>"
-            f"{command_list}\n"
-            "<#FFFFFF>También puedes usar !play nombre de canción."
+    async def get_command_help(self, user: User) -> list[str]:
+        role = await self.role_manager.get_user_role(self, user)
+        sections = [
+            "\n".join([
+                "<#66CCFF>🎭 EMOTES",
+                "<#FFFFFF>• !random - Emotes aleatorios para ti",
+                "<#FFFFFF>• !stop - Detener tu emote",
+                "<#FFFFFF>• !help - Mostrar esta ayuda",
+            ]),
+            "\n".join([
+                "<#66CCFF>🎉 DIVERSIÓN",
+                "<#FFFFFF>• !fight @usuario - Pelear con emotes",
+                "<#FFFFFF>• !kiss @usuario - Enviar un beso",
+                "<#FFFFFF>• !heart @usuario - Enviar un corazón",
+                "<#FFFFFF>• !love @usuario - Calcular compatibilidad",
+                "<#FFFFFF>• !superpunch @usuario - Lanzar un superpunch",
+            ]),
+            "\n".join([
+                "<#66FF99>📍 MOVIMIENTO",
+                "<#FFFFFF>• !tele @usuario - Ir junto a un usuario",
+                "<#FFFFFF>• !follow - Seguir al dueño",
+                "<#FFFFFF>• !stopfollow - Dejar de seguir al dueño",
+            ]),
+            "\n".join([
+                "<#FFCC66>💰 PROPINAS",
+                "<#FFFFFF>• !top - Ranking de propinas",
+                "<#FFFFFF>• !wallet - Ver la billetera del bot",
+                "<#FFFFFF>• !get @usuario - Ver sus propinas",
+            ]),
+            "\n".join([
+                "<#CC99FF>👤 INFORMACIÓN",
+                "<#FFFFFF>• !userinfo @usuario - Ver información",
+                "<#FFFFFF>• !play canción - Añadir música a la radio",
+            ]),
         ]
+
+        if role in ("owner", "mod"):
+            sections.extend([
+                "\n".join([
+                    "<#FF66CC>🛡️ MODERACIÓN",
+                    "<#FFFFFF>• !kick @usuario - Expulsar un usuario",
+                    "<#FFFFFF>• !tp @usuario x y z - Teletransportar un usuario",
+                    "<#FFFFFF>• !botdance - Activar baile del bot",
+                    "<#FFFFFF>• !stopbotdance - Detener baile del bot",
+                    "<#FFFFFF>• !randomall - Activar emotes para todos",
+                ]),
+                "\n".join([
+                    "<#FFCC66>🎁 ENVÍO DE PROPINAS",
+                    "<#FFFFFF>• !tipme cantidad - Enviarte oro",
+                    "<#FFFFFF>• !tip @usuario cantidad - Enviar oro",
+                    "<#FFFFFF>• !tipall cantidad - Enviar a todos",
+                    "<#FFFFFF>• !tip all cantidad - Alias de !tipall",
+                ]),
+            ])
+
+        if role == "owner":
+            sections.extend([
+                "\n".join([
+                    "<#CC99FF>⚙️ ADMINISTRACIÓN",
+                    "<#FFFFFF>• !set - Guardar la posición del bot",
+                    "<#FFFFFF>• !home - Volver a la posición guardada",
+                    "<#FFFFFF>• !reset - Reiniciar el bot",
+                    "<#FFFFFF>• !role @usuario mod|vip|user - Administrar roles",
+                ]),
+                "\n".join([
+                    "<#FFFFFF>👕 VESTUARIO",
+                    "<#FFFFFF>• !color categoría número - Cambiar color",
+                    "<#FFFFFF>• !equip nombre - Equipar una prenda",
+                    "<#FFFFFF>• /remove categoría - Quitar una categoría",
+                    "<#FFFFFF>• /getoutfit - Ver el vestuario",
+                ]),
+            ])
+
+        return sections
 
     async def is_mod(self, user_id: str) -> bool:
         """Verifica si un usuario posee rol de moderador o superior."""
