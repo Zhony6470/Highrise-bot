@@ -793,6 +793,18 @@ class Bot(BaseBot):
             return owner_response
         return await self.tip_manager.handle_command(self, command, user_id)
 
+    async def on_user_join(
+        self, user: User, position: Position | AnchorPosition
+    ) -> None:
+        print(f"[JOIN] {user.username} entró a la sala.")
+        try:
+            await self.role_manager.apply_saved_role(self, user)
+        except Exception as error:
+            print(f"Error aplicando el rol guardado a @{user.username}: {error}")
+
+        if isinstance(position, Position):
+            self.user_positions[user.id] = position
+
 if __name__ == "__main__":
     if not ROOM_ID or not API_KEY:
         raise RuntimeError("ROOM_ID y API_KEY deben estar configuradas en el entorno")

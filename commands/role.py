@@ -21,8 +21,6 @@ async def handle_role(bot: BaseBot, user: User, message: str) -> Optional[str]:
         return "<#FF6666>❌ Rol inválido. Usa: mod, vip, designer o user."
 
     target_id = await bot.get_user_id(username)
-    if not target_id:
-        return "<#FFCC66>🔎 Usuario no encontrado en la sala."
     if target_id == bot.owner_id:
         return "<#FFCC66>👑 El dueño no puede cambiarse de rol."
 
@@ -32,7 +30,14 @@ async def handle_role(bot: BaseBot, user: User, message: str) -> Optional[str]:
         print(f"Error asignando el rol {role} a @{username}: {error}")
         return "<#FF6666>⚠️ No se pudo cambiar el rol del usuario."
 
-    await bot.highrise.chat(f"<#66FF99>✅ @{username} ahora tiene el rol {role}.")
+    if target_id:
+        message = f"<#66FF99>✅ @{username} ahora tiene el rol {role}."
+    else:
+        message = (
+            f"<#66FF99>✅ Rol {role} guardado para @{username}. "
+            "Se aplicará cuando entre a la sala."
+        )
+    await bot.highrise.chat(message)
     return None
 
 
