@@ -159,6 +159,17 @@ class Bot(BaseBot):
                 ]),
             ])
 
+        if role == "designer":
+            sections.append(
+                "\n".join([
+                    "<#CC99FF>🎨 DISEÑADOR",
+                    "<#FFFFFF>• !color categoría número - Cambiar color",
+                    "<#FFFFFF>• !equip nombre - Equipar una prenda",
+                    "<#FFFFFF>• /remove categoría - Quitar una categoría",
+                    "<#FFFFFF>• /getoutfit - Ver el vestuario",
+                ])
+            )
+
         if role == "owner":
             sections.extend([
                 "\n".join([
@@ -166,7 +177,7 @@ class Bot(BaseBot):
                     "<#FFFFFF>• !set - Guardar la posición del bot",
                     "<#FFFFFF>• !home - Volver a la posición guardada",
                     "<#FFFFFF>• !reset - Reiniciar el bot",
-                    "<#FFFFFF>• !role @usuario mod|vip|user - Administrar roles",
+                    "<#FFFFFF>• !role @usuario mod|vip|designer|user - Administrar roles",
                 ]),
                 "\n".join([
                     "<#FFFFFF>👕 VESTUARIO",
@@ -179,13 +190,53 @@ class Bot(BaseBot):
 
         return sections
 
+    async def send_saved_roles_to_inbox(self, user: User) -> str:
+        saved_roles = [
+            (username, role)
+            for username, role in sorted(self.role_manager.roles.items())
+            if role != "user"
+        ]
+        if not saved_roles:
+            content = "No hay usuarios con roles guardados distintos de user."
+        else:
+            content = "Usuarios con roles guardados:\n" + "\n".join(
+                f"@{username}: {role}" for username, role in saved_roles
+            )
+
+        try:
+            conversations = await self.highrise.get_conversations()
+            conversation = next(
+                (
+                    item for item in conversations.conversations
+                    if item.member_ids and user.id in item.member_ids
+                ),
+                None,
+            )
+            if conversation:
+                result = await self.highrise.send_message(conversation.id, content)
+                if result is None:
+                    return "<#66FF99>📨 Te envié la lista de roles guardados por mensaje privado."
+                print(f"Error enviando lista de roles: {result}")
+            else:
+                result = await self.highrise.send_message_bulk([user.id], content)
+                if result is None:
+                    return "<#66FF99>📨 Te envié la lista de roles guardados por mensaje privado."
+                print(f"No se pudo iniciar la conversación privada: {result}")
+        except Exception as error:
+            print(f"Error enviando roles a la bandeja: {error}")
+
+        return "<#FFCC66>📨 No pude enviar la lista a tu bandeja. Escríbeme primero por mensaje privado y vuelve a usar !role."
+
     async def is_mod(self, user_id: str) -> bool:
         """Verifica si un usuario posee rol de moderador o superior."""
         if user_id == self.owner_id:
             return True
         try:
             permissions = await self.highrise.get_room_privilege(user_id)
-            return bool(getattr(permissions, "moderator", False))
+            return bool(
+                getattr(permissions, "moderator", False)
+                or getattr(permissions, "designer", False)
+            )
         except Exception as error:
             print(f"Error comprobando permisos de {user_id}: {error}")
             return False

@@ -2,7 +2,7 @@ from highrise import BaseBot, User
 from typing import Optional
 
 
-ROLES = {"mod", "vip", "user"}
+ROLES = {"mod", "vip", "designer", "user"}
 
 
 async def handle_role(bot: BaseBot, user: User, message: str) -> Optional[str]:
@@ -10,13 +10,15 @@ async def handle_role(bot: BaseBot, user: User, message: str) -> Optional[str]:
         return "<#FF6666>🛡️ Solo el dueño o los moderadores pueden asignar roles."
 
     parts = message.split()
+    if len(parts) == 1:
+        return await bot.send_saved_roles_to_inbox(user)
     if len(parts) != 3:
-        return "<#FFCC66>🛡️ Uso: !role @usuario <mod|vip|user>"
+        return "<#FFCC66>🛡️ Uso: !role o !role @usuario <mod|vip|designer|user>"
 
     username = parts[1].lstrip("@")
     role = parts[2].lower()
     if role not in ROLES:
-        return "<#FF6666>❌ Rol inválido. Usa: mod, vip o user."
+        return "<#FF6666>❌ Rol inválido. Usa: mod, vip, designer o user."
 
     target_id = await bot.get_user_id(username)
     if not target_id:

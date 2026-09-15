@@ -5,7 +5,7 @@ from highrise import User
 from services.storage import load_json, save_json
 
 
-Role = Literal["owner", "mod", "vip", "user"]
+Role = Literal["owner", "mod", "vip", "designer", "user"]
 
 
 class RoleManager:
@@ -29,6 +29,8 @@ class RoleManager:
 
         if privileges and getattr(privileges, "moderator", False):
             return "mod"
+        if privileges and getattr(privileges, "designer", False):
+            return "designer"
         if user.id in self._legacy_vip_users:
             return "vip"
         return "user"
@@ -46,15 +48,14 @@ class RoleManager:
         if not user_id:
             return
 
-        if role in ("mod", "user"):
-            permissions = await bot.highrise.get_room_privilege(user_id)
-            permissions.moderator = role == "mod"
-            await bot.highrise.change_room_privilege(user_id, permissions)
+        permissions = await bot.highrise.get_room_privilege(user_id)
+        permissions.moderator = role == "mod"
+        permissions.designer = role == "designer"
+        await bot.highrise.change_room_privilege(user_id, permissions)
 
     async def apply_saved_role(self, bot, user: User) -> None:
         role = self.roles.get(user.username.lower())
-        if role in ("mod", "user"):
-            await self.set_role(bot, user.id, role, user.username)
+        await self.set_role(bot, user.id, role, user.username)
 
     def _load_roles(self) -> dict[str, Role]:
         try:
@@ -63,7 +64,7 @@ class RoleManager:
             return {
                 username.lower(): role
                 for username, role in data.get("users", {}).items()
-                if role in ("mod", "vip", "user")
+                if role in ("mod", "vip", "designer", "user")
             }
         except (FileNotFoundError, KeyError, TypeError):
             self._legacy_vip_users = set()
