@@ -119,6 +119,10 @@ class TipManager:
                         )
                         return "<#FF6666>⚠️ La propina no pudo enviarse completamente."
                 successful_recipients += 1
+                if parts[0] == "!tipall":
+                    await highrise.chat(
+                        f"<#FFCC66>💝 @{recipient_username} recibió {amount}g de propina."
+                    )
                 if parts[0] == "!tip":
                     print(
                         f"[TIP OUT  ] Enviados {amount}g a "
