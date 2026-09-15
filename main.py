@@ -315,12 +315,13 @@ class Bot(BaseBot):
         msg = message.strip()
         msg_lower = msg.lower()
 
-        response = await self.command_dispatcher.handle(self, user, msg)
-        if response is not None:
+        command_name = msg.split(maxsplit=1)[0].lower() if msg else ""
+        if command_name in self.command_dispatcher.handlers:
+            response = await self.command_dispatcher.handle(self, user, msg)
             if isinstance(response, list):
                 for section in response:
                     await self.highrise.send_whisper(user.id, section)
-            else:
+            elif response:
                 await self.highrise.send_whisper(user.id, response)
             return
 

@@ -1,10 +1,11 @@
 from highrise import BaseBot, User
+from typing import Optional
 
 
 ROLES = {"mod", "vip", "user"}
 
 
-async def handle_role(bot: BaseBot, user: User, message: str) -> str:
+async def handle_role(bot: BaseBot, user: User, message: str) -> Optional[str]:
     if user.id != bot.owner_id and not await bot.is_mod(user.id):
         return "<#FF6666>🛡️ Solo el dueño o los moderadores pueden asignar roles."
 
@@ -18,6 +19,8 @@ async def handle_role(bot: BaseBot, user: User, message: str) -> str:
         return "<#FF6666>❌ Rol inválido. Usa: mod, vip o user."
 
     target_id = await bot.get_user_id(username)
+    if not target_id:
+        return "<#FFCC66>🔎 Usuario no encontrado en la sala."
     if target_id == bot.owner_id:
         return "<#FFCC66>👑 El dueño no puede cambiarse de rol."
 
