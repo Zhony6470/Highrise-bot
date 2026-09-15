@@ -655,6 +655,23 @@ class Bot(BaseBot):
                 )
             return
 
+        response = await self.command_handler(user.id, message)
+        if response:
+            await self.highrise.send_whisper(user.id, response)
+        return
+
+    async def command_handler(self, user_id: str, message: str) -> str | None:
+        command = message.lower().strip()
+        if not command or (user_id != self.owner_id and not await self.is_mod(user_id)):
+            return None
+        if command.startswith("!tip all "):
+            command = "!tipall " + command[len("!tip all "):]
+
+        owner_response = await handle_owner_command(self, command, user_id)
+        if owner_response:
+            return owner_response
+        return await self.tip_manager.handle_command(self, command, user_id)
+
 if __name__ == "__main__":
     if not ROOM_ID or not API_KEY:
         raise RuntimeError("ROOM_ID y API_KEY deben estar configuradas en el entorno")
