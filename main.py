@@ -805,6 +805,32 @@ class Bot(BaseBot):
         if isinstance(position, Position):
             self.user_positions[user.id] = position
 
+    async def on_message(
+        self, user_id: str, conversation_id: str, is_new_conversation: bool
+    ) -> None:
+        try:
+            response = await self.highrise.get_messages(conversation_id)
+            if not isinstance(response, GetMessagesRequest.GetMessagesResponse):
+                return
+            if not response.messages:
+                return
+
+            message = response.messages[-1].content.strip().lower()
+            if message != "!help":
+                return
+
+            user = User(user_id, "")
+            try:
+                user_response = await self.webapi.get_user(user_id)
+                user = User(user_id, user_response.user.username)
+            except Exception as error:
+                print(f"No se pudo cargar el usuario de la conversación: {error}")
+
+            for section in await self.get_command_help(user):
+                await self.highrise.send_message(conversation_id, section)
+        except Exception as error:
+            print(f"Error procesando !help en la bandeja: {error}")
+
 if __name__ == "__main__":
     if not ROOM_ID or not API_KEY:
         raise RuntimeError("ROOM_ID y API_KEY deben estar configuradas en el entorno")
