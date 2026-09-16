@@ -34,6 +34,13 @@ def test_on_user_join_sends_private_welcome():
     assert bot.highrise.whispers == [
         (
             "user-123",
-            "👋 ¡Hola, Ana! Tu rol es: vip. Bienvenid@ a la sala disfruta de tu instancia aqui!!. Escribe !help para ver mis comandos.",
+            "\n".join([
+                "<#66FFCC>✨ ¡Hola, Ana! ✨",
+                "<#FFFFFF>━━━━━━━━━━━━━━━━━━",
+                "<#FFCC66>🎭 Tu rol en la sala: <#FFFFFF>vip",
+                "<#66FF99>🎉 ¡Bienvenido/a! Pasa, disfruta y comparte buenas vibras.",
+                "<#CC99FF>💫 Escribe <#FFFFFF>!help <#CC99FF>para descubrir mis comandos.",
+                "<#FFFFFF>━━━━━━━━━━━━━━━━━━",
+            ]),
         )
     ]

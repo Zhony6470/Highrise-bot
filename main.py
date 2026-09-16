@@ -801,7 +801,14 @@ class Bot(BaseBot):
         try:
             await self.highrise.send_whisper(
                 user.id,
-                f"👋 ¡Hola, {user.username}! Tu rol es: {role}. Bienvenid@ a la sala disfruta de tu instancia aqui!!. Escribe !help para ver mis comandos.",
+                "\n".join([
+                    f"<#66FFCC>✨ ¡Hola, {user.username}! ✨",
+                    "<#FFFFFF>━━━━━━━━━━━━━━━━━━",
+                    f"<#FFCC66>🎭 Tu rol en la sala: <#FFFFFF>{role}",
+                    "<#66FF99>🎉 ¡Bienvenido/a! Pasa, disfruta y comparte buenas vibras.",
+                    "<#CC99FF>💫 Escribe <#FFFFFF>!help <#CC99FF>para descubrir mis comandos.",
+                    "<#FFFFFF>━━━━━━━━━━━━━━━━━━",
+                ]),
             )
         except Exception as error:
             print(f"Error enviando la bienvenida a @{user.username}: {error}")
