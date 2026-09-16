@@ -166,8 +166,8 @@ class Bot(BaseBot):
                     "<#CC99FF>🎨 DISEÑADOR",
                     "<#FFFFFF>• !color categoría número - Cambiar color",
                     "<#FFFFFF>• !equip nombre - Equipar una prenda",
-                    "<#FFFFFF>• /remove categoría - Quitar una categoría",
-                    "<#FFFFFF>• /getoutfit - Ver el vestuario",
+                    "<#FFFFFF>• !remove categoría - Quitar una categoría",
+                    "<#FFFFFF>• !getoutfit - Ver el vestuario",
                 ])
             )
 
@@ -184,8 +184,8 @@ class Bot(BaseBot):
                     "<#FFFFFF>👕 VESTUARIO",
                     "<#FFFFFF>• !color categoría número - Cambiar color",
                     "<#FFFFFF>• !equip nombre - Equipar una prenda",
-                    "<#FFFFFF>• /remove categoría - Quitar una categoría",
-                    "<#FFFFFF>• /getoutfit - Ver el vestuario",
+                    "<#FFFFFF>• !remove categoría - Quitar una categoría",
+                    "<#FFFFFF>• !getoutfit - Ver el vestuario",
                 ]),
             ])
 
@@ -797,6 +797,15 @@ class Bot(BaseBot):
         self, user: User, position: Position | AnchorPosition
     ) -> None:
         print(f"[JOIN] {user.username} entró a la sala.")
+        role = await self.role_manager.get_user_role(self, user)
+        try:
+            await self.highrise.send_whisper(
+                user.id,
+                f"👋 ¡Hola, {user.username}! Tu rol es: {role}. Bienvenid@ a la sala disfruta de tu instancia aqui!!. Escribe !help para ver mis comandos.",
+            )
+        except Exception as error:
+            print(f"Error enviando la bienvenida a @{user.username}: {error}")
+
         try:
             await self.role_manager.apply_saved_role(self, user)
         except Exception as error:

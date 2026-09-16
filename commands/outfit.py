@@ -20,4 +20,4 @@ async def handle_get_outfit(bot: BaseBot, user: User, message: str = "") -> str 
     )
 
 
-COMMANDS = {"/getoutfit": handle_get_outfit}
+COMMANDS = {"!getoutfit": handle_get_outfit, "/getoutfit": handle_get_outfit}

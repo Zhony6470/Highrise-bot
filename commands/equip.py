@@ -8,7 +8,7 @@ async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
 
     parts = message.split()
     if len(parts) < 2:
-        return "<#FFCC66>👗 Uso: /equip <nombre de la prenda> [numero]"
+        return "<#FFCC66>👗 Uso: !equip <nombre de la prenda> [numero]"
 
     result_index = 0
     item_name_parts = parts[1:]
@@ -86,7 +86,10 @@ async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
                 )
             )
 
-        await bot.highrise.set_outfit(outfit)
+        result = await bot.highrise.set_outfit(outfit)
+        if result is not None:
+            print(f"Error de Highrise equipando la prenda: {result}")
+            return "<#FF6666>⚠️ No se pudo equipar la prenda."
     except Exception as error:
         print(f"Error equipando la prenda: {error}")
         return "<#FF6666>⚠️ No se pudo equipar la prenda."
@@ -94,4 +97,4 @@ async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
     return f"<#66FF99>✨ Prenda equipada: {selected_item.item_name}."
 
 
-COMMANDS = {"/equip": handle_equip}
+COMMANDS = {"!equip": handle_equip, "/equip": handle_equip}

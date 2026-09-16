@@ -43,7 +43,7 @@ async def handle_remove(bot: BaseBot, user: User, message: str) -> str:
 
     parts = message.split()
     if len(parts) != 2:
-        return "<#FFCC66>🧥 Uso: /remove <categoria>"
+        return "<#FFCC66>🧥 Uso: !remove <categoria>"
 
     category = parts[1].lower()
     if category not in CATEGORIES:
@@ -60,11 +60,14 @@ async def handle_remove(bot: BaseBot, user: User, message: str) -> str:
         if len(filtered_outfit) == len(outfit):
             return f"<#FFCC66>👕 El bot no usa ninguna prenda de la categoría '{category}'."
 
-        await bot.highrise.set_outfit(filtered_outfit)
+        result = await bot.highrise.set_outfit(filtered_outfit)
+        if result is not None:
+            print(f"Error de Highrise eliminando la categoría '{category}': {result}")
+            return "<#FF6666>⚠️ No se pudo modificar el vestuario."
         return f"<#66FF99>✨ Categoría '{category}' eliminada correctamente."
     except Exception as error:
         print(f"Error eliminando la categoría '{category}': {error}")
         return "<#FF6666>⚠️ No se pudo modificar el vestuario."
 
 
-COMMANDS = {"/remove": handle_remove}
+COMMANDS = {"!remove": handle_remove, "/remove": handle_remove}

@@ -28,7 +28,10 @@ async def handle_color(bot: BaseBot, user: User, message: str) -> str | None:
         if not found_item:
             return f"<#FFCC66>👕 El bot no usa ningún artículo de la categoría '{category}'."
 
-        await bot.highrise.set_outfit(outfit)
+        result = await bot.highrise.set_outfit(outfit)
+        if result is not None:
+            print(f"Error de Highrise cambiando el color: {result}")
+            return "<#FF6666>⚠️ No se pudo cambiar el color del vestuario."
         return f"<#66FF99>✨ Color de '{category}' actualizado correctamente."
     except Exception as error:
         print(f"Error cambiando el color del vestuario: {error}")

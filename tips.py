@@ -1,13 +1,3 @@
-Variable de entorno PATH modificada; reinicie el shell para usar el nuevo valor.
-Alias de línea de comandos agregado: "ffmpeg"
-Alias de línea de comandos agregado: "ffplay"
-Alias de línea de comandos agregado: "ffprobe"
-Instalado correctamente
-ERROR: Could not open requirements file: [Errno 2] No such file or directory: 'requirements.txt'
-
-[notice] A new release of pip is available: 23.1.2 -> 26.2.1
-[notice] To update, run: python.exe -m pip install --upgrade pipfrom json import dump, load
-
 from highrise import CurrencyItem, Item, User
 from services.storage import load_json, save_json
 
