@@ -26,9 +26,26 @@ class FakeBot:
     webapi = FakeWebAPI()
 
 
+class FakeRoomHighrise:
+    async def get_room_users(self):
+        return SimpleNamespace(content=[(User("user-789", "EnSala"), None)])
+
+
+class FakeRoomBot(FakeBot):
+    highrise = FakeRoomHighrise()
+
+
 def test_userinfo_finds_user_outside_room():
     response = asyncio.run(
         handle_userinfo(FakeBot(), User("requester", "Solicitante"), "!userinfo @FueraDeSala")
+    )
+
+    assert "Perfil de FueraDeSala" in response
+
+
+def test_userinfo_finds_user_in_room_when_api_has_no_match():
+    response = asyncio.run(
+        handle_userinfo(FakeRoomBot(), User("requester", "Solicitante"), "!userinfo @EnSala")
     )
 
     assert "Perfil de FueraDeSala" in response
