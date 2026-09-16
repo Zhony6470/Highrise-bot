@@ -8,17 +8,20 @@ def required(name)
   value
 end
 
-shoutcast_host = required("SHOUTCAST_HOST")
-shoutcast_port = int_of_string(required("SHOUTCAST_PORT"))
-shoutcast_password = required("SHOUTCAST_PASSWORD")
+icecast_host = required("ICECAST_HOST")
+icecast_port = int_of_string(required("ICECAST_PORT"))
+icecast_password = required("ICECAST_PASSWORD")
+icecast_mount = getenv("ICECAST_MOUNT")
+if icecast_mount == "" then
+  icecast_mount = "stream"
+end
 source = input.http("http://127.0.0.1:8090/stream")
 
 output.icecast(
   %mp3(bitrate=128),
-  protocol="icy",
-  host=shoutcast_host,
-  port=shoutcast_port,
-  password=shoutcast_password,
-  mount="",
+  host=icecast_host,
+  port=icecast_port,
+  password=icecast_password,
+  mount=icecast_mount,
   source
 )
