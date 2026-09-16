@@ -23,8 +23,9 @@ ICECAST_URL = os.environ.get(
     "ICECAST_URL", "icecast://source:CHANGE_ME@127.0.0.1:8000/radio.mp3"
 )
 
-# Ruta a las cookies exportadas para mitigar bloqueos en VPS
+# Ruta opcional a las cookies exportadas para mitigar bloqueos en VPS
 COOKIES_PATH = os.path.join(os.path.dirname(__file__), "cookies.txt")
+USE_YOUTUBE_COOKIES = os.environ.get("YOUTUBE_USE_COOKIES", "0") == "1"
 
 queue = deque()
 queue_lock = Lock()
@@ -60,7 +61,10 @@ def update_icecast_metadata(metadata: dict) -> None:
     try:
         with urlopen(request, timeout=5):
             pass
-    except (HTTPError, URLError, TimeoutError) as error:
+    except HTTPError as error:
+        if error.code != 404:
+            print(f"No se pudieron actualizar los metadatos de Icecast: {error}")
+    except (URLError, TimeoutError) as error:
         print(f"No se pudieron actualizar los metadatos de Icecast: {error}")
 
 
@@ -77,8 +81,8 @@ def decode_video(video_id: str) -> subprocess.Popen:
         source
     ]
     
-    # Agregar cookies si existen en el sistema
-    if os.path.exists(COOKIES_PATH):
+    # Las cookies exportadas pueden caducar; solo usarlas si se solicitan.
+    if USE_YOUTUBE_COOKIES and os.path.exists(COOKIES_PATH):
         ytdlp_cmd.insert(1, "--cookies")
         ytdlp_cmd.insert(2, COOKIES_PATH)
 
@@ -114,29 +118,51 @@ def stop_decoder(decoder: subprocess.Popen | None) -> None:
             process.terminate()
 
 
-def stream_track(decoder, output, tail: bytearray) -> bytearray:
-    while True:
-        chunk = decoder.read(64 * 1024)
-        if not chunk:
-            break
-        if CROSSFADE_BYTES == 0:
-            output.write(chunk)
-        else:
-            tail.extend(chunk)
-            if len(tail) > CROSSFADE_BYTES:
-                output.write(tail[:-CROSSFADE_BYTES])
-                del tail[:-CROSSFADE_BYTES]
-    output.flush()
-    return tail
-
-
-def play_queue() -> None:
-    output = subprocess.Popen([
+def create_output_process() -> subprocess.Popen:
+    return subprocess.Popen([
         "ffmpeg", "-hide_banner", "-loglevel", "warning", "-re",
         "-f", "s16le", "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS), "-i", "pipe:0",
         "-c:a", "libmp3lame", "-b:a", "128k", "-content_type", "audio/mpeg",
         "-f", "mp3", ICECAST_URL,
     ], stdin=subprocess.PIPE)
+
+
+def ensure_output_process(output: subprocess.Popen | None) -> subprocess.Popen:
+    if output is not None and output.poll() is None:
+        return output
+
+    if output is not None:
+        try:
+            output.terminate()
+            output.wait(timeout=2)
+        except Exception:
+            pass
+
+    return create_output_process()
+
+
+def stream_track(decoder, output, tail: bytearray, initial_chunk: bytes = b"") -> bytearray:
+    try:
+        chunks = [initial_chunk] if initial_chunk else []
+        while True:
+            chunk = chunks.pop(0) if chunks else decoder.read(64 * 1024)
+            if not chunk:
+                break
+            if CROSSFADE_BYTES == 0:
+                output.write(chunk)
+            else:
+                tail.extend(chunk)
+                if len(tail) > CROSSFADE_BYTES:
+                    output.write(tail[:-CROSSFADE_BYTES])
+                    del tail[:-CROSSFADE_BYTES]
+        output.flush()
+    except (BrokenPipeError, OSError):
+        raise
+    return tail
+
+
+def play_queue() -> None:
+    output = None
     current = None
     try:
         while True:
@@ -146,23 +172,59 @@ def play_queue() -> None:
                 time.sleep(0.25)
                 continue
             try:
-                update_icecast_metadata(item["metadata"])
-                current = decode_video(item["video_id"])
-                while current is not None:
-                    tail = stream_track(current.stdout, output.stdin, bytearray())
+                while True:
+                    update_icecast_metadata(item["metadata"])
+                    current = decode_video(item["video_id"])
+                    try:
+                        initial_chunk = current.stdout.read(64 * 1024)
+                        if not initial_chunk:
+                            raise OSError("El decodificador no entregó audio")
+                        output = ensure_output_process(output)
+                        tail = stream_track(
+                            current.stdout,
+                            output.stdin,
+                            bytearray(),
+                            initial_chunk,
+                        )
+                    except (BrokenPipeError, OSError):
+                        print("Conexión a Icecast cerrada. Recreando salida del stream...")
+                        output = ensure_output_process(output)
+                        stop_decoder(current)
+                        current = None
+                        time.sleep(1)
+                        continue
                     with queue_lock:
                         next_item = queue.popleft() if queue else None
                     if next_item is None:
-                        output.stdin.write(tail)
-                        output.stdin.flush()
+                        try:
+                            output = ensure_output_process(output)
+                            output.stdin.write(tail)
+                            output.stdin.flush()
+                        except (BrokenPipeError, OSError):
+                            print("Conexión a Icecast cerrada mientras enviaba cola final.")
+                            output = ensure_output_process(output)
+                            stop_decoder(current)
+                            current = None
+                            time.sleep(1)
+                            continue
                         break
                     update_icecast_metadata(next_item["metadata"])
                     next_decoder = decode_video(next_item["video_id"])
                     prefix = next_decoder.stdout.read(CROSSFADE_BYTES) if CROSSFADE_BYTES else b""
-                    output.stdin.write(mix_pcm(bytes(tail), prefix) if CROSSFADE_BYTES else prefix)
-                    if len(prefix) > len(tail):
-                        output.stdin.write(prefix[len(tail):])
-                    output.stdin.flush()
+                    try:
+                        output = ensure_output_process(output)
+                        output.stdin.write(mix_pcm(bytes(tail), prefix) if CROSSFADE_BYTES else prefix)
+                        if len(prefix) > len(tail):
+                            output.stdin.write(prefix[len(tail):])
+                        output.stdin.flush()
+                    except (BrokenPipeError, OSError):
+                        print("Conexión a Icecast cerrada durante el crossfade.")
+                        output = ensure_output_process(output)
+                        stop_decoder(next_decoder)
+                        stop_decoder(current)
+                        current = None
+                        time.sleep(1)
+                        continue
                     stop_decoder(current)
                     current = next_decoder
             except Exception as error:
@@ -172,7 +234,8 @@ def play_queue() -> None:
                 current = None
     finally:
         stop_decoder(current)
-        output.terminate()
+        if output is not None:
+            output.terminate()
 
 
 def worker() -> None:
