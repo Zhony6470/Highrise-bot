@@ -27,6 +27,7 @@ ICECAST_HOST = os.environ.get("ICECAST_HOST", "")
 ICECAST_PORT = os.environ.get("ICECAST_PORT", "")
 ICECAST_PASSWORD = os.environ.get("ICECAST_PASSWORD", "")
 ICECAST_SOURCE = os.environ.get("ICECAST_SOURCE", "")
+ICECAST_MOUNT = os.environ.get("ICECAST_MOUNT", "stream")
 SHOUTCAST_HOST = os.environ.get("SHOUTCAST_HOST", "")
 SHOUTCAST_PORT = os.environ.get("SHOUTCAST_PORT", "")
 SHOUTCAST_PASSWORD = os.environ.get("SHOUTCAST_PASSWORD", "")
@@ -43,7 +44,9 @@ def get_output_url() -> str:
         return f"icecast://{username}:{password}@{SHOUTCAST_HOST}:{SHOUTCAST_PORT}{mount_path}"
     if ICECAST_HOST and ICECAST_PORT and ICECAST_PASSWORD:
         username = ICECAST_SOURCE or ""
-        return f"icecast://{username}:{quote(ICECAST_PASSWORD, safe='')}@{ICECAST_HOST}:{ICECAST_PORT}/"
+        mount = ICECAST_MOUNT.strip("/")
+        mount_path = f"/{quote(mount, safe='/')}" if mount else "/"
+        return f"icecast://{username}:{quote(ICECAST_PASSWORD, safe='')}@{ICECAST_HOST}:{ICECAST_PORT}{mount_path}"
     return ICECAST_URL
 
 
