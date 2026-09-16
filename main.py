@@ -374,7 +374,10 @@ class Bot(BaseBot):
                 for section in response:
                     await self.highrise.send_whisper(user.id, section)
             elif response:
-                await self.highrise.send_whisper(user.id, response)
+                if command_name == "!userinfo":
+                    await self.highrise.chat(response)
+                else:
+                    await self.highrise.send_whisper(user.id, response)
             return
 
         if await handle_track_command(self, user, message):

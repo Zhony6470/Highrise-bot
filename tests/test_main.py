@@ -8,9 +8,13 @@ from main import Bot
 class FakeHighrise:
     def __init__(self):
         self.whispers = []
+        self.chats = []
 
     async def send_whisper(self, user_id, message):
         self.whispers.append((user_id, message))
+
+    async def chat(self, message):
+        self.chats.append(message)
 
 
 class FakeRoleManager:
@@ -44,3 +48,21 @@ def test_on_user_join_sends_private_welcome():
             ]),
         )
     ]
+
+
+def test_userinfo_is_sent_to_public_chat():
+    bot = Bot.__new__(Bot)
+    bot.highrise = FakeHighrise()
+    bot.command_dispatcher = type("FakeDispatcher", (), {
+        "handlers": {"!userinfo": object()},
+        "handle": lambda self, bot, user, message: _resolved_response("Perfil público"),
+    })()
+
+    asyncio.run(bot.on_chat(User("user-123", "Ana"), "!userinfo"))
+
+    assert bot.highrise.chats == ["Perfil público"]
+    assert bot.highrise.whispers == []
+
+
+async def _resolved_response(response):
+    return response
