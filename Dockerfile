@@ -3,7 +3,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 RUN apt-get update \
-	&& apt-get install -y --no-install-recommends ca-certificates curl ffmpeg liquidsoap unzip \
+	&& apt-get install -y --no-install-recommends ca-certificates curl ffmpeg unzip \
 	&& curl -fsSL https://deno.land/install.sh | sh -s v2.3.0 \
 	&& ln -s /root/.deno/bin/deno /usr/local/bin/deno \
 	&& rm -rf /var/lib/apt/lists/*
@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir --upgrade "yt-dlp[default]"
 
 COPY . .
 
-CMD ["sh", "-c", "echo 'Iniciando radio_player y Liquidsoap...' ; python -u radio_player.py & RADIO_PID=$!; (liquidsoap /app/radio.liq > /proc/1/fd/1 2> /proc/1/fd/2; echo \"Liquidsoap terminó con código $?\" > /proc/1/fd/2) & LIQUIDSOAP_PID=$!; trap 'kill $RADIO_PID $LIQUIDSOAP_PID 2>/dev/null || true' TERM INT EXIT; exec python -u main.py"]
+CMD ["sh", "-c", "python -u radio_player.py & exec python -u main.py"]

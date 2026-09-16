@@ -1,7 +1,6 @@
 import hmac
 import json
 import os
-import queue
 import re
 import shutil
 import subprocess
@@ -10,7 +9,7 @@ from array import array
 from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Lock, Thread
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 HOST = os.environ.get("RADIO_HOST", "0.0.0.0")
 PORT = int(os.environ.get("RADIO_PORT", "8090"))
@@ -18,6 +17,29 @@ TOKEN = os.environ.get("RADIO_PLAYER_TOKEN", "")
 if not TOKEN:
     raise RuntimeError("RADIO_PLAYER_TOKEN no está configurado")
 YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
+ICECAST_HOST = os.environ.get("ICECAST_HOST", "")
+ICECAST_PORT = os.environ.get("ICECAST_PORT", "")
+ICECAST_PASSWORD = os.environ.get("ICECAST_PASSWORD", "")
+ICECAST_SOURCE = os.environ.get("ICECAST_SOURCE", "source")
+ICECAST_MOUNT = os.environ.get("ICECAST_MOUNT") or "stream"
+
+
+def get_output_url() -> str:
+    if ICECAST_HOST and ICECAST_PORT and ICECAST_PASSWORD:
+        mount = ICECAST_MOUNT.strip("/")
+        mount_path = f"/{quote(mount, safe='/')}" if mount else "/"
+        username = quote(ICECAST_SOURCE, safe="")
+        password = quote(ICECAST_PASSWORD, safe="")
+        return f"icecast://{username}:{password}@{ICECAST_HOST}:{ICECAST_PORT}{mount_path}"
+    return os.environ.get(
+        "ICECAST_URL", "icecast://source:CHANGE_ME@127.0.0.1:8000/radio.mp3"
+    )
+
+
+OUTPUT_URL = get_output_url()
+output_parts = urlparse(OUTPUT_URL)
+if not output_parts.hostname or not output_parts.password:
+    raise RuntimeError("Configura ICECAST_HOST, ICECAST_PORT e ICECAST_PASSWORD en Render.")
 
 # Ruta opcional a las cookies exportadas para mitigar bloqueos en VPS
 COOKIES_PATH = os.environ.get(
@@ -34,42 +56,9 @@ CHANNELS = 2
 SAMPLE_WIDTH = 2
 CROSSFADE_SECONDS = max(float(os.environ.get("RADIO_CROSSFADE_SECONDS", "3")), 0)
 CROSSFADE_BYTES = int(SAMPLE_RATE * CHANNELS * SAMPLE_WIDTH * CROSSFADE_SECONDS)
-STREAM_PATH = "/stream"
-STREAM_QUEUE_SIZE = 16
-
-
-class LocalAudioPublisher:
-    def __init__(self):
-        self.clients = set()
-        self.clients_lock = Lock()
-
-    def subscribe(self):
-        client = queue.Queue(maxsize=STREAM_QUEUE_SIZE)
-        with self.clients_lock:
-            self.clients.add(client)
-        return client
-
-    def unsubscribe(self, client):
-        with self.clients_lock:
-            self.clients.discard(client)
-
-    def publish(self, chunk: bytes):
-        with self.clients_lock:
-            clients = tuple(self.clients)
-        for client in clients:
-            try:
-                client.put_nowait(chunk)
-            except queue.Full:
-                try:
-                    client.get_nowait()
-                    client.put_nowait(chunk)
-                except queue.Empty:
-                    pass
-
-
-audio_publisher = LocalAudioPublisher()
 
 print(f"Radio player escuchando en {HOST}:{PORT}", flush=True)
+print(f"Destino Icecast configurado: {OUTPUT_URL.rsplit('@', 1)[-1]}", flush=True)
 
 
 def decode_video(video_id: str) -> subprocess.Popen:
@@ -142,22 +131,13 @@ def stop_decoder(decoder: subprocess.Popen | None) -> None:
 
 
 def create_output_process() -> subprocess.Popen:
-    print("Publicando audio local para Liquidsoap...", flush=True)
-    output = subprocess.Popen([
+    print("Conectando salida de audio a Icecast...", flush=True)
+    return subprocess.Popen([
         "ffmpeg", "-hide_banner", "-loglevel", "warning", "-re",
         "-f", "s16le", "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS), "-i", "pipe:0",
-        "-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3", "pipe:1",
-    ], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    Thread(target=publish_output, args=(output,), daemon=True).start()
-    return output
-
-
-def publish_output(output: subprocess.Popen) -> None:
-    while output.stdout:
-        chunk = output.stdout.read(64 * 1024)
-        if not chunk:
-            break
-        audio_publisher.publish(chunk)
+        "-c:a", "libmp3lame", "-b:a", "128k", "-content_type", "audio/mpeg",
+        "-legacy_icecast", "1", "-f", "mp3", OUTPUT_URL,
+    ], stdin=subprocess.PIPE)
 
 
 def ensure_output_process(output: subprocess.Popen | None) -> subprocess.Popen:
@@ -322,25 +302,6 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(b"queued\n")
         except (KeyError, TypeError, ValueError, json.JSONDecodeError):
             self.send_error(400)
-
-    def do_GET(self):
-        if self.path != STREAM_PATH:
-            self.send_error(404)
-            return
-        client = audio_publisher.subscribe()
-        try:
-            self.send_response(200)
-            self.send_header("Content-Type", "audio/mpeg")
-            self.send_header("Cache-Control", "no-cache, no-store")
-            self.send_header("Connection", "close")
-            self.end_headers()
-            while True:
-                self.wfile.write(client.get())
-                self.wfile.flush()
-        except (BrokenPipeError, ConnectionResetError, OSError):
-            pass
-        finally:
-            audio_publisher.unsubscribe(client)
 
     def log_message(self, *_):
         return
