@@ -30,12 +30,19 @@ ICECAST_SOURCE = os.environ.get("ICECAST_SOURCE", "")
 
 def get_output_url() -> str:
     if ICECAST_HOST and ICECAST_PORT and ICECAST_PASSWORD:
-        username = f"{ICECAST_SOURCE}:" if ICECAST_SOURCE else ""
-        return f"icecast://{username}{quote(ICECAST_PASSWORD, safe='')}@{ICECAST_HOST}:{ICECAST_PORT}/"
+        username = ICECAST_SOURCE or ""
+        return f"icecast://{username}:{quote(ICECAST_PASSWORD, safe='')}@{ICECAST_HOST}:{ICECAST_PORT}/"
     return ICECAST_URL
 
 
 OUTPUT_URL = get_output_url()
+
+output_parts = urlparse(OUTPUT_URL)
+if not output_parts.hostname or not output_parts.password:
+    raise RuntimeError(
+        "Falta la conexión de emisión: configura ICECAST_HOST, ICECAST_PORT "
+        "e ICECAST_PASSWORD en Render. No uses la URL pública de escucha en ICECAST_URL."
+    )
 
 # Ruta opcional a las cookies exportadas para mitigar bloqueos en VPS
 COOKIES_PATH = os.path.join(os.path.dirname(__file__), "cookies.txt")
@@ -60,8 +67,8 @@ def update_icecast_metadata(metadata: dict) -> None:
         return
 
     parsed = urlparse(OUTPUT_URL)
-    if not parsed.hostname or not parsed.username or not parsed.password:
-        print("Metadatos Icecast omitidos: ICECAST_URL no contiene credenciales")
+    if not parsed.hostname or not parsed.password:
+        print("Metadatos omitidos: faltan credenciales de emisión")
         return
 
     song = f"{title} - {channel}" if channel else title
