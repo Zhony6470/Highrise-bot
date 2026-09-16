@@ -199,12 +199,11 @@ def play_queue() -> None:
                             initial_chunk,
                         )
                     except (BrokenPipeError, OSError):
-                        print("Conexión local cerrada. Recreando salida del stream...")
+                        print("Conexión Icecast cerrada; se descarta la pista actual.")
                         output = ensure_output_process(output)
                         stop_decoder(current)
                         current = None
-                        time.sleep(1)
-                        continue
+                        break
                     with queue_lock:
                         next_item = playback_queue.popleft() if playback_queue else None
                     if next_item is None:
@@ -213,12 +212,11 @@ def play_queue() -> None:
                             output.stdin.write(tail)
                             output.stdin.flush()
                         except (BrokenPipeError, OSError):
-                            print("Conexión local cerrada mientras enviaba cola final.")
+                            print("Conexión Icecast cerrada al finalizar la pista.")
                             output = ensure_output_process(output)
                             stop_decoder(current)
                             current = None
-                            time.sleep(1)
-                            continue
+                            break
                         break
                     next_decoder = decode_item(next_item)
                     prefix = next_decoder.stdout.read(CROSSFADE_BYTES) if CROSSFADE_BYTES else b""
@@ -229,13 +227,12 @@ def play_queue() -> None:
                             output.stdin.write(prefix[len(tail):])
                         output.stdin.flush()
                     except (BrokenPipeError, OSError):
-                        print("Conexión local cerrada durante el crossfade.")
+                        print("Conexión Icecast cerrada durante el crossfade.")
                         output = ensure_output_process(output)
                         stop_decoder(next_decoder)
                         stop_decoder(current)
                         current = None
-                        time.sleep(1)
-                        continue
+                        break
                     stop_decoder(current)
                     current = next_decoder
             except Exception as error:
