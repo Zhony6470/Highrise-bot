@@ -51,10 +51,11 @@ RUNTIME_COOKIES_PATH = os.path.join("/tmp", "yt-dlp-cookies.txt")
 
 playback_queue = deque()
 queue_lock = Lock()
+MAX_QUEUE_SIZE = 10
 SAMPLE_RATE = 44100
 CHANNELS = 2
 SAMPLE_WIDTH = 2
-CROSSFADE_SECONDS = max(float(os.environ.get("RADIO_CROSSFADE_SECONDS", "3")), 0)
+CROSSFADE_SECONDS = max(float(os.environ.get("RADIO_CROSSFADE_SECONDS", "0")), 0)
 CROSSFADE_BYTES = int(SAMPLE_RATE * CHANNELS * SAMPLE_WIDTH * CROSSFADE_SECONDS)
 
 print(f"Radio player escuchando en {HOST}:{PORT}", flush=True)
@@ -68,6 +69,8 @@ def decode_video(video_id: str) -> subprocess.Popen:
     ytdlp_cmd = [
         "yt-dlp",
         "--no-playlist",
+        "--no-cache-dir",
+        "--no-progress",
         "-f", "bestaudio/best",
         "--extractor-args", "youtube:player_client=android,ios,web_embedded;skip=hls,dash",
         "-o", "-",
@@ -86,7 +89,7 @@ def decode_video(video_id: str) -> subprocess.Popen:
 
     ytdlp = subprocess.Popen(ytdlp_cmd, stdout=subprocess.PIPE)
     decoder = subprocess.Popen([
-        "ffmpeg", "-hide_banner", "-loglevel", "warning", "-i", "pipe:0",
+        "ffmpeg", "-hide_banner", "-loglevel", "warning", "-threads", "1", "-i", "pipe:0",
         "-vn", "-f", "s16le", "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS), "pipe:1",
     ], stdin=ytdlp.stdout, stdout=subprocess.PIPE)
     ytdlp.stdout.close()
@@ -96,7 +99,7 @@ def decode_video(video_id: str) -> subprocess.Popen:
 
 def decode_stream(stream_url: str) -> subprocess.Popen:
     decoder = subprocess.Popen([
-        "ffmpeg", "-hide_banner", "-loglevel", "warning", "-i", stream_url,
+        "ffmpeg", "-hide_banner", "-loglevel", "warning", "-threads", "1", "-i", stream_url,
         "-vn", "-f", "s16le", "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS), "pipe:1",
     ], stdout=subprocess.PIPE)
     return decoder
@@ -133,7 +136,7 @@ def stop_decoder(decoder: subprocess.Popen | None) -> None:
 def create_output_process() -> subprocess.Popen:
     print("Conectando salida de audio a Icecast...", flush=True)
     return subprocess.Popen([
-        "ffmpeg", "-hide_banner", "-loglevel", "warning", "-re",
+        "ffmpeg", "-hide_banner", "-loglevel", "warning", "-threads", "1", "-re",
         "-f", "s16le", "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS), "-i", "pipe:0",
         "-c:a", "libmp3lame", "-b:a", "128k", "-content_type", "audio/mpeg",
         "-f", "mp3", OUTPUT_URL,
@@ -289,6 +292,9 @@ class Handler(BaseHTTPRequestHandler):
                 if key in {"title", "channel", "url"} and isinstance(value, str)
             }
             with queue_lock:
+                if len(playback_queue) >= MAX_QUEUE_SIZE:
+                    self.send_error(429, "cola de reproducción llena")
+                    return
                 playback_queue.append({
                     "video_id": video_id,
                     "stream_url": stream_url,
