@@ -13,7 +13,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlparse
 from urllib.request import Request, urlopen
 
-HOST = os.environ.get("RADIO_HOST", "127.0.0.1")
+HOST = os.environ.get("RADIO_HOST", "0.0.0.0")
 PORT = int(os.environ.get("RADIO_PORT", "8090"))
 TOKEN = os.environ.get("RADIO_PLAYER_TOKEN", "")
 if not TOKEN:
