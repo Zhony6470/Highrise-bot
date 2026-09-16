@@ -78,6 +78,9 @@ print(f"Destino de salida configurado: {OUTPUT_URL.rsplit('@', 1)[-1]}", flush=T
 
 
 def update_icecast_metadata(metadata: dict) -> None:
+    if SHOUTCAST_HOST:
+        return
+
     title = metadata.get("title", "").strip()
     channel = metadata.get("channel", "").strip()
     if not title:
@@ -117,7 +120,6 @@ def decode_video(video_id: str) -> subprocess.Popen:
         "yt-dlp",
         "--no-playlist",
         "-f", "bestaudio/best",
-        "--js-runtimes", "deno",
         "--extractor-args", "youtube:player_client=android,ios,web_embedded;skip=hls,dash",
         "-o", "-",
         source
