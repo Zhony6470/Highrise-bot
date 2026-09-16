@@ -22,9 +22,6 @@ YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
 ICECAST_URL = os.environ.get(
     "ICECAST_URL", "icecast://source:CHANGE_ME@127.0.0.1:8000/radio.mp3"
 )
-RADIO_SOURCE_URL = os.environ.get(
-    "RADIO_STREAM_URL", os.environ.get("RADIO_SOURCE_URL", "")
-)
 
 # Ruta opcional a las cookies exportadas para mitigar bloqueos en VPS
 COOKIES_PATH = os.path.join(os.path.dirname(__file__), "cookies.txt")
@@ -38,18 +35,8 @@ SAMPLE_WIDTH = 2
 CROSSFADE_SECONDS = max(float(os.environ.get("RADIO_CROSSFADE_SECONDS", "3")), 0)
 CROSSFADE_BYTES = int(SAMPLE_RATE * CHANNELS * SAMPLE_WIDTH * CROSSFADE_SECONDS)
 
-if RADIO_SOURCE_URL:
-    parsed_source = urlparse(RADIO_SOURCE_URL)
-    if parsed_source.scheme not in {"http", "https"} or not parsed_source.hostname:
-        raise RuntimeError("RADIO_SOURCE_URL debe ser una URL http o https válida")
-    queue.append({
-        "stream_url": RADIO_SOURCE_URL,
-        "metadata": {
-            "title": "ZRadio",
-            "channel": "ZRadio",
-            "url": RADIO_SOURCE_URL,
-        },
-    })
+print(f"Radio player escuchando en {HOST}:{PORT}", flush=True)
+print(f"Destino de salida configurado: {ICECAST_URL.rsplit('@', 1)[-1]}", flush=True)
 
 
 def update_icecast_metadata(metadata: dict) -> None:
@@ -149,6 +136,7 @@ def stop_decoder(decoder: subprocess.Popen | None) -> None:
 
 
 def create_output_process() -> subprocess.Popen:
+    print("Conectando salida de audio a MyRadioStream...", flush=True)
     return subprocess.Popen([
         "ffmpeg", "-hide_banner", "-loglevel", "warning", "-re",
         "-f", "s16le", "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS), "-i", "pipe:0",

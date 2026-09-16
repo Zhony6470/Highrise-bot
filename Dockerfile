@@ -11,4 +11,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["sh", "-c", "python radio_player.py & exec python main.py"]
+CMD ["sh", "-c", "python -u radio_player.py & exec python -u main.py"]
