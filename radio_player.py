@@ -26,9 +26,20 @@ ICECAST_HOST = os.environ.get("ICECAST_HOST", "")
 ICECAST_PORT = os.environ.get("ICECAST_PORT", "")
 ICECAST_PASSWORD = os.environ.get("ICECAST_PASSWORD", "")
 ICECAST_SOURCE = os.environ.get("ICECAST_SOURCE", "")
+SHOUTCAST_HOST = os.environ.get("SHOUTCAST_HOST", "")
+SHOUTCAST_PORT = os.environ.get("SHOUTCAST_PORT", "")
+SHOUTCAST_PASSWORD = os.environ.get("SHOUTCAST_PASSWORD", "")
+SHOUTCAST_SOURCE = os.environ.get("SHOUTCAST_SOURCE", "source")
+SHOUTCAST_MOUNT = os.environ.get("SHOUTCAST_MOUNT", "")
 
 
 def get_output_url() -> str:
+    if SHOUTCAST_HOST and SHOUTCAST_PORT and SHOUTCAST_PASSWORD:
+        mount = SHOUTCAST_MOUNT.strip("/")
+        mount_path = f"/{quote(mount, safe='/')}" if mount else "/"
+        username = quote(SHOUTCAST_SOURCE, safe="")
+        password = quote(SHOUTCAST_PASSWORD, safe="")
+        return f"icecast://{username}:{password}@{SHOUTCAST_HOST}:{SHOUTCAST_PORT}{mount_path}"
     if ICECAST_HOST and ICECAST_PORT and ICECAST_PASSWORD:
         username = ICECAST_SOURCE or ""
         return f"icecast://{username}:{quote(ICECAST_PASSWORD, safe='')}@{ICECAST_HOST}:{ICECAST_PORT}/"
@@ -40,12 +51,16 @@ OUTPUT_URL = get_output_url()
 output_parts = urlparse(OUTPUT_URL)
 if not output_parts.hostname or not output_parts.password:
     raise RuntimeError(
-        "Falta la conexión de emisión: configura ICECAST_HOST, ICECAST_PORT "
-        "e ICECAST_PASSWORD en Render. No uses la URL pública de escucha en ICECAST_URL."
+        "Falta la conexión de emisión: configura SHOUTCAST_HOST, SHOUTCAST_PORT "
+        "y SHOUTCAST_PASSWORD (o las variables ICECAST_* equivalentes) en Render. "
+        "No uses la URL pública de escucha como destino de emisión."
     )
 
 # Ruta opcional a las cookies exportadas para mitigar bloqueos en VPS
-COOKIES_PATH = os.path.join(os.path.dirname(__file__), "cookies.txt")
+COOKIES_PATH = os.environ.get(
+    "YOUTUBE_COOKIES_PATH",
+    os.path.join(os.path.dirname(__file__), "cookies.txt"),
+)
 USE_YOUTUBE_COOKIES = os.environ.get("YOUTUBE_USE_COOKIES", "0") == "1"
 
 queue = deque()
