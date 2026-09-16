@@ -11,19 +11,19 @@ async def handle_userinfo(bot: BaseBot, user: User, message: str) -> str:
             return "<#FFCC66>👤 Debes indicar un usuario válido."
 
         try:
-            room_users = (await bot.highrise.get_room_users()).content
-            room_user = next(
-                (room_user for room_user, _ in room_users
-                 if room_user.username.lower() == username.lower()),
+            users_response = await bot.webapi.get_users(username=username)
+            matched_user = next(
+                (public_user for public_user in users_response.users
+                 if public_user.username.lower() == username.lower()),
                 None,
             )
         except Exception as error:
-            print(f"Error buscando usuarios en la sala: {error}")
-            return "<#FF6666>⚠️ No se pudo buscar ese usuario en la sala."
+            print(f"Error buscando el usuario en Web API: {error}")
+            return "<#FF6666>⚠️ No se pudo buscar ese usuario."
 
-        if room_user is None:
-            return "<#FFCC66>🔎 Usuario no encontrado en la sala."
-        user_id = room_user.id
+        if matched_user is None:
+            return "<#FFCC66>🔎 Usuario no encontrado."
+        user_id = matched_user.id
     else:
         return "<#FFCC66>👤 Uso: !userinfo o !userinfo @usuario"
 
