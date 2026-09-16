@@ -31,7 +31,7 @@ SHOUTCAST_HOST = os.environ.get("SHOUTCAST_HOST", "")
 SHOUTCAST_PORT = os.environ.get("SHOUTCAST_PORT", "")
 SHOUTCAST_PASSWORD = os.environ.get("SHOUTCAST_PASSWORD", "")
 SHOUTCAST_SOURCE = os.environ.get("SHOUTCAST_SOURCE", "source")
-SHOUTCAST_MOUNT = os.environ.get("SHOUTCAST_MOUNT", "")
+SHOUTCAST_MOUNT = os.environ.get("SHOUTCAST_MOUNT", "stream")
 
 
 def get_output_url() -> str:
