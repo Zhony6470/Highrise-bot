@@ -2,3 +2,4 @@ highrise-bot-sdk
 supabase
 yt-dlp[default]
 google-api-python-client
+websockets<10

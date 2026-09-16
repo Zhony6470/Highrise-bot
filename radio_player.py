@@ -136,7 +136,7 @@ def create_output_process() -> subprocess.Popen:
         "ffmpeg", "-hide_banner", "-loglevel", "warning", "-re",
         "-f", "s16le", "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS), "-i", "pipe:0",
         "-c:a", "libmp3lame", "-b:a", "128k", "-content_type", "audio/mpeg",
-        "-legacy_icecast", "1", "-f", "mp3", OUTPUT_URL,
+        "-f", "mp3", OUTPUT_URL,
     ], stdin=subprocess.PIPE)
 
 
