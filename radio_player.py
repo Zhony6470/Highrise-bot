@@ -27,12 +27,12 @@ ICECAST_HOST = os.environ.get("ICECAST_HOST", "")
 ICECAST_PORT = os.environ.get("ICECAST_PORT", "")
 ICECAST_PASSWORD = os.environ.get("ICECAST_PASSWORD", "")
 ICECAST_SOURCE = os.environ.get("ICECAST_SOURCE", "")
-ICECAST_MOUNT = os.environ.get("ICECAST_MOUNT", "stream")
+ICECAST_MOUNT = os.environ.get("ICECAST_MOUNT") or "stream"
 SHOUTCAST_HOST = os.environ.get("SHOUTCAST_HOST", "")
 SHOUTCAST_PORT = os.environ.get("SHOUTCAST_PORT", "")
 SHOUTCAST_PASSWORD = os.environ.get("SHOUTCAST_PASSWORD", "")
 SHOUTCAST_SOURCE = os.environ.get("SHOUTCAST_SOURCE", "source")
-SHOUTCAST_MOUNT = os.environ.get("SHOUTCAST_MOUNT", "stream")
+SHOUTCAST_MOUNT = os.environ.get("SHOUTCAST_MOUNT") or "stream"
 
 
 def get_output_url() -> str:
