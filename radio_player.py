@@ -22,6 +22,20 @@ YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
 ICECAST_URL = os.environ.get(
     "ICECAST_URL", "icecast://source:CHANGE_ME@127.0.0.1:8000/radio.mp3"
 )
+ICECAST_HOST = os.environ.get("ICECAST_HOST", "")
+ICECAST_PORT = os.environ.get("ICECAST_PORT", "")
+ICECAST_PASSWORD = os.environ.get("ICECAST_PASSWORD", "")
+ICECAST_SOURCE = os.environ.get("ICECAST_SOURCE", "")
+
+
+def get_output_url() -> str:
+    if ICECAST_HOST and ICECAST_PORT and ICECAST_PASSWORD:
+        username = f"{ICECAST_SOURCE}:" if ICECAST_SOURCE else ""
+        return f"icecast://{username}{quote(ICECAST_PASSWORD, safe='')}@{ICECAST_HOST}:{ICECAST_PORT}/"
+    return ICECAST_URL
+
+
+OUTPUT_URL = get_output_url()
 
 # Ruta opcional a las cookies exportadas para mitigar bloqueos en VPS
 COOKIES_PATH = os.path.join(os.path.dirname(__file__), "cookies.txt")
@@ -36,7 +50,7 @@ CROSSFADE_SECONDS = max(float(os.environ.get("RADIO_CROSSFADE_SECONDS", "3")), 0
 CROSSFADE_BYTES = int(SAMPLE_RATE * CHANNELS * SAMPLE_WIDTH * CROSSFADE_SECONDS)
 
 print(f"Radio player escuchando en {HOST}:{PORT}", flush=True)
-print(f"Destino de salida configurado: {ICECAST_URL.rsplit('@', 1)[-1]}", flush=True)
+print(f"Destino de salida configurado: {OUTPUT_URL.rsplit('@', 1)[-1]}", flush=True)
 
 
 def update_icecast_metadata(metadata: dict) -> None:
@@ -45,7 +59,7 @@ def update_icecast_metadata(metadata: dict) -> None:
     if not title:
         return
 
-    parsed = urlparse(ICECAST_URL)
+    parsed = urlparse(OUTPUT_URL)
     if not parsed.hostname or not parsed.username or not parsed.password:
         print("Metadatos Icecast omitidos: ICECAST_URL no contiene credenciales")
         return
@@ -142,7 +156,7 @@ def create_output_process() -> subprocess.Popen:
         "-f", "s16le", "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS), "-i", "pipe:0",
         "-c:a", "libmp3lame", "-b:a", "128k", "-content_type", "audio/mpeg",
         "-legacy_icecast", "1",
-        "-f", "mp3", ICECAST_URL,
+        "-f", "mp3", OUTPUT_URL,
     ], stdin=subprocess.PIPE)
 
 
