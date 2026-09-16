@@ -22,6 +22,7 @@ YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
 ICECAST_URL = os.environ.get(
     "ICECAST_URL", "icecast://source:CHANGE_ME@127.0.0.1:8000/radio.mp3"
 )
+RADIO_SOURCE_URL = os.environ.get("RADIO_SOURCE_URL", "")
 
 # Ruta opcional a las cookies exportadas para mitigar bloqueos en VPS
 COOKIES_PATH = os.path.join(os.path.dirname(__file__), "cookies.txt")
@@ -34,6 +35,19 @@ CHANNELS = 2
 SAMPLE_WIDTH = 2
 CROSSFADE_SECONDS = max(float(os.environ.get("RADIO_CROSSFADE_SECONDS", "3")), 0)
 CROSSFADE_BYTES = int(SAMPLE_RATE * CHANNELS * SAMPLE_WIDTH * CROSSFADE_SECONDS)
+
+if RADIO_SOURCE_URL:
+    parsed_source = urlparse(RADIO_SOURCE_URL)
+    if parsed_source.scheme not in {"http", "https"} or not parsed_source.hostname:
+        raise RuntimeError("RADIO_SOURCE_URL debe ser una URL http o https válida")
+    queue.append({
+        "stream_url": RADIO_SOURCE_URL,
+        "metadata": {
+            "title": "ZRadio",
+            "channel": "ZRadio",
+            "url": RADIO_SOURCE_URL,
+        },
+    })
 
 
 def update_icecast_metadata(metadata: dict) -> None:
@@ -94,6 +108,20 @@ def decode_video(video_id: str) -> subprocess.Popen:
     ytdlp.stdout.close()
     decoder.ytdlp = ytdlp
     return decoder
+
+
+def decode_stream(stream_url: str) -> subprocess.Popen:
+    decoder = subprocess.Popen([
+        "ffmpeg", "-hide_banner", "-loglevel", "warning", "-i", stream_url,
+        "-vn", "-f", "s16le", "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS), "pipe:1",
+    ], stdout=subprocess.PIPE)
+    return decoder
+
+
+def decode_item(item: dict) -> subprocess.Popen:
+    if item.get("stream_url"):
+        return decode_stream(item["stream_url"])
+    return decode_video(item["video_id"])
 
 
 def mix_pcm(left: bytes, right: bytes) -> bytes:
@@ -174,7 +202,7 @@ def play_queue() -> None:
             try:
                 while True:
                     update_icecast_metadata(item["metadata"])
-                    current = decode_video(item["video_id"])
+                    current = decode_item(item)
                     try:
                         initial_chunk = current.stdout.read(64 * 1024)
                         if not initial_chunk:
@@ -209,7 +237,7 @@ def play_queue() -> None:
                             continue
                         break
                     update_icecast_metadata(next_item["metadata"])
-                    next_decoder = decode_video(next_item["video_id"])
+                    next_decoder = decode_item(next_item)
                     prefix = next_decoder.stdout.read(CROSSFADE_BYTES) if CROSSFADE_BYTES else b""
                     try:
                         output = ensure_output_process(output)
@@ -228,7 +256,8 @@ def play_queue() -> None:
                     stop_decoder(current)
                     current = next_decoder
             except Exception as error:
-                print(f"Error reproduciendo {item['video_id']}: {error}")
+                source = item.get("stream_url", item.get("video_id", "desconocido"))
+                print(f"Error reproduciendo {source}: {error}")
             finally:
                 stop_decoder(current)
                 current = None
@@ -255,9 +284,23 @@ class Handler(BaseHTTPRequestHandler):
         try:
             length = int(self.headers.get("Content-Length", "0"))
             payload = json.loads(self.rfile.read(length))
-            video_id = payload["video_id"]
-            if not isinstance(video_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
+            video_id = payload.get("video_id")
+            stream_url = payload.get("stream_url")
+            if video_id is None and stream_url is None:
+                raise ValueError("fuente de reproducción ausente")
+            if video_id is not None and (
+                not isinstance(video_id, str)
+                or not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id)
+            ):
                 raise ValueError("video_id inválido")
+            if stream_url is not None:
+                parsed_stream = urlparse(stream_url) if isinstance(stream_url, str) else None
+                if (
+                    parsed_stream is None
+                    or parsed_stream.scheme not in {"http", "https"}
+                    or not parsed_stream.hostname
+                ):
+                    raise ValueError("stream_url inválida")
             metadata = payload.get("metadata", {})
             if not isinstance(metadata, dict):
                 raise ValueError("metadata inválida")
@@ -266,7 +309,11 @@ class Handler(BaseHTTPRequestHandler):
                 if key in {"title", "channel", "url"} and isinstance(value, str)
             }
             with queue_lock:
-                queue.append({"video_id": video_id, "metadata": metadata})
+                queue.append({
+                    "video_id": video_id,
+                    "stream_url": stream_url,
+                    "metadata": metadata,
+                })
             self.send_response(202)
             self.end_headers()
             self.wfile.write(b"queued\n")

@@ -383,7 +383,7 @@ class Bot(BaseBot):
         if await handle_track_command(self, user, message):
             return
 
-        if msg_lower.startswith(("!play", "/play")):
+        if command_name in ("!play", "/play"):
             query = msg[5:].strip()
             if not query:
                 await self.highrise.send_whisper(
