@@ -139,7 +139,7 @@ def create_output_process() -> subprocess.Popen:
         "ffmpeg", "-hide_banner", "-loglevel", "warning", "-threads", "1", "-re",
         "-f", "s16le", "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS), "-i", "pipe:0",
         "-c:a", "libmp3lame", "-b:a", "128k", "-content_type", "audio/mpeg",
-        "-f", "mp3", OUTPUT_URL,
+        "-flush_packets", "1", "-f", "mp3", OUTPUT_URL,
     ], stdin=subprocess.PIPE)
 
 
@@ -221,6 +221,11 @@ def play_queue() -> None:
                             current = None
                             break
                         break
+                    print(
+                        f"Cambiando a la siguiente pista: "
+                        f"{next_item.get('video_id') or next_item.get('stream_url')}",
+                        flush=True,
+                    )
                     next_decoder = decode_item(next_item)
                     prefix = next_decoder.stdout.read(CROSSFADE_BYTES) if CROSSFADE_BYTES else b""
                     try:
