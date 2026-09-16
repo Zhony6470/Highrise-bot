@@ -246,7 +246,7 @@ def play_queue() -> None:
                     stop_decoder(current)
                     current = next_decoder
             except Exception as error:
-                source = item.get("stream_url", item.get("video_id", "desconocido"))
+                source = item.get("stream_url") or item.get("video_id") or "desconocido"
                 print(f"Error reproduciendo {source}: {error}")
             finally:
                 stop_decoder(current)
