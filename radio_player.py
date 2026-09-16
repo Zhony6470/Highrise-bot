@@ -2,6 +2,7 @@ import hmac
 import json
 import os
 import re
+import shutil
 import subprocess
 import time
 from array import array
@@ -62,6 +63,7 @@ COOKIES_PATH = os.environ.get(
     os.path.join(os.path.dirname(__file__), "cookies.txt"),
 )
 USE_YOUTUBE_COOKIES = os.environ.get("YOUTUBE_USE_COOKIES", "0") == "1"
+RUNTIME_COOKIES_PATH = os.path.join("/tmp", "yt-dlp-cookies.txt")
 
 queue = deque()
 queue_lock = Lock()
@@ -115,6 +117,7 @@ def decode_video(video_id: str) -> subprocess.Popen:
         "yt-dlp",
         "--no-playlist",
         "-f", "bestaudio/best",
+        "--js-runtimes", "deno",
         "--extractor-args", "youtube:player_client=android,ios,web_embedded;skip=hls,dash",
         "-o", "-",
         source
@@ -122,8 +125,13 @@ def decode_video(video_id: str) -> subprocess.Popen:
     
     # Las cookies exportadas pueden caducar; solo usarlas si se solicitan.
     if USE_YOUTUBE_COOKIES and os.path.exists(COOKIES_PATH):
-        ytdlp_cmd.insert(1, "--cookies")
-        ytdlp_cmd.insert(2, COOKIES_PATH)
+        try:
+            shutil.copyfile(COOKIES_PATH, RUNTIME_COOKIES_PATH)
+        except OSError as error:
+            print(f"No se pudieron preparar las cookies de YouTube: {error}")
+        else:
+            ytdlp_cmd.insert(1, "--cookies")
+            ytdlp_cmd.insert(2, RUNTIME_COOKIES_PATH)
 
     ytdlp = subprocess.Popen(ytdlp_cmd, stdout=subprocess.PIPE)
     decoder = subprocess.Popen([
