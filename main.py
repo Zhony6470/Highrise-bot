@@ -4,8 +4,6 @@ from asyncio import run as arun
 from json import load
 import asyncio
 import os
-import subprocess
-import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from random import choice, randint
 from threading import Thread
@@ -30,28 +28,6 @@ from services.radio import RadioRequestError, request_playback
 from tips import TipManager
 from anuncios import announcement_loop
 from diversion import handle_diversion_command
-
-
-radio_player_process = None
-
-
-def start_radio_player():
-    global radio_player_process
-    if os.environ.get("RADIO_PLAYER_AUTOSTART", "0") != "1":
-        return None
-
-    radio_player_process = subprocess.Popen(
-        [sys.executable, os.path.join(os.path.dirname(__file__), "radio_player.py")],
-        cwd=os.path.dirname(__file__),
-        env=os.environ.copy(),
-    )
-    print(f"Reproductor de radio iniciado con PID {radio_player_process.pid}.")
-    return radio_player_process
-
-
-def stop_radio_player():
-    if radio_player_process is not None and radio_player_process.poll() is None:
-        radio_player_process.terminate()
 
 
 class HealthHandler(BaseHTTPRequestHandler):
@@ -877,10 +853,6 @@ class Bot(BaseBot):
 if __name__ == "__main__":
     if not ROOM_ID or not API_KEY:
         raise RuntimeError("ROOM_ID y API_KEY deben estar configuradas en el entorno")
-    start_radio_player()
     Thread(target=start_health_server, daemon=True).start()
     definitions = [BotDefinition(Bot(), ROOM_ID, API_KEY)]
-    try:
-        arun(__main__.main(definitions))
-    finally:
-        stop_radio_player()
+    arun(__main__.main(definitions))

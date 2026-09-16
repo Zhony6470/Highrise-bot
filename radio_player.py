@@ -22,7 +22,9 @@ YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
 ICECAST_URL = os.environ.get(
     "ICECAST_URL", "icecast://source:CHANGE_ME@127.0.0.1:8000/radio.mp3"
 )
-RADIO_SOURCE_URL = os.environ.get("RADIO_SOURCE_URL", "")
+RADIO_SOURCE_URL = os.environ.get(
+    "RADIO_STREAM_URL", os.environ.get("RADIO_SOURCE_URL", "")
+)
 
 # Ruta opcional a las cookies exportadas para mitigar bloqueos en VPS
 COOKIES_PATH = os.path.join(os.path.dirname(__file__), "cookies.txt")
