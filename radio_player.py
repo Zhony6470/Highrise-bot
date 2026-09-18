@@ -353,27 +353,6 @@ def crossfade_prefetched(source, output, tail: bytes) -> int:
     write_output_chunk(output, mix_pcm(tail[-overlap:], incoming[:overlap]))
     return overlap
 
-
-def stream_prefetched_after_crossfade(
-    prepared,
-    output,
-    tail: bytes,
-    should_stop=None,
-) -> int:
-    """Aplica el crossfade y continúa la pista preparada sin repetir el audio solapado."""
-    with open(prepared.path, "rb") as source:
-        consumed = crossfade_prefetched(source, output, tail)
-
-        while True:
-            if should_stop and should_stop():
-                raise OSError("salto solicitado")
-            chunk = source.read(64 * 1024)
-            if not chunk:
-                break
-            write_output_chunk(output, chunk)
-
-    return consumed
-
 def stop_decoder(decoder: subprocess.Popen | None) -> None:
     if decoder and decoder.stdout:
         decoder.stdout.close()
@@ -390,6 +369,7 @@ class PrefetchedTrack:
         self.path = self.file.name
         self.done = False
         self.error = None
+        self.offset = 0
         self.thread = Thread(target=self._read, daemon=True)
         self.thread.start()
 
@@ -414,7 +394,11 @@ class PrefetchedTrack:
 
     def stream(self, output, tail: bytearray, should_stop=None) -> bytearray:
         with open(self.path, "rb") as source:
-            return stream_track(source, output, tail, should_stop=should_stop)
+            if self.offset:
+                source.seek(self.offset)
+            result = stream_track(source, output, tail, should_stop=should_stop)
+            self.offset = 0
+            return result
 
     def cleanup(self) -> None:
         stop_decoder(self.decoder)
@@ -634,8 +618,9 @@ def play_queue() -> None:
                     )
 
                 # En una transición normal mezclamos el final actual con el inicio
-                # de la siguiente pista. La salida a Icecast sigue siendo el mismo
-                # proceso FFmpeg: nunca se cierra/reabre la conexión por canción.
+                # de la siguiente pista. Solo consumimos del archivo preparado los
+                # bytes que participan en el solapamiento; el resto se reproducirá
+                # normalmente cuando esa pista pase a ser la actual.
                 do_crossfade = (
                     CROSSFADE_BYTES > 0
                     and next_prepared is not None
@@ -648,13 +633,13 @@ def play_queue() -> None:
                     next_prepared.wait()
                     if next_prepared.error:
                         raise next_prepared.error
-                    stream_prefetched_after_crossfade(
-                        next_prepared,
-                        output.stdin,
-                        bytes(current_tail),
-                        should_stop=stop_for_skip,
-                    )
-                    set_current(next_item)
+                    with open(next_prepared.path, "rb") as source:
+                        consumed = crossfade_prefetched(
+                            source,
+                            output.stdin,
+                            bytes(current_tail),
+                        )
+                    next_prepared.offset = consumed
                     current_tail.clear()
 
 
