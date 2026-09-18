@@ -145,12 +145,7 @@ class Bot(BaseBot):
                 "<#CC99FF>👤 INFORMACIÓN",
                     "<#FFFFFF>• !userinfo - Ver tu información",
                 "<#FFFFFF>• !userinfo @usuario - Ver información de otro usuario",
-                "<#FFFFFF>• !play canción - Añadir música a la radio",
-                    "<#FFFFFF>• !q - Ver la cola de reproducción",
-                    "<#FFFFFF>• !reviw - Ver la canción actual y su tiempo",
-                    "<#FFFFFF>• !skip - Saltar la canción actual (moderación)",
-                    "<#FFFFFF>• !addplay / !ap - Añadir a la playlist (moderación)",
-                    "<#FFFFFF>• !removeplay / !rp - Quitar de la playlist (moderación)",
+                "<#FFFFFF>• !help - Mostrar la ayuda disponible",
             ]),
         ]
 
@@ -371,7 +366,8 @@ class Bot(BaseBot):
         self.announcement_task = asyncio.create_task(announcement_loop(self))
         if self.radio_monitor_task:
             self.radio_monitor_task.cancel()
-        self.radio_monitor_task = asyncio.create_task(self.radio_monitor_loop())
+        if os.environ.get("MUSIC_COMMANDS_ENABLED", "0") == "1":
+            self.radio_monitor_task = asyncio.create_task(self.radio_monitor_loop())
         try:
             positions = load_json(self.position_manager.positions_file)
             if positions.get("pista_emotes"):
@@ -384,6 +380,9 @@ class Bot(BaseBot):
         msg_lower = msg.lower()
 
         command_name = msg.split(maxsplit=1)[0].lower() if msg else ""
+        # La música vive en music-bot. El bot principal puede desactivar estos comandos.
+        if os.environ.get("MUSIC_COMMANDS_ENABLED", "0") != "1" and command_name in {"!play", "/play", "!skip", "!q", "!queue", "!review", "!reviw", "!ap", "!addplay", "!rp", "!removeplay"}:
+            return
         if command_name in self.command_dispatcher.handlers:
             response = await self.command_dispatcher.handle(self, user, msg)
             if isinstance(response, list):
