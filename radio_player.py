@@ -443,6 +443,24 @@ def stream_track(
     return tail
 
 
+def is_same_track(item_a: dict | None, item_b: dict | None) -> bool:
+    if item_a is None or item_b is None:
+        return item_a is item_b
+    a_key = item_a.get("video_id") or item_a.get("stream_url") or item_a.get("file_path")
+    b_key = item_b.get("video_id") or item_b.get("stream_url") or item_b.get("file_path")
+    if not a_key or not b_key:
+        return item_a == item_b
+    return a_key == b_key
+
+
+def should_advance_after_skip(current_item: dict | None, next_item: dict | None) -> bool:
+    if next_item is None:
+        return False
+    if current_item is None:
+        return True
+    return not is_same_track(current_item, next_item)
+
+
 def set_current(item: dict | None) -> None:
     global current_item, current_started_at
     with state_lock:
@@ -595,6 +613,17 @@ def play_queue() -> None:
                         playback_queue.appendleft(item)
                         save_request_queue()
                 if skip_requested and next_prepared and next_prepared.done and not next_prepared.error:
+                    if not should_advance_after_skip(item, next_item):
+                        print("Skip ignorado: la pista siguiente es la misma que la actual.", flush=True)
+                        skip_requested = False
+                        next_prepared.cleanup()
+                        next_prepared = None
+                        if next_item:
+                            with queue_lock:
+                                playback_queue.appendleft(next_item)
+                                save_request_queue()
+                        item = None
+                        continue
                     if current_decoder:
                         stop_decoder(current_decoder)
                         current_decoder = None
@@ -635,6 +664,13 @@ def play_queue() -> None:
                     print("Pista por defecto interrumpida por una solicitud de !play.", flush=True)
                     priority_requested = False
                     priority_event.clear()
+                    if next_prepared:
+                        next_prepared.cleanup()
+                        next_prepared = None
+                        if next_item and next_item.get("default_track"):
+                            with queue_lock:
+                                playback_queue.appendleft(next_item)
+                                save_request_queue()
                     requested_item = take_requested_item()
                     if requested_item is not None:
                         item = requested_item

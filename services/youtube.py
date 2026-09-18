@@ -1,8 +1,9 @@
 import os
 import asyncio
+import json
+import subprocess
 from typing import Optional, Dict, Any
 import re
-from googleapiclient.discovery import build
 import yt_dlp
 
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
@@ -45,51 +46,54 @@ class YouTubeSearchError(Exception):
 
 
 def search_youtube(query: str) -> Dict[str, str]:
-    """Busca en YouTube API v3 (búsqueda general) y devuelve metadatos del video."""
-    if not YOUTUBE_API_KEY:
-        raise YouTubeSearchError("YOUTUBE_API_KEY no está configurada.")
+    """Busca en YouTube usando yt-dlp y devuelve metadatos con la misma estructura que usa main.py."""
+    command = [
+        "yt-dlp",
+        "--dump-single-json",
+        "--no-playlist",
+        "--flat-playlist",
+        f"ytsearch1:{query}",
+    ]
+
+    if os.path.exists(COOKIES_PATH):
+        command.extend(["--cookies", COOKIES_PATH])
 
     try:
-        youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
-        request = youtube.search().list(
-            q=query,
-            part="snippet",
-            type="video",
-            maxResults=1,
-            safeSearch="none"
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=45,
+            check=True,
         )
-        response = request.execute()
-        items = response.get("items", [])
-        
-        if not items:
-            raise YouTubeSearchError("No encontré resultados para esa búsqueda.")
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        raise YouTubeSearchError("No pude buscar la canción ahora mismo.") from error
 
-        video = items[0]
-        video_id = video.get("id", {}).get("videoId")
-        snippet = video.get("snippet", {})
-        
-        if not video_id or not snippet.get("title"):
-            raise YouTubeSearchError("YouTube devolvió un resultado incompleto.")
+    try:
+        data = json.loads(completed.stdout or "{}")
+    except json.JSONDecodeError as error:
+        raise YouTubeSearchError("La respuesta de búsqueda de YouTube no es válida.") from error
 
-        details = youtube.videos().list(
-            id=video_id,
-            part="contentDetails",
-        ).execute().get("items", [])
-        duration = None
-        if details:
-            duration = _duration_seconds(details[0]["contentDetails"]["duration"])
+    entries = data.get("entries") or []
+    if not entries:
+        raise YouTubeSearchError("No encontré ninguna canción con ese nombre.")
 
-        return {
-            "video_id": video_id,
-            "title": snippet["title"],
-            "channel": snippet.get("channelTitle", "Canal desconocido"),
-            "url": f"https://www.youtube.com/watch?v={video_id}",
-            "duration": duration,
-        }
-    except Exception as e:
-        if isinstance(e, YouTubeSearchError):
-            raise e
-        raise YouTubeSearchError("No se pudo consultar la API de YouTube.") from e
+    entry = entries[0]
+    video_id = entry.get("id")
+    title = entry.get("title") or "Pista desconocida"
+    channel = entry.get("channel") or entry.get("uploader") or "Canal desconocido"
+    duration = entry.get("duration")
+
+    if not video_id:
+        raise YouTubeSearchError("YouTube devolvió un resultado incompleto.")
+
+    return {
+        "video_id": video_id,
+        "title": title,
+        "channel": channel,
+        "url": f"https://www.youtube.com/watch?v={video_id}",
+        "duration": duration,
+    }
 
 
 async def extract_stream_info(video_id_or_url: str) -> Optional[Dict[str, Any]]:

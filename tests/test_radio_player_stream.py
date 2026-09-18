@@ -60,3 +60,11 @@ def test_output_is_healthy_rejects_dead_process():
             return 1
 
     assert radio_player.output_is_healthy(DeadProcess()) is False
+
+
+def test_skip_guard_rejects_same_track_replay():
+    current = {"video_id": "abc123def45", "stream_url": "https://example.com/track.mp3"}
+    next_item = {"video_id": "abc123def45", "stream_url": "https://example.com/track.mp3"}
+
+    assert radio_player.is_same_track(current, next_item) is True
+    assert radio_player.should_advance_after_skip(current, next_item) is False
