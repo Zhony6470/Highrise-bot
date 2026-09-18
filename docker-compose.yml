@@ -46,8 +46,6 @@ services:
     container_name: highrise-main-bot
     restart: unless-stopped
     env_file: .env
-    environment:
-      MUSIC_COMMANDS_ENABLED: "0"
     command: ["python", "-u", "main.py"]
 
   music-bot:
