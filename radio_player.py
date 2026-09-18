@@ -998,19 +998,33 @@ def play_queue():
         stop_process(current_decoder)
         current_decoder = None
 
+        # Si hubo un fallo de salida/decoder, devolvemos las pistas retiradas
+        # a la cola para no perderlas. El encoder de Icecast se recreará
+        # automáticamente en la siguiente escritura.
+        if next_prepared is not None and next_item is not None:
+            if next_item.get("default_track"):
+                pending_default = next_item
+            else:
+                with queue_lock:
+                    playback_queue.appendleft(next_item)
+                save_request_queue()
+            next_prepared.cleanup()
+            next_prepared = None
+            next_item = None
+
         if current_prepared is not None:
             current_prepared.cleanup()
             current_prepared = None
 
-        if next_prepared is not None:
-            next_prepared.cleanup()
-            next_prepared = None
+        if current is not None and not current.get("default_track"):
+            with queue_lock:
+                playback_queue.appendleft(current)
+            save_request_queue()
 
+        current = None
         with state_lock:
             prefetched_item = None
 
-        # El worker debe continuar vivo. La próxima vuelta creará de nuevo
-        # el encoder de Icecast si fue desconectado.
         time.sleep(0.5)
         play_queue()
 
