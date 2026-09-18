@@ -336,30 +336,22 @@ def read_pcm(source, size: int) -> bytes:
     return b"".join(chunks)
 
 
-def crossfade_prefetched(source, output, tail: bytes) -> None:
-    """Solapa el final de la pista actual con el inicio de la siguiente."""
+def crossfade_prefetched(source, output, tail: bytes) -> int:
+    """Mezcla el final de la pista actual con el inicio de la siguiente."""
     if CROSSFADE_BYTES <= 0 or not tail:
-        if tail:
-            write_output_chunk(output, tail)
-        return
+        return 0
 
     incoming = read_pcm(source, len(tail))
     if not incoming:
-        # La siguiente pista no tiene audio suficiente; no perdemos el final actual.
-        write_output_chunk(output, tail)
-        return
+        return 0
 
     overlap = min(len(tail), len(incoming))
     overlap -= overlap % (CHANNELS * SAMPLE_WIDTH)
     if overlap <= 0:
-        write_output_chunk(output, tail)
-        write_output_chunk(output, incoming)
-        return
+        return 0
 
-    write_output_chunk(output, mix_pcm(tail[:overlap], incoming[:overlap]))
-
-    if len(incoming) > overlap:
-        write_output_chunk(output, incoming[overlap:])
+    write_output_chunk(output, mix_pcm(tail[-overlap:], incoming[:overlap]))
+    return overlap
 
 
 def stream_prefetched_after_crossfade(
@@ -367,10 +359,10 @@ def stream_prefetched_after_crossfade(
     output,
     tail: bytes,
     should_stop=None,
-) -> bytearray:
-    """Reproduce una pista precargada, aplicando el crossfade al comienzo."""
+) -> int:
+    """Aplica el crossfade y continúa la pista preparada sin repetir el audio solapado."""
     with open(prepared.path, "rb") as source:
-        crossfade_prefetched(source, output, tail)
+        consumed = crossfade_prefetched(source, output, tail)
 
         while True:
             if should_stop and should_stop():
@@ -380,8 +372,7 @@ def stream_prefetched_after_crossfade(
                 break
             write_output_chunk(output, chunk)
 
-    return bytearray()
-
+    return consumed
 
 def stop_decoder(decoder: subprocess.Popen | None) -> None:
     if decoder and decoder.stdout:
@@ -424,9 +415,6 @@ class PrefetchedTrack:
     def stream(self, output, tail: bytearray, should_stop=None) -> bytearray:
         with open(self.path, "rb") as source:
             return stream_track(source, output, tail, should_stop=should_stop)
-
-    def stream_with_crossfade(self, output, tail: bytes, should_stop=None) -> None:
-        stream_prefetched_after_crossfade(self, output, tail, should_stop=should_stop)
 
     def cleanup(self) -> None:
         stop_decoder(self.decoder)
@@ -627,9 +615,7 @@ def play_queue() -> None:
                     priority_event.is_set()
                     and item.get("default_track", False)
                 )
-                # Conservamos los últimos CROSSFADE_SECONDS de la pista actual
-                # en memoria en lugar de descartarlos. Esos bytes se mezclarán con
-                # el comienzo de la siguiente pista sin tocar la conexión de Icecast.
+                # Conservamos los últimos CROSSFADE_SECONDS de la pista actual.
                 current_tail = bytearray()
                 if current_prepared is None:
                     current_tail = stream_track(
@@ -647,14 +633,13 @@ def play_queue() -> None:
                         stop_for_skip,
                     )
 
-                # Si el cambio fue normal, hacemos el crossfade antes de limpiar
-                # la pista preparada. En !skip/prioridad se conserva el comportamiento
-                # de salto inmediato existente.
+                # En una transición normal mezclamos el final actual con el inicio
+                # de la siguiente pista. La salida a Icecast sigue siendo el mismo
+                # proceso FFmpeg: nunca se cierra/reabre la conexión por canción.
                 do_crossfade = (
                     CROSSFADE_BYTES > 0
                     and next_prepared is not None
                     and next_item is not None
-                    and next_prepared.done
                     and not skip_requested
                     and not priority_event.is_set()
                     and bool(current_tail)
@@ -663,11 +648,15 @@ def play_queue() -> None:
                     next_prepared.wait()
                     if next_prepared.error:
                         raise next_prepared.error
-                    next_prepared.stream_with_crossfade(
+                    stream_prefetched_after_crossfade(
+                        next_prepared,
                         output.stdin,
                         bytes(current_tail),
+                        should_stop=stop_for_skip,
                     )
+                    set_current(next_item)
                     current_tail.clear()
+
 
                 if current_decoder:
                     stop_decoder(current_decoder)
