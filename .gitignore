@@ -3,3 +3,7 @@ __pycache__/
 *.pyc
 .env
 cookies.txt
+*.pem
+music_bot_data.local.json
+request_queue.json
+default_playlist.json
