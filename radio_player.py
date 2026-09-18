@@ -2,6 +2,7 @@ import hmac
 import hashlib
 import json
 import os
+import random
 import re
 import shutil
 import subprocess
@@ -62,6 +63,7 @@ skip_requested = False
 priority_requested = False
 priority_event = Event()
 prefetched_item = None
+pending_default = None
 MAX_QUEUE_SIZE = 10
 SAMPLE_RATE = 44100
 CHANNELS = 2
@@ -98,9 +100,14 @@ def load_request_queue() -> list[dict]:
 
 def save_request_queue() -> None:
     DEFAULT_MUSIC_DIR.mkdir(parents=True, exist_ok=True)
+    pending = [item for item in list(playback_queue) if not item.get("default_track")]
+    with state_lock:
+        playing = current_item
+    if playing and not playing.get("default_track"):
+        pending.insert(0, playing)
     temporary = REQUEST_QUEUE_FILE.with_suffix(".tmp")
     temporary.write_text(
-        json.dumps(list(playback_queue), ensure_ascii=False, indent=2),
+        json.dumps(pending, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
     temporary.replace(REQUEST_QUEUE_FILE)
@@ -226,22 +233,21 @@ def next_default_item() -> dict | None:
     except (FileNotFoundError, OSError, ValueError):
         playlist = []
     if playlist:
-        candidates = playlist
-        if len(playlist) > 1:
-            candidates = [
-                item for item in playlist
-                if item.get("video_id") != last_default_key
-            ] or playlist
-        item = dict(candidates[default_playlist_index % len(candidates)])
+        candidates = [dict(item) for item in playlist if item.get("video_id")]
+        if len(candidates) > 1:
+            candidates = [item for item in candidates if item.get("video_id") != last_default_key] or candidates
+            random.shuffle(candidates)
+        else:
+            candidates = candidates or [dict(item) for item in playlist]
+        item = dict(candidates[0])
         default_playlist_index += 1
         item["default_track"] = True
         last_default_key = item.get("video_id")
         return item
     if default_tracks:
-        candidates = default_tracks
-        if len(default_tracks) > 1:
-            candidates = [path for path in default_tracks if str(path) != last_default_key] or default_tracks
-        path = candidates[default_track_index % len(candidates)]
+        candidates = [path for path in default_tracks if str(path) != last_default_key] or list(default_tracks)
+        random.shuffle(candidates)
+        path = candidates[0]
         default_track_index += 1
         last_default_key = str(path)
         return {
@@ -268,9 +274,14 @@ def save_default_playlist(playlist: list[dict]) -> None:
 
 
 def next_item_from_queue_or_default() -> dict | None:
+    global pending_default
     with queue_lock:
         if playback_queue:
             item = playback_queue.popleft()
+            save_request_queue()
+            return item
+        if pending_default is not None:
+            item, pending_default = pending_default, None
             save_request_queue()
             return item
     return next_default_item()
@@ -466,6 +477,7 @@ def set_current(item: dict | None) -> None:
     with state_lock:
         current_item = item
         current_started_at = time.time() if item else None
+    save_request_queue()
 
 
 def radio_state() -> dict:
@@ -569,9 +581,7 @@ def play_queue() -> None:
                     requested_item = take_requested_item()
                     if requested_item is not None:
                         next_prepared.cleanup()
-                        with queue_lock:
-                            playback_queue.appendleft(next_item)
-                            save_request_queue()
+                        pending_default = next_item
                         next_item = requested_item
                         next_prepared = PrefetchedTrack(next_item)
                         with state_lock:
@@ -585,9 +595,7 @@ def play_queue() -> None:
                         requested_item = take_requested_item()
                         if requested_item is not None:
                             next_prepared.cleanup()
-                            with queue_lock:
-                                playback_queue.appendleft(next_item)
-                                save_request_queue()
+                            pending_default = next_item
                             next_item = requested_item
                             next_prepared = PrefetchedTrack(next_item)
                             next_prepared.wait()
@@ -608,7 +616,7 @@ def play_queue() -> None:
                 if isinstance(error, BrokenPipeError):
                     close_output_process(output)
                     output = None
-                if item and not item.get("default_track") and not priority_requested:
+                if item and not item.get("default_track") and not priority_requested and not skip_requested:
                     with queue_lock:
                         playback_queue.appendleft(item)
                         save_request_queue()
@@ -618,7 +626,9 @@ def play_queue() -> None:
                         skip_requested = False
                         next_prepared.cleanup()
                         next_prepared = None
-                        if next_item:
+                        if next_item and next_item.get("default_track"):
+                            pending_default = next_item
+                        elif next_item:
                             with queue_lock:
                                 playback_queue.appendleft(next_item)
                                 save_request_queue()
@@ -634,9 +644,7 @@ def play_queue() -> None:
                         requested_item = take_requested_item()
                         if requested_item is not None:
                             next_prepared.cleanup()
-                            with queue_lock:
-                                playback_queue.appendleft(next_item)
-                                save_request_queue()
+                            pending_default = next_item
                             next_item = requested_item
                             next_prepared = PrefetchedTrack(next_item)
                             next_prepared.wait()
@@ -653,7 +661,9 @@ def play_queue() -> None:
                 if next_prepared and next_item:
                     next_prepared.cleanup()
                     next_prepared = None
-                    if not next_item.get("default_track"):
+                    if next_item.get("default_track"):
+                        pending_default = next_item
+                    elif not next_item.get("default_track"):
                         with queue_lock:
                             playback_queue.appendleft(next_item)
                             save_request_queue()
@@ -668,9 +678,7 @@ def play_queue() -> None:
                         next_prepared.cleanup()
                         next_prepared = None
                         if next_item and next_item.get("default_track"):
-                            with queue_lock:
-                                playback_queue.appendleft(next_item)
-                                save_request_queue()
+                            pending_default = next_item
                     requested_item = take_requested_item()
                     if requested_item is not None:
                         item = requested_item

@@ -858,8 +858,9 @@ class Bot(BaseBot):
                     state = await request_radio_state()
                     current = state.get("current") or {}
                     video_id = current.get("video_id")
+                    elapsed = int(current.get("elapsed", 0) or 0)
                     track_identity = (video_id, current.get("default_track", False))
-                    if video_id and track_identity != self.radio_last_track:
+                    if video_id and elapsed >= 1 and track_identity != self.radio_last_track:
                         self.radio_last_track = track_identity
                         prefix = "Playlist por defecto" if current.get("default_track") else "Solicitud"
                         await self.highrise.chat(
