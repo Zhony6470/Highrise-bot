@@ -3,18 +3,31 @@ services:
     image: moul/icecast
     container_name: highrise-icecast
     restart: unless-stopped
-    ports: ["8000:8000"]
+    ports:
+      - "8000:8000"
     environment:
       ICECAST_HOSTNAME: ${ICECAST_PUBLIC_HOST:-localhost}
       ICECAST_SOURCE_PASSWORD: ${ICECAST_PASSWORD}
       ICECAST_ADMIN_PASSWORD: ${ICECAST_ADMIN_PASSWORD:-change-me-admin}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/status-json.xsl >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
   autodj:
-    build: {context: ., dockerfile: Dockerfile.autodj}
+    build:
+      context: .
+      dockerfile: Dockerfile.autodj
     container_name: highrise-autodj
     restart: unless-stopped
-    depends_on: [icecast]
+    depends_on:
+      icecast:
+        condition: service_healthy
     environment:
       AUTODJ_TOKEN: ${AUTODJ_TOKEN}
+      AUTODJ_HOST: 0.0.0.0
+      AUTODJ_PORT: 8090
       ICECAST_HOST: icecast
       ICECAST_PORT: 8000
       ICECAST_SOURCE: ${ICECAST_SOURCE:-source}
@@ -23,17 +36,24 @@ services:
       YOUTUBE_COOKIES_PATH: /app/cookies.txt
     volumes:
       - autodj_data:/data
-      - ./default_music:/data/default_music
+      - ./default_music:/data/default_music:ro
       - ./cookies.txt:/app/cookies.txt:ro
+
   main-bot:
-    build: {context: ., dockerfile: Dockerfile.bot}
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
     container_name: highrise-main-bot
     restart: unless-stopped
     env_file: .env
-    environment: {MUSIC_COMMANDS_ENABLED: "0"}
-    command: ["python","-u","main.py"]
+    environment:
+      MUSIC_COMMANDS_ENABLED: "0"
+    command: ["python", "-u", "main.py"]
+
   music-bot:
-    build: {context: ., dockerfile: Dockerfile.bot}
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
     container_name: highrise-music-bot
     restart: unless-stopped
     env_file: .env
@@ -42,9 +62,12 @@ services:
       MUSIC_API_KEY: ${MUSIC_API_KEY}
       AUTODJ_URL: http://autodj:8090
       AUTODJ_TOKEN: ${AUTODJ_TOKEN}
-    depends_on: [autodj]
+      MUSIC_DATA_FILE: /app/music_bot_data.json
+    depends_on:
+      - autodj
     volumes:
       - ./music_bot_data.json:/app/music_bot_data.json
-    command: ["python","-u","music_bot.py"]
+    command: ["python", "-u", "music_bot.py"]
+
 volumes:
   autodj_data:
