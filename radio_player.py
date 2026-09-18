@@ -526,14 +526,16 @@ class OutputSink:
         try:
             self.process.stdin.write(data)
         except (BrokenPipeError, OSError):
-            print("Salida Icecast desconectada; reconectando...", flush=True)
+            # No repetir el mismo bloque PCM después de reconectar:
+            # reenviarlo puede producir un fragmento duplicado al oyente.
+            print(
+                "Salida Icecast desconectada; reconectando sin repetir audio...",
+                flush=True,
+            )
             self.close()
             self._start()
-            try:
-                self.process.stdin.write(data)
-            except (BrokenPipeError, OSError) as error:
-                self.close()
-                raise error
+            # El bloque que provocó el fallo se descarta deliberadamente.
+            # El siguiente bloque continúa desde el punto correcto.
 
     def flush(self):
         if self.process and self.process.stdin and not self.process.stdin.closed:
