@@ -1,6 +1,7 @@
 import os
 import asyncio
 from typing import Optional, Dict, Any
+import re
 from googleapiclient.discovery import build
 import yt_dlp
 
@@ -21,6 +22,18 @@ YTDL_OPTS: Dict[str, Any] = {
         }
     }
 }
+
+
+def _duration_seconds(value: str) -> int | None:
+    match = re.fullmatch(
+        r"P(?:(?P<days>\d+)D)?T(?:(?P<hours>\d+)H)?"
+        r"(?:(?P<minutes>\d+)M)?(?:(?P<seconds>\d+)S)?",
+        value,
+    )
+    if not match:
+        return None
+    parts = {key: int(number or 0) for key, number in match.groupdict().items()}
+    return parts["days"] * 86400 + parts["hours"] * 3600 + parts["minutes"] * 60 + parts["seconds"]
 
 # Carga cookies de sesión si el archivo existe
 if os.path.exists(COOKIES_PATH):
@@ -58,11 +71,20 @@ def search_youtube(query: str) -> Dict[str, str]:
         if not video_id or not snippet.get("title"):
             raise YouTubeSearchError("YouTube devolvió un resultado incompleto.")
 
+        details = youtube.videos().list(
+            id=video_id,
+            part="contentDetails",
+        ).execute().get("items", [])
+        duration = None
+        if details:
+            duration = _duration_seconds(details[0]["contentDetails"]["duration"])
+
         return {
             "video_id": video_id,
             "title": snippet["title"],
             "channel": snippet.get("channelTitle", "Canal desconocido"),
             "url": f"https://www.youtube.com/watch?v={video_id}",
+            "duration": duration,
         }
     except Exception as e:
         if isinstance(e, YouTubeSearchError):

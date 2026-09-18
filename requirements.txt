@@ -3,3 +3,4 @@ supabase
 yt-dlp[default]
 google-api-python-client
 websockets<10
+isoduration

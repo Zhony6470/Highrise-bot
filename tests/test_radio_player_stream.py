@@ -49,3 +49,14 @@ def test_ensure_output_process_recreates_dead_process():
         assert result is replacement
     finally:
         radio_player.create_output_process = original
+
+
+def test_output_is_healthy_rejects_dead_process():
+    class DeadProcess:
+        def __init__(self):
+            self.stdin = io.BytesIO()
+
+        def poll(self):
+            return 1
+
+    assert radio_player.output_is_healthy(DeadProcess()) is False
