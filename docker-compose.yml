@@ -1,0 +1,50 @@
+services:
+  icecast:
+    image: libretime/icecast:2.5.0
+    container_name: highrise-icecast
+    restart: unless-stopped
+    ports: ["8000:8000"]
+    environment:
+      ICECAST_HOSTNAME: ${ICECAST_PUBLIC_HOST:-localhost}
+      ICECAST_SOURCE_PASSWORD: ${ICECAST_PASSWORD}
+      ICECAST_ADMIN_PASSWORD: ${ICECAST_ADMIN_PASSWORD:-change-me-admin}
+  autodj:
+    build: {context: ., dockerfile: Dockerfile.autodj}
+    container_name: highrise-autodj
+    restart: unless-stopped
+    depends_on: [icecast]
+    environment:
+      AUTODJ_TOKEN: ${AUTODJ_TOKEN}
+      ICECAST_HOST: icecast
+      ICECAST_PORT: 8000
+      ICECAST_SOURCE: ${ICECAST_SOURCE:-source}
+      ICECAST_PASSWORD: ${ICECAST_PASSWORD}
+      ICECAST_MOUNT: ${ICECAST_MOUNT:-stream}
+      YOUTUBE_COOKIES_PATH: /app/cookies.txt
+    volumes:
+      - autodj_data:/data
+      - ./default_music:/data/default_music
+      - ./cookies.txt:/app/cookies.txt:ro
+  main-bot:
+    build: {context: ., dockerfile: Dockerfile.bot}
+    container_name: highrise-main-bot
+    restart: unless-stopped
+    env_file: .env
+    environment: {MUSIC_COMMANDS_ENABLED: "0"}
+    command: ["python","-u","main.py"]
+  music-bot:
+    build: {context: ., dockerfile: Dockerfile.bot}
+    container_name: highrise-music-bot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MUSIC_ROOM_ID: ${MUSIC_ROOM_ID}
+      MUSIC_API_KEY: ${MUSIC_API_KEY}
+      AUTODJ_URL: http://autodj:8090
+      AUTODJ_TOKEN: ${AUTODJ_TOKEN}
+    depends_on: [autodj]
+    volumes:
+      - ./music_bot_data.json:/app/music_bot_data.json
+    command: ["python","-u","music_bot.py"]
+volumes:
+  autodj_data:
