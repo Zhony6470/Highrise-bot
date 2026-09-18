@@ -407,18 +407,28 @@ def set_current(item: dict | None) -> None:
 def stop_process(process: subprocess.Popen | None) -> None:
     if process is None:
         return
-    try:
-        if process.stdout and not process.stdout.closed:
-            process.stdout.close()
-    except Exception:
-        pass
 
-    for child in (process, getattr(process, "ytdlp", None)):
+    # Terminar primero y cerrar stdout después evita Broken pipe durante !skip.
+    children = [process, getattr(process, "ytdlp", None)]
+    for child in children:
         try:
             if child and child.poll() is None:
                 child.terminate()
         except Exception:
             pass
+
+    for child in children:
+        try:
+            if child and child.poll() is None:
+                child.wait(timeout=1)
+        except Exception:
+            pass
+
+    try:
+        if process.stdout and not process.stdout.closed:
+            process.stdout.close()
+    except Exception:
+        pass
 
 
 def mix_pcm(left: bytes, right: bytes) -> bytes:
@@ -499,6 +509,7 @@ class OutputSink:
                 OUTPUT_URL,
             ],
             stdin=subprocess.PIPE,
+            bufsize=0,
         )
 
     def ensure(self):
@@ -854,9 +865,36 @@ def play_queue():
             # ------------------------------------------------------------
             if interrupted:
                 old_current = current
+                # El tail de una pista interrumpida se descarta. Solo se usa
+                # para crossfade cuando la pista termina de forma natural.
 
                 if priority_event.is_set() and old_current.get("default_track"):
                     priority_event.clear()
+
+                    # La solicitud puede estar ya en next_prepared. En ese
+                    # caso ya fue retirada de playback_queue por la precarga.
+                    if (
+                        next_prepared is not None
+                        and next_item is not None
+                        and not next_item.get("default_track")
+                    ):
+                        current = next_item
+                        current_prepared = next_prepared
+                        current_decoder = None
+
+                        next_prepared = None
+                        next_item = None
+                        with state_lock:
+                            prefetched_item = None
+
+                        set_current(current)
+                        print(
+                            f"Comienza la solicitud: "
+                            f"{current.get('metadata', {}).get('title', 'pista desconocida')}",
+                            flush=True,
+                        )
+                        skip_event.clear()
+                        continue
 
                     requested = pop_next_requested()
 
@@ -1026,7 +1064,7 @@ def play_queue():
             prefetched_item = None
 
         time.sleep(0.5)
-        play_queue()
+        Thread(target=play_queue, daemon=True).start()
 
     finally:
         stop_process(current_decoder)
