@@ -82,7 +82,9 @@ class Bot(BaseBot):
             except RuntimeError as e:return await self.highrise.send_whisper(user.id,f"⚠️ {e}")
         if cmd in ("!ap","!addplay","!rp","!removeplay"):
             if user.id!=self.owner_id and not await self.is_mod(user.id):return await self.highrise.send_whisper(user.id,"🔒 Solo dueño/mod.")
-            q=parts[1] if len(parts)==2 else ""
+            q=parts[1].strip() if len(parts)==2 else ""
+            if not q:
+                return await self.highrise.send_whisper(user.id,"🎵 Uso: !ap canción o !rp canción")
             try:
                 v=await asyncio.to_thread(search_youtube,q);path="/default-add" if cmd in ("!ap","!addplay") else "/default-remove";await self.api(path,"POST",{"video_id":v["video_id"],"metadata":v})
                 await self.highrise.chat(f"🎵 «{v['title']}» {'añadida a' if path.endswith('add') else 'eliminada de'} la playlist.")
