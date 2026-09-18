@@ -744,61 +744,84 @@ def radio_state() -> dict:
 
 
 def play_queue():
-    global current_item, current_started_at
     global prefetched_item, pending_default
 
     output = OutputSink()
+
     current = None
     current_decoder = None
-    prepared = None
-    prepared_item = None
+    current_prepared = None
+
+    next_prepared = None
+    next_item = None
 
     try:
         while True:
-            try:
-                # Obtener una pista actual.
+            # ------------------------------------------------------------
+            # 1. Obtener la pista actual.
+            # ------------------------------------------------------------
+            if current is None:
+                current = pop_next_item()
                 if current is None:
-                    current = pop_next_item()
-                    if current is None:
-                        time.sleep(0.25)
-                        continue
+                    time.sleep(0.25)
+                    continue
 
+                try:
                     current_decoder = decode_item(current)
-                    set_current(current)
-
-                # Preparar siempre la siguiente pista mientras la actual suena.
-                if prepared is None:
-                    prepared_item = pop_next_item()
-                    if prepared_item is not None:
-                        try:
-                            prepared = PreparedTrack(prepared_item)
-                            with state_lock:
-                                prefetched_item = prepared_item
-                            print(
-                                f"Precargando siguiente pista: "
-                                f"{prepared_item.get('metadata', {}).get('title', 'pista desconocida')}",
-                                flush=True,
-                            )
-                        except Exception as error:
-                            print(
-                                f"Error precargando pista: {error}",
-                                flush=True,
-                            )
-                            prepared = None
-                            prepared_item = None
-                            with state_lock:
-                                prefetched_item = None
-
-                # Si llega una solicitud mientras suena la playlist por defecto,
-                # interrumpimos al terminar de leer el siguiente bloque PCM.
-                def should_stop():
-                    return skip_event.is_set() or (
-                        priority_event.is_set()
-                        and current.get("default_track", False)
+                except Exception as error:
+                    print(
+                        f"Error preparando {current.get('video_id', 'pista')}: {error}",
+                        flush=True,
                     )
+                    current = None
+                    time.sleep(0.5)
+                    continue
 
-                output.ensure()
+                current_prepared = None
+                set_current(current)
 
+            # ------------------------------------------------------------
+            # 2. Preparar UNA sola siguiente pista en segundo plano.
+            #    Se completa antes de necesitarla para el crossfade.
+            # ------------------------------------------------------------
+            if next_prepared is None:
+                candidate = pop_next_item()
+                if candidate is not None:
+                    try:
+                        next_prepared = PreparedTrack(candidate)
+                        next_item = candidate
+                        with state_lock:
+                            prefetched_item = candidate
+                        print(
+                            f"Precargando siguiente pista: "
+                            f"{candidate.get('metadata', {}).get('title', 'pista desconocida')}",
+                            flush=True,
+                        )
+                    except Exception as error:
+                        print(
+                            f"Error precargando pista: {error}",
+                            flush=True,
+                        )
+                        next_prepared = None
+                        next_item = None
+                        with state_lock:
+                            prefetched_item = None
+
+            # ------------------------------------------------------------
+            # 3. Reproducir la pista actual.
+            #    La petición HTTP SOLO activa eventos. Nunca mata el
+            #    decoder desde otro hilo.
+            # ------------------------------------------------------------
+            def should_stop():
+                return skip_event.is_set() or (
+                    priority_event.is_set()
+                    and current is not None
+                    and current.get("default_track", False)
+                )
+
+            output.ensure()
+
+            try:
                 if current_decoder is not None:
                     tail = bytearray()
                     interrupted = stream_decoder(
@@ -809,148 +832,197 @@ def play_queue():
                     )
                     stop_process(current_decoder)
                     current_decoder = None
+                elif current_prepared is not None:
+                    tail, interrupted = current_prepared.stream(
+                        output,
+                        should_stop,
+                    )
+                    current_prepared.cleanup()
+                    current_prepared = None
                 else:
-                    tail, interrupted = prepared.stream(output, should_stop)
-                    prepared.cleanup()
-                    prepared = None
+                    raise OSError("estado interno: no existe decoder para la pista actual")
+            except (BrokenPipeError, OSError, ValueError, subprocess.SubprocessError):
+                stop_process(current_decoder)
+                current_decoder = None
+                if current_prepared is not None:
+                    current_prepared.cleanup()
+                    current_prepared = None
+                raise
 
-                if interrupted:
-                    # !skip: descartar la actual y reproducir la siguiente pista.
-                    if skip_event.is_set():
-                        skip_event.clear()
+            # ------------------------------------------------------------
+            # 4. Interrupción: !skip o !play durante playlist por defecto.
+            # ------------------------------------------------------------
+            if interrupted:
+                old_current = current
 
-                    # Una solicitud normal tiene prioridad sobre la playlist por defecto.
-                    if current.get("default_track") and priority_event.is_set():
-                        priority_event.clear()
-                        requested = pop_next_requested()
-                        if requested is not None:
-                            if prepared is not None:
-                                prepared.cleanup()
-                                prepared = None
-                            if prepared_item and prepared_item.get("default_track"):
-                                pending_default = prepared_item
-                            prepared_item = None
-                            with state_lock:
-                                prefetched_item = None
-                            current = requested
-                            current_decoder = decode_item(current)
-                            set_current(current)
-                            print(
-                                f"Comienza la solicitud: "
-                                f"{current.get('metadata', {}).get('title', 'pista desconocida')}",
-                                flush=True,
-                            )
-                            continue
+                if priority_event.is_set() and old_current.get("default_track"):
+                    priority_event.clear()
 
-                    # Skip siempre consume la siguiente pista de la cola.
-                    if prepared is not None and prepared_item is not None:
-                        next_current = prepared_item
-                        next_prepared = prepared
-                    else:
-                        next_current = pop_next_item()
-                        next_prepared = None
+                    requested = pop_next_requested()
 
-                    if next_current is None:
-                        current = None
-                        set_current(None)
-                        continue
-
-                    if same_item(current, next_current):
-                        if next_prepared:
+                    if requested is not None:
+                        # La pista por defecto que estaba precargada no se pierde.
+                        if next_prepared is not None and next_item is not None:
+                            if next_item.get("default_track"):
+                                pending_default = next_item
+                            else:
+                                with queue_lock:
+                                    playback_queue.appendleft(next_item)
+                                save_request_queue()
                             next_prepared.cleanup()
-                        prepared = None
-                        prepared_item = None
-                        current = None
-                        set_current(None)
+
+                        next_prepared = None
+                        next_item = None
+                        with state_lock:
+                            prefetched_item = None
+
+                        current = requested
+                        current_decoder = decode_item(current)
+                        current_prepared = None
+                        set_current(current)
+
+                        print(
+                            f"Comienza la solicitud: "
+                            f"{current.get('metadata', {}).get('title', 'pista desconocida')}",
+                            flush=True,
+                        )
+
+                        # Un !skip que haya llegado simultáneamente no debe
+                        # saltarse también la nueva solicitud.
+                        skip_event.clear()
                         continue
 
-                    if current_decoder:
-                        stop_process(current_decoder)
+                    # No encontramos una solicitud; continuar normalmente.
+                    skip_event.clear()
 
-                    current = next_current
-                    prepared = next_prepared
-                    prepared_item = next_current if next_prepared else None
+                if skip_event.is_set():
+                    skip_event.clear()
+
+                # !skip significa: pasar exactamente a la siguiente pista.
+                if next_prepared is not None and next_item is not None:
+                    current = next_item
+                    current_prepared = next_prepared
                     current_decoder = None
+                    next_prepared = None
+                    next_item = None
 
                     with state_lock:
                         prefetched_item = None
 
+                    set_current(current)
                     print(
                         f"Canción saltada. Comienza: "
                         f"{current.get('metadata', {}).get('title', 'pista desconocida')}",
                         flush=True,
                     )
-                    set_current(current)
                     continue
 
-                # Final normal de la pista. Hacemos crossfade únicamente con
-                # una pista ya completamente preparada.
-                if prepared is not None and prepared_item is not None:
-                    if current_decoder is not None:
-                        current_tail = tail
-                    else:
-                        current_tail = tail
+                current = pop_next_item()
+                current_prepared = None
+                current_decoder = None
 
-                    did_crossfade = False
+                with state_lock:
+                    prefetched_item = None
+
+                if current is None:
+                    set_current(None)
+                    continue
+
+                current_decoder = decode_item(current)
+                set_current(current)
+                print(
+                    f"Canción saltada. Comienza: "
+                    f"{current.get('metadata', {}).get('title', 'pista desconocida')}",
+                    flush=True,
+                )
+                continue
+
+            # ------------------------------------------------------------
+            # 5. Final normal: hacer crossfade con la siguiente pista
+            #    SOLO si está completamente preparada.
+            # ------------------------------------------------------------
+            if next_prepared is not None and next_item is not None:
+                did_crossfade = False
+
+                if tail:
                     try:
                         did_crossfade = perform_crossfade(
                             output,
-                            bytes(current_tail),
-                            prepared,
+                            bytes(tail),
+                            next_prepared,
                         )
                     except Exception as error:
                         print(
-                            f"Error en crossfade: {error}. Se continúa sin crossfade.",
+                            f"Error en crossfade: {error}. "
+                            f"Se continúa sin crossfade.",
                             flush=True,
                         )
 
-                    if not did_crossfade and current_tail:
-                        output.write(bytes(current_tail))
-
-                    current = prepared_item
-                    prepared.offset = prepared.offset
-                    prepared_for_current = prepared
-                    prepared = None
-                    prepared_item = None
-                    current_decoder = None
-
-                    with state_lock:
-                        prefetched_item = None
-
-                    set_current(current)
-                    print(
-                        f"Comienza la siguiente pista: "
-                        f"{current.get('metadata', {}).get('title', 'pista desconocida')}",
-                        flush=True,
-                    )
-                    # El archivo PCM preparado se convierte en la pista actual.
-                    # Lo conservamos en prepared_for_current mediante current_prepared.
-                    prepared = prepared_for_current
-                    continue
-
-                # No había siguiente preparada: conservamos el estado y buscamos otra.
-                if tail:
+                if not did_crossfade and tail:
                     output.write(bytes(tail))
 
-                current = None
-                set_current(None)
-
-            except (BrokenPipeError, OSError, ValueError, subprocess.SubprocessError) as error:
-                print(f"Error en el reproductor: {error}", flush=True)
-                stop_process(current_decoder)
+                current = next_item
+                current_prepared = next_prepared
                 current_decoder = None
-                if prepared is not None:
-                    prepared.cleanup()
-                    prepared = None
-                prepared_item = None
+
+                next_prepared = None
+                next_item = None
+
                 with state_lock:
                     prefetched_item = None
-                time.sleep(0.5)
+
+                set_current(current)
+                print(
+                    f"Comienza la siguiente pista: "
+                    f"{current.get('metadata', {}).get('title', 'pista desconocida')}",
+                    flush=True,
+                )
+                continue
+
+            # ------------------------------------------------------------
+            # 6. No había siguiente preparada.
+            #    Sacamos la cola final y en la próxima iteración buscamos
+            #    otra pista.
+            # ------------------------------------------------------------
+            if tail:
+                output.write(bytes(tail))
+
+            current = None
+            current_decoder = None
+            current_prepared = None
+            set_current(None)
+
+    except (BrokenPipeError, OSError, ValueError, subprocess.SubprocessError) as error:
+        print(f"Error en el reproductor: {error}", flush=True)
+
+        stop_process(current_decoder)
+        current_decoder = None
+
+        if current_prepared is not None:
+            current_prepared.cleanup()
+            current_prepared = None
+
+        if next_prepared is not None:
+            next_prepared.cleanup()
+            next_prepared = None
+
+        with state_lock:
+            prefetched_item = None
+
+        # El worker debe continuar vivo. La próxima vuelta creará de nuevo
+        # el encoder de Icecast si fue desconectado.
+        time.sleep(0.5)
+        play_queue()
 
     finally:
         stop_process(current_decoder)
-        if prepared is not None:
-            prepared.cleanup()
+
+        if current_prepared is not None:
+            current_prepared.cleanup()
+
+        if next_prepared is not None:
+            next_prepared.cleanup()
+
         output.close()
 
 
