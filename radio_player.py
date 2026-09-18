@@ -350,6 +350,11 @@ def crossfade_prefetched(source, output, tail: bytes) -> int:
     if overlap <= 0:
         return 0
 
+    # Si la siguiente pista es más corta que el crossfade, conserva la parte
+    # final de la pista actual que queda fuera del solapamiento.
+    if len(tail) > overlap:
+        write_output_chunk(output, tail[:-overlap])
+
     write_output_chunk(output, mix_pcm(tail[-overlap:], incoming[:overlap]))
     return overlap
 
