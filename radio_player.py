@@ -298,17 +298,89 @@ def take_requested_item() -> dict | None:
 
 
 def mix_pcm(left: bytes, right: bytes) -> bytes:
+    """Mezcla dos bloques PCM estéreo s16le con una curva lineal de crossfade."""
+    usable_left = len(left) - (len(left) % SAMPLE_WIDTH)
+    usable_right = len(right) - (len(right) % SAMPLE_WIDTH)
+    usable = min(usable_left, usable_right)
+    if usable <= 0:
+        return b""
+
     left_samples = array("h")
     right_samples = array("h")
-    left_samples.frombytes(left[:len(left) - len(left) % SAMPLE_WIDTH])
-    right_samples.frombytes(right[:len(right) - len(right) % SAMPLE_WIDTH])
-    count = min(len(left_samples), len(right_samples))
+    left_samples.frombytes(left[:usable])
+    right_samples.frombytes(right[:usable])
+
     mixed = array("h")
+    count = min(len(left_samples), len(right_samples))
     for index in range(count):
         fade_in = index / max(count - 1, 1)
-        value = int(left_samples[index] * (1 - fade_in) + right_samples[index] * fade_in)
+        fade_out = 1.0 - fade_in
+        value = int(left_samples[index] * fade_out + right_samples[index] * fade_in)
         mixed.append(max(-32768, min(32767, value)))
     return mixed.tobytes()
+
+
+def read_pcm(source, size: int) -> bytes:
+    """Lee exactamente hasta size bytes de PCM, respetando frames estéreo."""
+    size -= size % (CHANNELS * SAMPLE_WIDTH)
+    if size <= 0:
+        return b""
+    chunks = []
+    remaining = size
+    while remaining:
+        chunk = source.read(remaining)
+        if not chunk:
+            break
+        chunks.append(chunk)
+        remaining -= len(chunk)
+    return b"".join(chunks)
+
+
+def crossfade_prefetched(source, output, tail: bytes) -> None:
+    """Solapa el final de la pista actual con el inicio de la siguiente."""
+    if CROSSFADE_BYTES <= 0 or not tail:
+        if tail:
+            write_output_chunk(output, tail)
+        return
+
+    incoming = read_pcm(source, len(tail))
+    if not incoming:
+        # La siguiente pista no tiene audio suficiente; no perdemos el final actual.
+        write_output_chunk(output, tail)
+        return
+
+    overlap = min(len(tail), len(incoming))
+    overlap -= overlap % (CHANNELS * SAMPLE_WIDTH)
+    if overlap <= 0:
+        write_output_chunk(output, tail)
+        write_output_chunk(output, incoming)
+        return
+
+    write_output_chunk(output, mix_pcm(tail[:overlap], incoming[:overlap]))
+
+    if len(incoming) > overlap:
+        write_output_chunk(output, incoming[overlap:])
+
+
+def stream_prefetched_after_crossfade(
+    prepared,
+    output,
+    tail: bytes,
+    should_stop=None,
+) -> bytearray:
+    """Reproduce una pista precargada, aplicando el crossfade al comienzo."""
+    with open(prepared.path, "rb") as source:
+        crossfade_prefetched(source, output, tail)
+
+        while True:
+            if should_stop and should_stop():
+                raise OSError("salto solicitado")
+            chunk = source.read(64 * 1024)
+            if not chunk:
+                break
+            write_output_chunk(output, chunk)
+
+    return bytearray()
 
 
 def stop_decoder(decoder: subprocess.Popen | None) -> None:
@@ -352,6 +424,9 @@ class PrefetchedTrack:
     def stream(self, output, tail: bytearray, should_stop=None) -> bytearray:
         with open(self.path, "rb") as source:
             return stream_track(source, output, tail, should_stop=should_stop)
+
+    def stream_with_crossfade(self, output, tail: bytes, should_stop=None) -> None:
+        stream_prefetched_after_crossfade(self, output, tail, should_stop=should_stop)
 
     def cleanup(self) -> None:
         stop_decoder(self.decoder)
@@ -552,21 +627,47 @@ def play_queue() -> None:
                     priority_event.is_set()
                     and item.get("default_track", False)
                 )
+                # Conservamos los últimos CROSSFADE_SECONDS de la pista actual
+                # en memoria en lugar de descartarlos. Esos bytes se mezclarán con
+                # el comienzo de la siguiente pista sin tocar la conexión de Icecast.
+                current_tail = bytearray()
                 if current_prepared is None:
-                    stream_track(
+                    current_tail = stream_track(
                         current_decoder.stdout,
                         output.stdin,
-                        bytearray(),
+                        current_tail,
                         initial_chunk,
                         stop_for_skip,
                         transition_buffer=CROSSFADE_BYTES,
                     )
                 else:
-                    current_prepared.stream(
+                    current_tail = current_prepared.stream(
                         output.stdin,
-                        bytearray(),
+                        current_tail,
                         stop_for_skip,
                     )
+
+                # Si el cambio fue normal, hacemos el crossfade antes de limpiar
+                # la pista preparada. En !skip/prioridad se conserva el comportamiento
+                # de salto inmediato existente.
+                do_crossfade = (
+                    CROSSFADE_BYTES > 0
+                    and next_prepared is not None
+                    and next_item is not None
+                    and next_prepared.done
+                    and not skip_requested
+                    and not priority_event.is_set()
+                    and bool(current_tail)
+                )
+                if do_crossfade:
+                    next_prepared.wait()
+                    if next_prepared.error:
+                        raise next_prepared.error
+                    next_prepared.stream_with_crossfade(
+                        output.stdin,
+                        bytes(current_tail),
+                    )
+                    current_tail.clear()
 
                 if current_decoder:
                     stop_decoder(current_decoder)
