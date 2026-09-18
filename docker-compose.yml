@@ -1,6 +1,6 @@
 services:
   icecast:
-    image: libretime/icecast:2.5.0
+    image: moul/icecast
     container_name: highrise-icecast
     restart: unless-stopped
     ports: ["8000:8000"]
