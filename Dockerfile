@@ -15,4 +15,4 @@ RUN pip install --no-cache-dir "websockets<10"
 
 COPY . .
 
-CMD ["sh", "-c", "python -u radio_player.py & exec python -u main.py"]
+CMD ["python", "-u", "main.py"]
