@@ -161,7 +161,14 @@ Motivo:
 - Se corrigió el reinicio `!restart` del DJ y se eliminó `reset_state()` sin referencias.
 - Se corrigió la excepción duplicada del gestor de baile y se reforzó el estado al detener modos.
 
-## 10. Archivos nuevos
+## 10. Mapa actual de persistencia
+
+- `data.json`, `posiciones.json` y `roles.json` usan `services/storage.py` y pueden persistirse en la tabla Supabase `bot_files`.
+- `music_bot_data.json` del DJ se gestiona directamente como archivo local montado por Docker.
+- La cola, playlist y caché de AutoDJ se mantienen en el volumen local de AutoDJ.
+- `common/emotes.json` es configuración estática y no se guarda en Supabase.
+
+## 11. Archivos nuevos
 
 - `common/avatar.py`
 - `common/bot_manager.py`
@@ -169,7 +176,7 @@ Motivo:
 - `common/dance.py`
 - `common/positions.py`
 
-## 11. Archivos modificados
+## 12. Archivos modificados
 
 - `bots/dj/music_bot.py`
 - `bots/bot1/main.py`
@@ -179,7 +186,7 @@ Motivo:
 - `commands/remove.py`
 - `services/storage.py`
 
-## 12. Validaciones realizadas
+## 13. Validaciones realizadas
 
 Se ejecutaron comprobaciones de sintaxis sobre los módulos modificados y nuevos:
 
@@ -205,7 +212,7 @@ Finalmente se comprobó que no quedan referencias al módulo eliminado:
 bot_targets removed and no references remain
 ```
 
-## 13. Pendiente de probar en producción
+## 14. Pendiente de probar en producción
 
 La validación local confirma sintaxis, imports y persistencia de archivos. Todavía hace falta probar en una sala real de Highrise:
 
@@ -214,3 +221,4 @@ La validación local confirma sintaxis, imports y persistencia de archivos. Toda
 - Restauración real de outfit y posición.
 - Reinicio desde `!reset` o `!restart`.
 - Funcionamiento con Supabase configurado.
+- Rotación de la clave SSH histórica y de las credenciales de Icecast/AWS si fueron expuestas.

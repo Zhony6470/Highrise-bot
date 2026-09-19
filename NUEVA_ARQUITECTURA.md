@@ -107,7 +107,7 @@ Los comandos de baile y emotes funcionan así:
 - `!emote @Zeta_Bot <emote>` → emote persistente del bot.
 - `!emote @Zeta_Bot stop` → detiene el emote persistente del bot.
 
-El estado persistente de estos comandos se guarda en los archivos de datos individuales de cada bot, sin compartir accidentalmente el estado entre @Zeta_Bot y @Dj.Z.
+El estado persistente de estos comandos se guarda en los archivos de datos individuales de cada bot, sin compartir accidentalmente el estado entre @Zeta_Bot y @Dj.Z. Supabase puede centralizar estos datos cuando `SUPABASE_URL` y `SUPABASE_KEY` están configuradas.
 
 ## Despliegue
 
