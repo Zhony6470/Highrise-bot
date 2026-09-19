@@ -7,11 +7,11 @@ from typing import Any
 @dataclass
 class BotState:
     bot_name: str = ""
-    position: dict[str, Any] | None = None
     outfit: list[Any] | None = None
-    dance_emote: str = ""
     dance_enabled: bool = False
-    reset_token: str = ""
+    bot_emote: str = ""
+    bot_emote_enabled: bool = False
+    active_mode: str = ""
 
 
 class BotStateManager:
@@ -44,23 +44,26 @@ class BotStateManager:
 
     def get_state(self) -> BotState:
         raw = self.load()
+        active_mode = raw.get("active_mode", "")
+        if not active_mode and raw.get("dance_enabled"):
+            active_mode = "dance"
         return BotState(
             bot_name=raw.get("bot_name", getattr(self.bot, "bot_username", "")),
-            position=raw.get("position"),
             outfit=raw.get("outfit"),
-            dance_emote=raw.get("dance_emote", ""),
             dance_enabled=bool(raw.get("dance_enabled", False)),
-            reset_token=raw.get("reset_token", ""),
+            bot_emote=raw.get("bot_emote", ""),
+            bot_emote_enabled=bool(raw.get("bot_emote_enabled", False)),
+            active_mode=active_mode,
         )
 
     def save_state(self, state: BotState) -> None:
         payload = {
             "bot_name": state.bot_name,
-            "position": state.position,
             "outfit": state.outfit,
-            "dance_emote": state.dance_emote,
             "dance_enabled": state.dance_enabled,
-            "reset_token": state.reset_token,
+            "bot_emote": state.bot_emote,
+            "bot_emote_enabled": state.bot_emote_enabled,
+            "active_mode": state.active_mode,
         }
         self.save(payload)
 

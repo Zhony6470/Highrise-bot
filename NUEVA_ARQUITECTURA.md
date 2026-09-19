@@ -104,7 +104,9 @@ Los comandos de baile conservarán sus funciones existentes:
 - `!dancebot @usuario` → baile aleatorio.
 - `!stopdance @usuario` → detiene el baile aleatorio.
 - `!emote @usuario <emote>` → emote específico en bucle.
-- `!emote stop @usuario` → detiene el emote específico.
+- `!emote @usuario <emote>` → emote específico para un usuario.
+- `!emote @Zeta_Bot <emote>` → emote persistente del bot.
+- `!emote @Zeta_Bot stop` → detiene el emote persistente del bot.
 
 El estado persistente de estos comandos se implementará sobre los archivos de datos individuales de cada bot, sin compartir accidentalmente el estado entre @Zeta_Bot y @Dj.Z.
 

@@ -76,19 +76,16 @@ class Bot(BaseBot):
         self.following = False
         self.follow_task = None
         self.emote_tasks = {}
-        self.dance_task = None
         self.position_task = None
         self.reset_task = None
         self.announcement_task = None
         self.fight_tasks = set()
-        self.current_bot_emote = None
         self.bot_username = os.getenv("BOT1_USERNAME", "Zeta_Bot")
         self.avatar_manager = AvatarManager(self)
         self.position_manager_common = PositionManagerCommon(self, DATA_FILE)
         self.dance_manager = DanceManager(self)
         self.bot_state_manager = BotStateManager(self)
         self.state_file = DATA_FILE
-        self.dance_config = {"dance_enabled": False, "dance_emote": ""}
         
         # Cargar lista de emotes desde emotes.json
         self.emotes_list = self.load_emotes_data()
@@ -346,8 +343,7 @@ class Bot(BaseBot):
             await self.avatar_manager.restore_saved_outfit()
         except Exception as error:
             print(f"Error restaurando el vestuario del bot: {error}")
-        if self.bot_state_manager.get_state().dance_enabled:
-            await self.dance_manager.start_random_dance()
+        await self.dance_manager.restore()
         if self.announcement_task:
             self.announcement_task.cancel()
         self.announcement_task = asyncio.create_task(announcement_loop(self))
@@ -602,29 +598,37 @@ class Bot(BaseBot):
         # ==========================================
         if msg_lower.startswith("!emote "):
             emote_parts = msg.split()
-            if len(emote_parts) < 3 or (
-                emote_parts[1].lower() != "stop" and not emote_parts[1].startswith("@")
-            ):
-                await self.highrise.send_whisper(user.id, "<#FFCC66>🎭 Uso: !emote @usuario <emote> o !emote stop @usuario")
+            if len(emote_parts) < 3:
+                await self.highrise.send_whisper(user.id, "<#FFCC66>🎭 Uso: !emote @usuario <emote> o !emote @Bot stop")
                 return
-            if emote_parts[1].lower() == "stop":
-                if len(emote_parts) != 3 or not emote_parts[2].startswith("@"):
-                    await self.highrise.send_whisper(user.id, "<#FFCC66>🎭 Uso: !emote stop @usuario")
+            legacy_stop = emote_parts[1].lower() == "stop"
+            if legacy_stop:
+                target_username = emote_parts[2][1:] if emote_parts[2].startswith("@") else ""
+                emote_name = "stop"
+            else:
+                if not emote_parts[1].startswith("@"):
+                    await self.highrise.send_whisper(user.id, "<#FFCC66>🎭 Uso: !emote @usuario <emote>")
                     return
-                target_username = emote_parts[2][1:]
-                target_id = await self.get_user_id(target_username)
-                if not target_id:
-                    await self.highrise.send_whisper(user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala.")
+                target_username = emote_parts[1][1:]
+                emote_name = " ".join(emote_parts[2:]).lower()
+
+            if target_username.lower() == self.bot_username.lower():
+                if user.id != self.owner_id and not await self.is_mod(user.id):
+                    await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden controlar el emote del bot.")
                     return
-                task = self.emote_tasks.pop(target_id, None)
-                if task:
-                    task.cancel()
-                await self.highrise.send_emote("", target_id)
-                await self.highrise.send_whisper(user.id, f"<#66CCFF>⏹️ Emote detenido para @{target_username}.")
+                if emote_name == "stop":
+                    response = await self.dance_manager.stop_bot_emote()
+                else:
+                    matched_emote = self.emotes_manager.get_by_name(emote_name)
+                    if not matched_emote:
+                        await self.highrise.send_whisper(user.id, f"<#FFCC66>🎭 Emote no encontrado: {emote_name}.")
+                        return
+                    response = await self.dance_manager.start_bot_emote(matched_emote["emote"])
+                await self.highrise.send_whisper(user.id, response)
+                return
+            if target_username.lower() == os.getenv("DJ_BOT_USERNAME", "Dj.Z").lower():
                 return
 
-            target_username = emote_parts[1][1:]
-            emote_name = " ".join(emote_parts[2:]).lower()
             target_id = await self.get_user_id(target_username)
             matched_emote = self.emotes_manager.get_by_name(emote_name)
             if not target_id:

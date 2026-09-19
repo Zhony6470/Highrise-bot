@@ -108,7 +108,8 @@ En `bots/bot1/main.py` se realizó lo siguiente:
 - Integración de `BotStateManager`.
 - Restauración del outfit al iniciar.
 - Baile dirigido mediante `!dancebot @Zeta_Bot` y `!stopdance @Zeta_Bot`.
-- Emotes dirigidos mediante `!emote @usuario <emote>` y `!emote stop @usuario`.
+- Emotes de usuarios mediante `!emote @usuario <emote>`.
+- Emotes persistentes del bot mediante `!emote @Zeta_Bot <emote>` y `!emote @Zeta_Bot stop`.
 - Reinicio dirigido mediante `!reset @Zeta_Bot`.
 - Filtrado de comandos compartidos por nombre de bot.
 - Conservación del `PositionManager` antiguo para las posiciones nombradas de la sala, que todavía utiliza Zeta para comandos como teletransportes guardados.
@@ -149,6 +150,9 @@ Motivo:
 - La posición común usa siempre el nombre estable del bot, por ejemplo `bot_position_zeta_bot` o `bot_position_dj.z`.
 - La restauración de posición de Zeta usa el mismo `PositionManagerCommon` que `!set` y `!home`.
 - El estado persistido es la única fuente de verdad para `dance_enabled`.
+- `BotState` separa `dance_enabled`, `bot_emote_enabled`, `bot_emote` y `active_mode`.
+- `active_mode` determina si el bot restaura el baile aleatorio o el emote específico.
+- Se eliminaron `dance_config`, `dance_emote`, `position` y `reset_token` del estado duplicado que ya no tenía uso.
 - El baile ya no se inicia automáticamente al conectar si no estaba activado.
 - Las solicitudes de AutoDJ permanecen en `request_queue.json` hasta terminar su reproducción.
 - Se eliminaron los fallbacks de outfit que llamaban directamente a Highrise.

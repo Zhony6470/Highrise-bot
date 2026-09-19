@@ -27,8 +27,6 @@ COOKIES = os.getenv("YOUTUBE_COOKIES_PATH", "/app/cookies.txt")
 
 SAMPLE_RATE = 44100
 CHANNELS = 2
-BLOCK = 16384
-
 queue = deque()
 lock = threading.RLock()
 skip_event = threading.Event()
@@ -375,7 +373,6 @@ class API(BaseHTTPRequestHandler):
                 with lock:
                     queue.append(item)
                     save(QUEUE_FILE, list(queue))
-                    current = state.get("current")
                 return self.reply(200, {"ok": True, "queued": item})
 
             if self.path == "/skip":
