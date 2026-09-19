@@ -40,12 +40,12 @@ services:
     container_name: highrise-main-bot
     restart: unless-stopped
     env_file: .env
-    command: ["python", "-u", "bots/zeta/main.py"]
+    command: ["python", "-u", "bots/bot1/main.py"]
 
   music-bot:
     build:
       context: .
-      dockerfile: Dockerfile.bot
+      dockerfile: infra/Dockerfile.bot
     container_name: highrise-music-bot
     restart: unless-stopped
     env_file: .env
@@ -58,8 +58,8 @@ services:
     depends_on:
       - autodj
     volumes:
-      - ./bots/djz/data/music_bot_data.json:/app/music_bot_data.json
-    command: ["python", "-u", "bots/djz/music_bot.py"]
+      - ./bots/dj/data/music_bot_data.json:/app/music_bot_data.json
+    command: ["python", "-u", "bots/dj/music_bot.py"]
 
 volumes:
   autodj_data:

@@ -7,8 +7,10 @@ async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
         return "<#FF6666>👗 Solo el dueño o los moderadores pueden equipar prendas."
 
     parts = message.split()
+    if len(parts) >= 2 and parts[1].startswith("@"):
+        parts = [parts[0], *parts[2:]]
     if len(parts) < 2:
-        return "<#FFCC66>👗 Uso: !equip <nombre de la prenda> [numero]"
+        return "<#FFCC66>👗 Uso: !equip @BotUsuario <nombre de la prenda> [numero]"
 
     result_index = 0
     item_name_parts = parts[1:]
@@ -57,6 +59,9 @@ async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
                 return "<#FF6666>⚠️ No se pudo comprar la prenda."
             if purchase_result != "success":
                 return f"<#FF6666>⚠️ No se pudo comprar la prenda '{selected_item.item_name}'."
+
+    if hasattr(bot, "avatar_manager"):
+        return await bot.avatar_manager.equip_item(item_id, category, selected_item.item_name)
 
     try:
         outfit = (await bot.highrise.get_my_outfit()).outfit

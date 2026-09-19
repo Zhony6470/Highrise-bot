@@ -1,15 +1,21 @@
+from __future__ import annotations
+
 import json
 import os
 from pathlib import Path
 
-from supabase import Client, create_client
+try:
+    from supabase import Client, create_client
+except ImportError:  # pragma: no cover - fallback local storage when supabase is absent
+    Client = None  # type: ignore[assignment]
+    create_client = None  # type: ignore[assignment]
 
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 _client: Client | None = (
     create_client(SUPABASE_URL, SUPABASE_KEY)
-    if SUPABASE_URL and SUPABASE_KEY
+    if create_client and SUPABASE_URL and SUPABASE_KEY
     else None
 )
 

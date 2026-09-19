@@ -41,15 +41,15 @@ highrise-bot/
 
 ## Responsabilidades
 
-### @Zeta_Bot
+### @Bot1
 
-Su código vive en `bots/zeta/`.
+Su código vive en `bots/bot1/`.
 
 Incluye comandos y funciones propias del bot general: moderación, propinas, diversión, anuncios, pista de emotes y sus datos/posición.
 
-### @Dj.Z
+### @Dj
 
-Su código vive en `bots/djz/`.
+Su código vive en `bots/dj/`.
 
 Incluye música, integración con AutoDJ, búsqueda de YouTube y sus datos/posición.
 
@@ -63,8 +63,8 @@ AutoDJ e Icecast siguen siendo independientes de los bots de Highrise:
 
 ```text
 HIGHRISE
-   ├── @Zeta_Bot ───────┐
-   └── @Dj.Z ───────────┤
+  ├── @Bot1 ───────────┐
+  └── @Dj ─────────────┤
                         ↓
                       AutoDJ
                         ↓
@@ -80,23 +80,23 @@ Si uno o ambos bots se desconectan, AutoDJ e Icecast pueden continuar reproducie
 La siguiente fase del sistema de avatar usará el usuario objetivo del propio bot para evitar choques entre bots:
 
 ```text
-!set @Zeta_Bot
-!set @Dj.Z
+!set @Bot1
+!set @Dj
 
-!home @Zeta_Bot
-!home @Dj.Z
+!home @Bot1
+!home @Dj
 
-!color @Zeta_Bot ...
-!color @Dj.Z ...
+!color @Bot1 ...
+!color @Dj ...
 
-!equip @Zeta_Bot ...
-!equip @Dj.Z ...
+!equip @Bot1 ...
+!equip @Dj ...
 
-!remove @Zeta_Bot
-!remove @Dj.Z
+!remove @Bot1
+!remove @Dj
 
-!getoutfit @Zeta_Bot
-!getoutfit @Dj.Z
+!getoutfit @Bot1
+!getoutfit @Dj
 ```
 
 Los comandos de baile conservarán sus funciones existentes:
@@ -106,7 +106,7 @@ Los comandos de baile conservarán sus funciones existentes:
 - `!emote @usuario <emote>` → emote específico en bucle.
 - `!emote stop @usuario` → detiene el emote específico.
 
-El estado persistente de estos comandos se implementará sobre los archivos de datos individuales de cada bot, sin compartir accidentalmente el estado entre @Zeta_Bot y @Dj.Z.
+El estado persistente de estos comandos se implementará sobre los archivos de datos individuales de cada bot, sin compartir accidentalmente el estado entre @Bot1 y @Dj.
 
 ## Despliegue
 
@@ -119,8 +119,8 @@ docker-compose ps
 
 Servicios:
 
-- `main-bot` → `bots/zeta/main.py`
-- `music-bot` → `bots/djz/music_bot.py`
+- `main-bot` → `bots/bot1/main.py`
+- `music-bot` → `bots/dj/music_bot.py`
 - `autodj` → `autodj/autodj.py`
 - `icecast` → servidor de streaming
 

@@ -42,12 +42,17 @@ async def handle_remove(bot: BaseBot, user: User, message: str) -> str:
         return "<#FF6666>🧥 Solo el dueño o los moderadores pueden modificar el vestuario."
 
     parts = message.split()
+    if len(parts) >= 2 and parts[1].startswith("@"):
+        parts = [parts[0], *parts[2:]]
     if len(parts) != 2:
-        return "<#FFCC66>🧥 Uso: !remove <categoria>"
+        return "<#FFCC66>🧥 Uso: !remove @BotUsuario <categoria>"
 
     category = parts[1].lower()
     if category not in CATEGORIES:
         return "<#FF6666>❌ Categoría inválida."
+
+    if hasattr(bot, "avatar_manager"):
+        return await bot.avatar_manager.remove_category(category)
 
     try:
         outfit = (await bot.highrise.get_my_outfit()).outfit

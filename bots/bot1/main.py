@@ -26,11 +26,16 @@ from commands.dispatcher import CommandDispatcher
 from services.positions import PositionManager
 from services.roles import RoleManager, get_user_role
 from services.emotes import EmotesManager
-from bots.zeta.services.track import start_track_monitor
+from bots.bot1.services.track import start_track_monitor
 from services.storage import load_json
-from bots.zeta.services.tips import TipManager
-from bots.zeta.services.anuncios import announcement_loop
-from bots.zeta.services.diversion import handle_diversion_command
+from bots.bot1.services.tips import TipManager
+from bots.bot1.services.anuncios import announcement_loop
+from bots.bot1.services.diversion import handle_diversion_command
+from common.bot_manager import should_handle_for_bot
+from common.avatar import AvatarManager
+from common.positions import PositionManagerCommon
+from common.dance import DanceManager
+from common.bot_state import BotStateManager
 
 
 class HealthHandler(BaseHTTPRequestHandler):
@@ -78,6 +83,13 @@ class Bot(BaseBot):
         self.fight_tasks = set()
         self.current_bot_emote = None
         self.current_bot_emote_duration = 0
+        self.bot_username = os.getenv("BOT1_USERNAME", "Bot1")
+        self.avatar_manager = AvatarManager(self)
+        self.position_manager_common = PositionManagerCommon(self, DATA_FILE)
+        self.dance_manager = DanceManager(self)
+        self.bot_state_manager = BotStateManager(self)
+        self.state_file = DATA_FILE
+        self.dance_config = {"dance_enabled": False, "dance_emote": ""}
         
         # Cargar lista de emotes desde emotes.json
         self.emotes_list = self.load_emotes_data()
@@ -106,6 +118,9 @@ class Bot(BaseBot):
         except (OSError, TypeError, ValueError) as error:
             print(f"Error al cargar emotes.json: {error}")
             return []
+
+    async def _is_targeted_for_me(self, message: str) -> bool:
+        return await should_handle_for_bot(self, message)
 
     async def get_command_help(self, user: User) -> list[str]:
         role = await self.role_manager.get_user_role(self, user)
@@ -353,6 +368,10 @@ class Bot(BaseBot):
         if self.position_task:
             self.position_task.cancel()
         self.position_task = asyncio.create_task(self.place_bot())
+        try:
+            await self.avatar_manager.restore_saved_outfit()
+        except Exception as error:
+            print(f"Error restaurando el vestuario del bot: {error}")
         if self.botdance_task:
             self.botdance_task.cancel()
         self.botdance_task = asyncio.create_task(self.random_dance_loop())
@@ -371,6 +390,10 @@ class Bot(BaseBot):
         msg_lower = msg.lower()
 
         command_name = msg.split(maxsplit=1)[0].lower() if msg else ""
+        protected_commands = {"!set", "!home", "!color", "!equip", "!remove", "!getoutfit", "/equip", "/remove", "/getoutfit"}
+        if command_name in protected_commands and not await self._is_targeted_for_me(msg):
+            return
+
         if command_name in self.command_dispatcher.handlers:
             response = await self.command_dispatcher.handle(self, user, msg)
             if isinstance(response, list):
@@ -396,6 +419,21 @@ class Bot(BaseBot):
                     user.id, "ðŸ”’ Solo el dueÃ±o o los moderadores pueden reiniciar el bot."
                 )
             return
+
+        if msg_lower.startswith("!set @") or msg_lower.startswith("!home @"):
+            if await self._is_targeted_for_me(msg):
+                if msg_lower.startswith("!set @"):
+                    position = await self.get_user_position(user.id)
+                    if position:
+                        self.position_manager_common.save_position(position)
+                        await self.highrise.send_whisper(user.id, "<#66FF99>📍 Posición del bot guardada correctamente.")
+                    else:
+                        await self.highrise.send_whisper(user.id, "<#FF6666>📍 No pude obtener tu posición actual.")
+                    return
+                if msg_lower.startswith("!home @"):
+                    response = await self.position_manager_common.return_home()
+                    await self.highrise.send_whisper(user.id, response)
+                    return
 
         if msg_lower in ["!stop", "stop"]:
             emote_task = self.emote_tasks.pop(user.id, None)
@@ -750,6 +788,11 @@ class Bot(BaseBot):
         command = message.lower().strip()
         if not command or (user_id != self.owner_id and not await self.is_mod(user_id)):
             return None
+
+        protected_commands = {"!set", "!home", "!color", "!equip", "!remove", "!getoutfit", "/equip", "/remove", "/getoutfit"}
+        if command.split()[0].lower() in protected_commands and not await self._is_targeted_for_me(message):
+            return None
+
         if command.startswith("!tip all "):
             command = "!tipall " + command[len("!tip all "):]
 
