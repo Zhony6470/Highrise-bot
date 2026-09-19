@@ -17,9 +17,7 @@ async def handle_color(bot: BaseBot, user: User, message: str) -> str | None:
     except ValueError:
         return "<#FFCC66>🔢 El número de paleta debe ser un número válido."
 
-    if hasattr(bot, "avatar_manager"):
-        return await bot.avatar_manager.change_color(category, color_palette)
-    return "<#FF6666>⚠️ Este bot no tiene gestor de avatar habilitado."
+    return await bot.avatar_manager.change_color(category, color_palette)
 
 
 COMMANDS = {"!color": handle_color}

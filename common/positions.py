@@ -11,8 +11,8 @@ class PositionManagerCommon:
         self.data_file = data_file
 
     def _key(self) -> str:
-        bot_id = getattr(self.bot, "bot_id", None) or getattr(self.bot, "bot_username", "default")
-        return f"bot_position_{str(bot_id).lower()}"
+        bot_name = getattr(self.bot, "bot_username", "default")
+        return f"bot_position_{str(bot_name).lower()}"
 
     def load_state(self):
         try:
@@ -32,9 +32,12 @@ class PositionManagerCommon:
 
     def get_saved_position(self) -> Position | None:
         data = self.load_state()
-        pos = data.get(self._key())
+        pos = data.get(self._key()) or data.get("bot_position")
         if not pos:
             return None
+        if self._key() not in data and "bot_position" in data:
+            data[self._key()] = pos
+            self.save_state(data)
         return Position(pos["x"], pos["y"], pos["z"], pos["facing"])
 
     async def set_current_position(self, user_id: str) -> str:

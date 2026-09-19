@@ -11,9 +11,9 @@ Este documento resume los cambios realizados en la carpeta `Botv2` para mejorar 
 Se añadió una forma explícita de indicar a qué bot pertenece un comando:
 
 ```text
-!color @Dj hair_front 2
-!equip @Bot1 shirt_basic
-!home @Dj
+!color @Dj.Z hair_front 2
+!equip @Zeta_Bot shirt_basic
+!home @Dj.Z
 ```
 
 Los comandos compartidos dejan de ejecutarse accidentalmente en los dos bots. El bot solo procesa la orden si la mención coincide con su nombre configurado.
@@ -107,6 +107,9 @@ En `bots/bot1/main.py` se realizó lo siguiente:
 - Integración de `DanceManager`.
 - Integración de `BotStateManager`.
 - Restauración del outfit al iniciar.
+- Baile dirigido mediante `!dancebot @Zeta_Bot` y `!stopdance @Zeta_Bot`.
+- Emotes dirigidos mediante `!emote @usuario <emote>` y `!emote stop @usuario`.
+- Reinicio dirigido mediante `!reset @Zeta_Bot`.
 - Filtrado de comandos compartidos por nombre de bot.
 - Conservación del `PositionManager` antiguo para las posiciones nombradas de la sala, que todavía utiliza Zeta para comandos como teletransportes guardados.
 
@@ -141,7 +144,16 @@ Motivo:
 - Repetía la responsabilidad de `common/bot_manager.py`.
 - La búsqueda confirmó que no quedaron referencias a `BotTargetResolver`.
 
-## 9. Archivos nuevos
+## 9. Correcciones posteriores a la primera revisión
+
+- La posición común usa siempre el nombre estable del bot, por ejemplo `bot_position_zeta_bot` o `bot_position_dj.z`.
+- La restauración de posición de Zeta usa el mismo `PositionManagerCommon` que `!set` y `!home`.
+- El estado persistido es la única fuente de verdad para `dance_enabled`.
+- El baile ya no se inicia automáticamente al conectar si no estaba activado.
+- Las solicitudes de AutoDJ permanecen en `request_queue.json` hasta terminar su reproducción.
+- Se eliminaron los fallbacks de outfit que llamaban directamente a Highrise.
+
+## 10. Archivos nuevos
 
 - `common/avatar.py`
 - `common/bot_manager.py`
@@ -149,7 +161,7 @@ Motivo:
 - `common/dance.py`
 - `common/positions.py`
 
-## 10. Archivos modificados
+## 11. Archivos modificados
 
 - `bots/dj/music_bot.py`
 - `bots/bot1/main.py`
@@ -159,7 +171,7 @@ Motivo:
 - `commands/remove.py`
 - `services/storage.py`
 
-## 11. Validaciones realizadas
+## 12. Validaciones realizadas
 
 Se ejecutaron comprobaciones de sintaxis sobre los módulos modificados y nuevos:
 
@@ -185,7 +197,7 @@ Finalmente se comprobó que no quedan referencias al módulo eliminado:
 bot_targets removed and no references remain
 ```
 
-## 12. Pendiente de probar en producción
+## 13. Pendiente de probar en producción
 
 La validación local confirma sintaxis, imports y persistencia de archivos. Todavía hace falta probar en una sala real de Highrise:
 

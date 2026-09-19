@@ -26,13 +26,17 @@ DATA=Path(os.getenv("MUSIC_DATA_FILE","/app/music_bot_data.json"))
 class Bot(BaseBot):
     def __init__(self):
         super().__init__();self.bot_id=None;self.owner_id=None
-        self.bot_username = os.getenv("DJ_BOT_USERNAME", "Dj")
+        self.bot_username = os.getenv("DJ_BOT_USERNAME", "Dj.Z")
         self.avatar_manager = AvatarManager(self)
         self.position_manager_common = PositionManagerCommon(self, str(DATA))
         self.dance_manager = DanceManager(self)
         self.bot_state_manager = BotStateManager(self)
         self.state_file = str(DATA)
         self.dance_config = {"dance_enabled": False, "dance_emote": ""}
+        try:
+            self.emotes_list = json.loads((Path(ROOT_DIR) / "common" / "emotes.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            self.emotes_list = []
     async def is_mod(self,uid):
         if uid==self.owner_id:return True
         try:
@@ -82,6 +86,8 @@ class Bot(BaseBot):
             await self.avatar_manager.restore_saved_outfit()
         except Exception as e:
             print("[MUSIC] outfit:", e)
+        if self.bot_state_manager.get_state().dance_enabled:
+            await self.dance_manager.start_random_dance()
 
         try:
             await self.highrise.chat("<#66FF99>🎵 ¡Bot de música conectado! <#FFFFFF>Estoy listo para poner tus canciones y gestionar la playlist.")
@@ -119,6 +125,30 @@ class Bot(BaseBot):
             fn={"!color":handle_color,"!equip":handle_equip,"/equip":handle_equip,"!remove":handle_remove,"/remove":handle_remove,"!getoutfit":handle_get_outfit,"/getoutfit":handle_get_outfit}[cmd]
             result = await fn(self,user,message) or "OK"
             return await self.highrise.send_whisper(user.id, result)
+        if cmd.startswith("!reset"):
+            if not await self._is_targeted_for_me(message):
+                return
+            if user.id == self.owner_id or await self.is_mod(user.id):
+                await self.restart_with_message()
+            else:
+                await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden reiniciar el bot.")
+            return
+        if cmd.startswith("!dancebot"):
+            if not await self._is_targeted_for_me(message):
+                return
+            if user.id == self.owner_id or await self.is_mod(user.id):
+                await self.highrise.send_whisper(user.id, await self.dance_manager.start_random_dance())
+            else:
+                await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden controlar el baile.")
+            return
+        if cmd.startswith("!stopdance"):
+            if not await self._is_targeted_for_me(message):
+                return
+            if user.id == self.owner_id or await self.is_mod(user.id):
+                await self.highrise.send_whisper(user.id, await self.dance_manager.stop_dance())
+            else:
+                await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden controlar el baile.")
+            return
         if cmd=="!play":
             q=parts[1] if len(parts)==2 else ""
             if not q:return await self.highrise.send_whisper(user.id,"<#FFCC66>🎵 Uso: !play canción")

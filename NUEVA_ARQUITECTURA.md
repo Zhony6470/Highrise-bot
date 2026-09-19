@@ -41,13 +41,13 @@ highrise-bot/
 
 ## Responsabilidades
 
-### @Bot1
+### @Zeta_Bot
 
 Su código vive en `bots/bot1/`.
 
 Incluye comandos y funciones propias del bot general: moderación, propinas, diversión, anuncios, pista de emotes y sus datos/posición.
 
-### @Dj
+### @Dj.Z
 
 Su código vive en `bots/dj/`.
 
@@ -63,8 +63,8 @@ AutoDJ e Icecast siguen siendo independientes de los bots de Highrise:
 
 ```text
 HIGHRISE
-  ├── @Bot1 ───────────┐
-  └── @Dj ─────────────┤
+  ├── @Zeta_Bot ───────┐
+  └── @Dj.Z ───────────┤
                         ↓
                       AutoDJ
                         ↓
@@ -80,23 +80,23 @@ Si uno o ambos bots se desconectan, AutoDJ e Icecast pueden continuar reproducie
 La siguiente fase del sistema de avatar usará el usuario objetivo del propio bot para evitar choques entre bots:
 
 ```text
-!set @Bot1
-!set @Dj
+!set @Zeta_Bot
+!set @Dj.Z
 
-!home @Bot1
-!home @Dj
+!home @Zeta_Bot
+!home @Dj.Z
 
-!color @Bot1 ...
-!color @Dj ...
+!color @Zeta_Bot ...
+!color @Dj.Z ...
 
-!equip @Bot1 ...
-!equip @Dj ...
+!equip @Zeta_Bot ...
+!equip @Dj.Z ...
 
-!remove @Bot1
-!remove @Dj
+!remove @Zeta_Bot
+!remove @Dj.Z
 
-!getoutfit @Bot1
-!getoutfit @Dj
+!getoutfit @Zeta_Bot
+!getoutfit @Dj.Z
 ```
 
 Los comandos de baile conservarán sus funciones existentes:
@@ -106,7 +106,7 @@ Los comandos de baile conservarán sus funciones existentes:
 - `!emote @usuario <emote>` → emote específico en bucle.
 - `!emote stop @usuario` → detiene el emote específico.
 
-El estado persistente de estos comandos se implementará sobre los archivos de datos individuales de cada bot, sin compartir accidentalmente el estado entre @Bot1 y @Dj.
+El estado persistente de estos comandos se implementará sobre los archivos de datos individuales de cada bot, sin compartir accidentalmente el estado entre @Zeta_Bot y @Dj.Z.
 
 ## Despliegue
 
