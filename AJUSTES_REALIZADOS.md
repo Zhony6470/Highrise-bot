@@ -158,6 +158,8 @@ Motivo:
 - El baile ya no se inicia automáticamente al conectar si no estaba activado.
 - Las solicitudes de AutoDJ permanecen en `request_queue.json` hasta terminar su reproducción.
 - Se eliminaron los fallbacks de outfit que llamaban directamente a Highrise.
+- Se corrigió el reinicio `!restart` del DJ y se eliminó `reset_state()` sin referencias.
+- Se corrigió la excepción duplicada del gestor de baile y se reforzó el estado al detener modos.
 
 ## 10. Archivos nuevos
 

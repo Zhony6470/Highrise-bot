@@ -178,7 +178,7 @@ class Bot(BaseBot):
             except RuntimeError as e:await self.highrise.send_whisper(user.id,f"<#FF6666>⚠️ {e}")
             return
 
-        if msg.strip().lower() == "!restart":
+        if message.strip().lower() == "!restart":
             if user.id == self.owner_id or await self.is_mod(user.id):
                 await self.restart_with_message()
             else:

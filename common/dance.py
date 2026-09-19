@@ -50,8 +50,6 @@ class DanceManager:
         except asyncio.CancelledError:
             return
         except Exception as error:
-            print(f"Error en el emote persistente del bot: {error}")
-        except Exception as error:
             print(f"Error en el baile del bot: {error}")
 
     async def _stop_runtime(self) -> None:
@@ -68,6 +66,7 @@ class DanceManager:
         await self._stop_runtime()
         state = self.state()
         state.dance_enabled = False
+        state.bot_emote_enabled = False
         state.active_mode = ""
         self.save(state)
         return "<#66CCFF>⏹️ Baile detenido para este bot." if send_message else ""
@@ -96,10 +95,13 @@ class DanceManager:
                 await asyncio.sleep(duration)
         except asyncio.CancelledError:
             return
+        except Exception as error:
+            print(f"Error en el emote persistente del bot: {error}")
 
     async def stop_bot_emote(self) -> str:
         await self._stop_runtime()
         state = self.state()
+        state.dance_enabled = False
         state.bot_emote_enabled = False
         state.active_mode = ""
         self.save(state)

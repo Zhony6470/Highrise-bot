@@ -67,6 +67,3 @@ class BotStateManager:
             "active_mode": state.active_mode,
         }
         self.save(payload)
-
-    def reset_state(self) -> None:
-        self.save_state(BotState(bot_name=getattr(self.bot, "bot_username", "")))
