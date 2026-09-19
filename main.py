@@ -23,14 +23,6 @@ from services.roles import RoleManager, get_user_role
 from services.emotes import EmotesManager
 from services.track import handle_track_command, start_track_monitor
 from services.storage import load_json
-from services.youtube import YouTubeSearchError, search_youtube
-from services.radio import (
-    RadioRequestError,
-    request_playback,
-    request_radio_state,
-    request_skip,
-    update_default_playlist,
-)
 from tips import TipManager
 from anuncios import announcement_loop
 from diversion import handle_diversion_command
@@ -78,8 +70,6 @@ class Bot(BaseBot):
         self.position_task = None
         self.reset_task = None
         self.announcement_task = None
-        self.radio_monitor_task = None
-        self.radio_last_track = None
         self.fight_tasks = set()
         self.current_bot_emote = None
         self.current_bot_emote_duration = 0
@@ -364,10 +354,6 @@ class Bot(BaseBot):
         if self.announcement_task:
             self.announcement_task.cancel()
         self.announcement_task = asyncio.create_task(announcement_loop(self))
-        if self.radio_monitor_task:
-            self.radio_monitor_task.cancel()
-        if os.environ.get("MUSIC_COMMANDS_ENABLED", "0") == "1":
-            self.radio_monitor_task = asyncio.create_task(self.radio_monitor_loop())
         try:
             positions = load_json(self.position_manager.positions_file)
             if positions.get("pista_emotes"):
@@ -380,9 +366,7 @@ class Bot(BaseBot):
         msg_lower = msg.lower()
 
         command_name = msg.split(maxsplit=1)[0].lower() if msg else ""
-        # La música vive en music-bot. El bot principal puede desactivar estos comandos.
-        if os.environ.get("MUSIC_COMMANDS_ENABLED", "0") != "1" and command_name in {"!play", "/play", "!skip", "!q", "!queue", "!review", "!reviw", "!ap", "!addplay", "!rp", "!removeplay"}:
-            return
+
         if command_name in self.command_dispatcher.handlers:
             response = await self.command_dispatcher.handle(self, user, msg)
             if isinstance(response, list):
@@ -396,96 +380,6 @@ class Bot(BaseBot):
             return
 
         if await handle_track_command(self, user, message):
-            return
-
-        if msg_lower in ("!q", "!queue"):
-            await self.send_radio_queue(user.id)
-            return
-
-        if msg_lower in ("!reviw", "!review"):
-            await self.send_radio_review(user.id)
-            return
-
-        if command_name in ("!addplay", "!ap", "!removeplay", "!rp"):
-            if user.id != self.owner_id and not await self.is_mod(user.id):
-                await self.highrise.send_whisper(
-                    user.id, "🔒 Solo el dueño o los moderadores pueden modificar la playlist."
-                )
-                return
-            parts = msg.split(maxsplit=1)
-            query = parts[1].strip() if len(parts) == 2 else ""
-            if not query:
-                await self.highrise.send_whisper(
-                    user.id, "<#FFCC66>Uso: !addplay canción o !removeplay canción"
-                )
-                return
-            try:
-                video = await asyncio.to_thread(search_youtube, query)
-                remove = command_name in ("!removeplay", "!rp")
-                await update_default_playlist(video, remove=remove)
-                action = "eliminada de" if remove else "añadida a"
-                await self.highrise.chat(
-                    f"🎵 Playlist por defecto: @{user.username} ha {action} la lista "
-                    f"«{video['title']}»."
-                )
-            except (YouTubeSearchError, RadioRequestError) as error:
-                await self.highrise.send_whisper(user.id, f"<#FF6666>⚠️ {error}")
-            return
-
-        if msg_lower == "!skip":
-            if user.id != self.owner_id and not await self.is_mod(user.id):
-                await self.highrise.send_whisper(
-                    user.id, "🔒 Solo el dueño o los moderadores pueden saltar canciones."
-                )
-                return
-            try:
-                await request_skip()
-                await self.highrise.chat("⏭️ Saltando la canción actual...")
-            except RadioRequestError as error:
-                await self.highrise.send_whisper(user.id, f"<#FF6666>⚠️ {error}")
-            return
-
-        if command_name in ("!play", "/play"):
-            query = msg[5:].strip()
-            if not query:
-                await self.highrise.send_whisper(
-                    user.id, "<#FFCC66>🎵 Uso: !play nombre de la canción"
-                )
-                return
-            try:
-                video = await asyncio.to_thread(search_youtube, query)
-                try:
-                    await request_playback(
-                        video["video_id"],
-                        {
-                            "title": video["title"],
-                            "channel": video["channel"],
-                            "url": video["url"],
-                            "duration": video.get("duration"),
-                        },
-                    )
-                    playback_message = (
-                        "<#66FF99>✅ Música encontrada correctamente y lista para sonar. "
-                        "Se ha añadido a la cola."
-                    )
-                except RadioRequestError as error:
-                    playback_message = f"<#FFCC66>ℹ️ {error}"
-                await self.highrise.chat(
-                    f"<#66FF99>🎵 @{user.username} encontró: {video['title']} "
-                    f"({video['channel']})\n{playback_message}"
-                )
-                await self.highrise.send_whisper(
-                    user.id,
-                    "<#66FF99>🔎 Resultado encontrado:\n"
-                    f"<#FFFFFF>🎵 {video['title']}\n"
-                    f"<#CC99FF>👤 {video['channel']}\n"
-                    f"<#66CCFF>🔗 {video['url']}\n"
-                    "<#FFCC66>ℹ️ Solicitud añadida a la cola de reproducción.",
-                )
-            except YouTubeSearchError as error:
-                await self.highrise.send_whisper(
-                    user.id, f"<#FF6666>⚠️ {error}"
-                )
             return
 
         if msg_lower == "!reset":
@@ -849,70 +743,6 @@ class Bot(BaseBot):
         if response:
             await self.highrise.send_whisper(user.id, response)
         return
-
-    async def radio_monitor_loop(self) -> None:
-        try:
-            while True:
-                try:
-                    state = await request_radio_state()
-                    current = state.get("current") or {}
-                    video_id = current.get("video_id")
-                    elapsed = int(current.get("elapsed", 0) or 0)
-                    track_identity = (video_id, current.get("default_track", False))
-                    if video_id and elapsed >= 1 and track_identity != self.radio_last_track:
-                        self.radio_last_track = track_identity
-                        prefix = "Playlist por defecto" if current.get("default_track") else "Solicitud"
-                        await self.highrise.chat(
-                            f"🎶 Ahora suena ({prefix}): {current.get('title', 'pista desconocida')}"
-                        )
-                except RadioRequestError:
-                    pass
-                await asyncio.sleep(2)
-        except asyncio.CancelledError:
-            pass
-        except Exception as error:
-            print(f"Error monitorizando la radio: {error}")
-
-    async def send_radio_queue(self, user_id: str) -> None:
-        try:
-            state = await request_radio_state()
-        except RadioRequestError as error:
-            await self.highrise.send_whisper(user_id, f"<#FF6666>⚠️ {error}")
-            return
-        current = state.get("current") or {}
-        queue = [item for item in state.get("queue", []) if not item.get("default_track")]
-        lines = ["🎵 Cola de reproducción:"]
-        if current.get("title") and not current.get("default_track"):
-            lines.append(f"▶️ Sonando: {current['title']}")
-        elif current.get("default_track"):
-            lines.append("▶️ Sonando playlist por defecto (no es una solicitud).")
-        if queue:
-            lines.extend(
-                f"{index}. {item.get('title', 'pista desconocida')}"
-                for index, item in enumerate(queue, start=1)
-            )
-        else:
-            lines.append("La cola está vacía.")
-        await self.highrise.send_whisper(user_id, "\n".join(lines))
-
-    async def send_radio_review(self, user_id: str) -> None:
-        try:
-            state = await request_radio_state()
-        except RadioRequestError as error:
-            await self.highrise.send_whisper(user_id, f"<#FF6666>⚠️ {error}")
-            return
-        current = state.get("current") or {}
-        if not current:
-            await self.highrise.send_whisper(user_id, "🎵 No hay ninguna canción sonando.")
-            return
-        elapsed = int(current.get("elapsed", 0))
-        duration = current.get("duration")
-        total = f"{duration // 60}:{duration % 60:02d}" if duration else "desconocida"
-        await self.highrise.send_whisper(
-            user_id,
-            f"🎵 Sonando ahora: {current.get('title', 'pista desconocida')}\n"
-            f"⏱️ Tiempo: {elapsed // 60}:{elapsed % 60:02d} / {total} min",
-        )
 
     async def command_handler(self, user_id: str, message: str) -> str | None:
         command = message.lower().strip()

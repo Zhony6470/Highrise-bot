@@ -3,9 +3,6 @@ import os
 
 ROOM_ID = os.environ.get("ROOM_ID", "")
 API_KEY = os.environ.get("API_KEY", "")
-YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
-RADIO_PLAYER_URL = os.environ.get("RADIO_PLAYER_URL", "")
-RADIO_PLAYER_TOKEN = os.environ.get("RADIO_PLAYER_TOKEN", "")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, "data.json")

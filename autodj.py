@@ -201,7 +201,7 @@ def choose_default() -> dict | None:
                 },
             }
             for path in DEFAULT.iterdir()
-            if path.is_file()
+            if path.is_file() and path.suffix.lower() in (".mp3", ".wav", ".ogg", ".m4a")
         ]
 
     if not items:
@@ -263,6 +263,11 @@ def player_loop():
 
             item = dict(item)
             item["file_path"] = str(ensure_file(item))
+
+            if item.get("default_track") and queue_snapshot():
+                print("[AUTODJ] Solicitud pendiente; descartando DEFAULT antes de reproducir.", flush=True)
+                continue
+
             item["metadata"] = metadata(item)
 
             with lock:
@@ -368,6 +373,9 @@ class API(BaseHTTPRequestHandler):
         try:
             data = self.body()
 
+            print("[AUTODJ DEBUG] PATH:", self.path, flush=True)
+            print("[AUTODJ DEBUG] DATA:", data, flush=True)
+
             if self.path == "/play":
                 video_id = data["video_id"]
                 item = {
@@ -378,13 +386,20 @@ class API(BaseHTTPRequestHandler):
                 with lock:
                     queue.append(item)
                     save(QUEUE_FILE, list(queue))
-                    if state.get("current", {}).get("default_track"):
-                        priority_event.set()
+                    current = state.get("current")
+                    if current and current.get("default_track"):
+                        priority_event.set()    
                 return self.reply(200, {"ok": True, "queued": item})
 
             if self.path == "/skip":
+                with lock:
+                    active = state.get("current") is not None
+
+                if not active:
+                    return self.reply(200, {"ok": True, "active": False})
+
                 skip_event.set()
-                return self.reply(200, {"ok": True})
+                return self.reply(200, {"ok": True, "active": True})
 
             if self.path in ("/default-add", "/default-remove"):
                 playlist = load(PLAYLIST, [])

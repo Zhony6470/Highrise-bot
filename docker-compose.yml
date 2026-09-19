@@ -9,11 +9,6 @@ services:
       ICECAST_HOSTNAME: ${ICECAST_PUBLIC_HOST:-localhost}
       ICECAST_SOURCE_PASSWORD: ${ICECAST_PASSWORD}
       ICECAST_ADMIN_PASSWORD: ${ICECAST_ADMIN_PASSWORD:-change-me-admin}
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/status-json.xsl >/dev/null || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
 
   autodj:
     build:
@@ -22,8 +17,7 @@ services:
     container_name: highrise-autodj
     restart: unless-stopped
     depends_on:
-      icecast:
-        condition: service_healthy
+    - icecast
     environment:
       AUTODJ_TOKEN: ${AUTODJ_TOKEN}
       AUTODJ_HOST: 0.0.0.0
@@ -37,7 +31,7 @@ services:
     volumes:
       - autodj_data:/data
       - ./default_music:/data/default_music:ro
-      - ./cookies.txt:/app/cookies.txt:ro
+      - ./services/cookies.txt:/app/cookies.txt:ro
 
   main-bot:
     build:
@@ -46,8 +40,6 @@ services:
     container_name: highrise-main-bot
     restart: unless-stopped
     env_file: .env
-    environment:
-      MUSIC_COMMANDS_ENABLED: "0"
     command: ["python", "-u", "main.py"]
 
   music-bot:

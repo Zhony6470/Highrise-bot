@@ -1,12 +1,8 @@
 import os
-import asyncio
 import json
 import subprocess
-from typing import Optional, Dict, Any
-import re
-import yt_dlp
+from typing import Dict, Any
 
-YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 COOKIES_PATH = os.path.join(os.path.dirname(__file__), "cookies.txt")
 
 # Configuración avanzada de yt-dlp para mitigar bloqueos en VPS
@@ -23,18 +19,6 @@ YTDL_OPTS: Dict[str, Any] = {
         }
     }
 }
-
-
-def _duration_seconds(value: str) -> int | None:
-    match = re.fullmatch(
-        r"P(?:(?P<days>\d+)D)?T(?:(?P<hours>\d+)H)?"
-        r"(?:(?P<minutes>\d+)M)?(?:(?P<seconds>\d+)S)?",
-        value,
-    )
-    if not match:
-        return None
-    parts = {key: int(number or 0) for key, number in match.groupdict().items()}
-    return parts["days"] * 86400 + parts["hours"] * 3600 + parts["minutes"] * 60 + parts["seconds"]
 
 # Carga cookies de sesión si el archivo existe
 if os.path.exists(COOKIES_PATH):
@@ -94,31 +78,3 @@ def search_youtube(query: str) -> Dict[str, str]:
         "url": f"https://www.youtube.com/watch?v={video_id}",
         "duration": duration,
     }
-
-
-async def extract_stream_info(video_id_or_url: str) -> Optional[Dict[str, Any]]:
-    """Resuelve la URL directa del audio usando yt-dlp con las opciones anti-bloqueo."""
-    loop = asyncio.get_event_loop()
-    url = (
-        video_id_or_url
-        if video_id_or_url.startswith("http")
-        else f"https://www.youtube.com/watch?v={video_id_or_url}"
-    )
-
-    def _extract():
-        with yt_dlp.YoutubeDL(YTDL_OPTS) as ytdl:
-            info = ytdl.extract_info(url, download=False)
-            if 'entries' in info:
-                info = info['entries'][0]
-            return {
-                "stream_url": info.get("url"),
-                "title": info.get("title"),
-                "artist": info.get("uploader"),
-                "duration": info.get("duration")
-            }
-
-    try:
-        return await loop.run_in_executor(None, _extract)
-    except Exception as e:
-        print(f"[Error yt-dlp]: {e}")
-        return None
