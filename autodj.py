@@ -103,138 +103,31 @@ def ensure_file(item: dict) -> Path:
     return matches[0]
 
 
-def decoder(path: Path):
-    return subprocess.Popen(
-        [
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
-            "-i", str(path),
-            "-f", "s16le",
-            "-ar", str(SAMPLE_RATE),
-            "-ac", str(CHANNELS),
-            "pipe:1",
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
+def icecast_url():
+    return (
+        f"icecast://{quote(ICECAST_SOURCE, safe='')}:"
+        f"{quote(ICECAST_PASSWORD, safe='')}@"
+        f"{ICECAST_HOST}:{ICECAST_PORT}/"
+        f"{quote(ICECAST_MOUNT, safe='/')}"
     )
 
 
-class IcecastOutput:
-    """Una sola salida FFmpeg persistente durante toda la vida del AutoDJ."""
-
-    def __init__(self):
-        self.process = None
-        self.lock = threading.RLock()
-
-    def _start(self):
-        url = (
-            f"icecast://{quote(ICECAST_SOURCE, safe='')}:"
-            f"{quote(ICECAST_PASSWORD, safe='')}@"
-            f"{ICECAST_HOST}:{ICECAST_PORT}/"
-            f"{quote(ICECAST_MOUNT, safe='/')}"
-        )
-        command = [
-            "ffmpeg", "-hide_banner", "-loglevel", "warning",
-            "-f", "s16le", "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS),
-            "-i", "pipe:0",
-            "-c:a", "libmp3lame", "-b:a", "128k",
-            "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS),
-            "-content_type", "audio/mpeg",
-            "-f", "mp3", url,
-        ]
-        self.process = subprocess.Popen(command, stdin=subprocess.PIPE)
-        print("[AUTODJ] salida Icecast conectada", flush=True)
-
-    def connect(self):
-        with self.lock:
-            if self.process and self.process.poll() is None:
-                return
-            self._start()
-
-    def write(self, pcm: bytes):
-        while True:
-            try:
-                self.connect()
-                self.process.stdin.write(pcm)
-                self.process.stdin.flush()
-                return
-            except (BrokenPipeError, OSError):
-                print(
-                    "[AUTODJ] Icecast desconectado; reconectando sin repetir el bloque.",
-                    flush=True,
-                )
-                self.close()
-                time.sleep(1)
-
-    def close(self):
-        with self.lock:
-            process = self.process
-            self.process = None
-            if not process:
-                return
-            try:
-                process.stdin.close()
-            except Exception:
-                pass
-            try:
-                process.terminate()
-                process.wait(timeout=2)
-            except Exception:
-                try:
-                    process.kill()
-                except Exception:
-                    pass
-
-
-def choose_default() -> dict | None:
-    playlist = load(PLAYLIST, [])
-    items = [
-        dict(item)
-        for item in playlist
-        if isinstance(item, dict) and item.get("video_id")
+def play_file(path: Path):
+    command = [
+        "ffmpeg", "-hide_banner", "-loglevel", "warning",
+        "-re",
+        "-i", str(path),
+        "-vn",
+        "-c:a", "libmp3lame",
+        "-b:a", "128k",
+        "-ar", str(SAMPLE_RATE),
+        "-ac", str(CHANNELS),
+        "-content_type", "audio/mpeg",
+        "-f", "mp3",
+        icecast_url(),
     ]
 
-    if not items:
-        try:
-            default_files = DEFAULT.iterdir()
-        except OSError:
-            default_files = []
-
-        items = [
-            {
-                "file_path": str(path),
-                "metadata": {
-                    "title": path.stem,
-                    "channel": "Highrise Radio",
-                },
-            }
-            for path in DEFAULT.iterdir()
-            if path.is_file() and path.suffix.lower() in (".mp3", ".wav", ".ogg", ".m4a")
-        ]
-
-    if not items:
-        return None
-
-    with lock:
-        previous = state.get("last_default_id")
-
-    candidates = [
-        item for item in items
-        if (item.get("video_id") or item.get("file_path")) != previous
-    ]
-    return random.choice(candidates or items)
-
-
-def next_item() -> dict | None:
-    with lock:
-        if queue:
-            item = queue.popleft()
-            save(QUEUE_FILE, list(queue))
-            return item
-
-    item = choose_default()
-    if item:
-        item["default_track"] = True
-    return item
+    return subprocess.Popen(command)
 
 
 def stop_decoder(process):
@@ -242,12 +135,7 @@ def stop_decoder(process):
         return
 
     try:
-        if process.stdout:
-            process.stdout.close()
-    except Exception:
-        pass
-
-    try:
+        process.terminate()
         process.wait(timeout=2)
     except Exception:
         try:
@@ -257,14 +145,72 @@ def stop_decoder(process):
             pass
 
 
+def choose_default():
+    playlist = load(PLAYLIST, [])
+    if playlist:
+        candidates = [
+            item for item in playlist
+            if item.get("video_id") or item.get("file_path")
+        ]
+        if candidates:
+            with lock:
+                last_id = state.get("last_default_id")
+
+            if len(candidates) > 1 and last_id:
+                filtered = [
+                    item for item in candidates
+                    if (item.get("video_id") or item.get("file_path")) != last_id
+                ]
+                if filtered:
+                    candidates = filtered
+
+            item = dict(random.choice(candidates))
+            item["default_track"] = True
+            return item
+
+    files = [
+        path for path in DEFAULT.iterdir()
+        if path.is_file() and path.suffix.lower() in {
+            ".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac", ".webm", ".opus"
+        }
+    ]
+
+    if not files:
+        return None
+
+    with lock:
+        last_id = state.get("last_default_id")
+
+    candidates = [path for path in files if str(path) != str(last_id)]
+
+    if not candidates:
+        candidates = files
+
+    path = random.choice(candidates)
+
+    return {
+        "file_path": str(path),
+        "title": path.stem,
+        "default_track": True,
+    }
+
+
+def next_item():
+    with lock:
+        if queue:
+            item = queue.popleft()
+            save(QUEUE_FILE, list(queue))
+            return item
+
+    return choose_default()
+
+
 def has_requests() -> bool:
     with lock:
         return bool(queue)
 
 
 def player_loop():
-    output = IcecastOutput()
-
     while True:
         item = None
         process = None
@@ -280,7 +226,10 @@ def player_loop():
             item["file_path"] = str(ensure_file(item))
 
             if item.get("default_track") and queue_snapshot():
-                print("[AUTODJ] Solicitud pendiente; descartando DEFAULT antes de reproducir.", flush=True)
+                print(
+                    "[AUTODJ] Solicitud pendiente; descartando DEFAULT antes de reproducir.",
+                    flush=True,
+                )
                 continue
 
             item["metadata"] = metadata(item)
@@ -300,29 +249,27 @@ def player_loop():
                 flush=True,
             )
 
-            process = decoder(Path(item["file_path"]))
+            process = play_file(Path(item["file_path"]))
 
             while True:
                 if skip_event.is_set():
                     break
 
-                # Las solicitudes interrumpen únicamente una pista DEFAULT.
-                # No usamos un evento separado: consultar la cola directamente
-                # evita condiciones de carrera cuando !play llega entre pistas.
                 if item.get("default_track") and has_requests():
-                    print("[AUTODJ] Solicitud prioritaria detectada.", flush=True)
+                    print(
+                        "[AUTODJ] Solicitud prioritaria detectada.",
+                        flush=True,
+                    )
                     break
 
-                pcm = process.stdout.read(BLOCK)
-                if not pcm:
+                if process.poll() is not None:
                     break
 
-                output.write(pcm)
+                time.sleep(0.25)
 
             stop_decoder(process)
             process = None
 
-            # El skip solo afecta a la pista que estaba activa cuando se solicitó.
             skip_event.clear()
 
             with lock:
@@ -332,13 +279,17 @@ def player_loop():
 
         except Exception as error:
             print(f"[AUTODJ] error: {error}", flush=True)
+
             if process is not None:
                 stop_decoder(process)
+
             skip_event.clear()
+
             with lock:
                 state["current"] = None
                 state["started_at"] = None
                 state["status"] = "recovering"
+
             time.sleep(1)
 
 
@@ -404,8 +355,6 @@ class API(BaseHTTPRequestHandler):
                     queue.append(item)
                     save(QUEUE_FILE, list(queue))
                     current = state.get("current")
-                    if current and current.get("default_track"):
-                        priority_event.set()
                 return self.reply(200, {"ok": True, "queued": item})
 
             if self.path == "/skip":

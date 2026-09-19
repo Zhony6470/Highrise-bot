@@ -7,3 +7,5 @@ cookies.txt
 music_bot_data.local.json
 request_queue.json
 default_playlist.json
+
+backup-antes-sync/

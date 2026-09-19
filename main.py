@@ -1,4 +1,4 @@
-from highrise import BaseBot, __main__, CurrencyItem, GetMessagesRequest, Item, Position, AnchorPosition, Reaction, SessionMetadata, User
+﻿from highrise import BaseBot, __main__, CurrencyItem, GetMessagesRequest, Item, Position, AnchorPosition, Reaction, SessionMetadata, User
 from highrise.__main__ import BotDefinition
 from asyncio import run as arun
 from json import load
@@ -79,7 +79,7 @@ class Bot(BaseBot):
         self.emotes_manager = EmotesManager(self.emotes_list)
 
     def load_emotes_data(self):
-        """Carga la configuración de emotes desde el archivo JSON."""
+        """Carga la configuraciÃ³n de emotes desde el archivo JSON."""
         try:
             with open(EMOTES_FILE, "r", encoding="utf-8") as file:
                 emotes = load(file)
@@ -106,84 +106,84 @@ class Bot(BaseBot):
         role = await self.role_manager.get_user_role(self, user)
         sections = [
             "\n".join([
-                "<#66CCFF>🎭 EMOTES",
-                "<#FFFFFF>• !random - Emotes aleatorios para ti",
-                "<#FFFFFF>• !stop - Detener tu emote",
-                "<#FFFFFF>• !help - Mostrar esta ayuda",
+                "<#66CCFF>ðŸŽ­ EMOTES",
+                "<#FFFFFF>â€¢ !random - Emotes aleatorios para ti",
+                "<#FFFFFF>â€¢ !stop - Detener tu emote",
+                "<#FFFFFF>â€¢ !help - Mostrar esta ayuda",
             ]),
             "\n".join([
-                "<#66CCFF>🎉 DIVERSIÓN",
-                "<#FFFFFF>• !fight @usuario - Pelear con emotes",
-                "<#FFFFFF>• !kiss @usuario - Enviar un beso",
-                "<#FFFFFF>• !heart @usuario - Enviar un corazón",
-                "<#FFFFFF>• !love @usuario - Calcular compatibilidad",
-                "<#FFFFFF>• !superpunch @usuario - Lanzar un superpunch",
+                "<#66CCFF>ðŸŽ‰ DIVERSIÃ“N",
+                "<#FFFFFF>â€¢ !fight @usuario - Pelear con emotes",
+                "<#FFFFFF>â€¢ !kiss @usuario - Enviar un beso",
+                "<#FFFFFF>â€¢ !heart @usuario - Enviar un corazÃ³n",
+                "<#FFFFFF>â€¢ !love @usuario - Calcular compatibilidad",
+                "<#FFFFFF>â€¢ !superpunch @usuario - Lanzar un superpunch",
             ]),
             "\n".join([
-                "<#66FF99>📍 MOVIMIENTO",
-                "<#FFFFFF>• !tele @usuario - Ir junto a un usuario",
-                "<#FFFFFF>• !follow - Seguir al dueño",
-                "<#FFFFFF>• !stopfollow - Dejar de seguir al dueño",
+                "<#66FF99>ðŸ“ MOVIMIENTO",
+                "<#FFFFFF>â€¢ !tele @usuario - Ir junto a un usuario",
+                "<#FFFFFF>â€¢ !follow - Seguir al dueÃ±o",
+                "<#FFFFFF>â€¢ !stopfollow - Dejar de seguir al dueÃ±o",
             ]),
             "\n".join([
-                "<#FFCC66>💰 PROPINAS",
-                "<#FFFFFF>• !top - Ranking de propinas",
-                "<#FFFFFF>• !wallet - Ver la billetera del bot",
-                "<#FFFFFF>• !get @usuario - Ver sus propinas",
+                "<#FFCC66>ðŸ’° PROPINAS",
+                "<#FFFFFF>â€¢ !top - Ranking de propinas",
+                "<#FFFFFF>â€¢ !wallet - Ver la billetera del bot",
+                "<#FFFFFF>â€¢ !get @usuario - Ver sus propinas",
             ]),
             "\n".join([
-                "<#CC99FF>👤 INFORMACIÓN",
-                    "<#FFFFFF>• !userinfo - Ver tu información",
-                "<#FFFFFF>• !userinfo @usuario - Ver información de otro usuario",
-                "<#FFFFFF>• !help - Mostrar la ayuda disponible",
+                "<#CC99FF>ðŸ‘¤ INFORMACIÃ“N",
+                    "<#FFFFFF>â€¢ !userinfo - Ver tu informaciÃ³n",
+                "<#FFFFFF>â€¢ !userinfo @usuario - Ver informaciÃ³n de otro usuario",
+                "<#FFFFFF>â€¢ !help - Mostrar la ayuda disponible",
             ]),
         ]
 
         if role in ("owner", "mod"):
             sections.extend([
                 "\n".join([
-                    "<#FF66CC>🛡️ MODERACIÓN",
-                    "<#FFFFFF>• !kick @usuario - Expulsar un usuario",
-                    "<#FFFFFF>• !tp @usuario x y z - Teletransportar un usuario",
-                    "<#FFFFFF>• !botdance - Activar baile del bot",
-                    "<#FFFFFF>• !stopbotdance - Detener baile del bot",
-                    "<#FFFFFF>• !randomall - Activar emotes para todos",
+                    "<#FF66CC>ðŸ›¡ï¸ MODERACIÃ“N",
+                    "<#FFFFFF>â€¢ !kick @usuario - Expulsar un usuario",
+                    "<#FFFFFF>â€¢ !tp @usuario x y z - Teletransportar un usuario",
+                    "<#FFFFFF>â€¢ !botdance - Activar baile del bot",
+                    "<#FFFFFF>â€¢ !stopbotdance - Detener baile del bot",
+                    "<#FFFFFF>â€¢ !randomall - Activar emotes para todos",
                 ]),
                 "\n".join([
-                    "<#FFCC66>🎁 ENVÍO DE PROPINAS",
-                    "<#FFFFFF>• !tipme cantidad - Enviarte oro",
-                    "<#FFFFFF>• !tip @usuario cantidad - Enviar oro",
-                    "<#FFFFFF>• !tipall cantidad - Enviar a todos",
-                    "<#FFFFFF>• !tip all cantidad - Alias de !tipall",
+                    "<#FFCC66>ðŸŽ ENVÃO DE PROPINAS",
+                    "<#FFFFFF>â€¢ !tipme cantidad - Enviarte oro",
+                    "<#FFFFFF>â€¢ !tip @usuario cantidad - Enviar oro",
+                    "<#FFFFFF>â€¢ !tipall cantidad - Enviar a todos",
+                    "<#FFFFFF>â€¢ !tip all cantidad - Alias de !tipall",
                 ]),
             ])
 
         if role == "designer":
             sections.append(
                 "\n".join([
-                    "<#CC99FF>🎨 DISEÑADOR",
-                    "<#FFFFFF>• !color categoría número - Cambiar color",
-                    "<#FFFFFF>• !equip nombre - Equipar una prenda",
-                    "<#FFFFFF>• !remove categoría - Quitar una categoría",
-                    "<#FFFFFF>• !getoutfit - Ver el vestuario",
+                    "<#CC99FF>ðŸŽ¨ DISEÃ‘ADOR",
+                    "<#FFFFFF>â€¢ !color categorÃ­a nÃºmero - Cambiar color",
+                    "<#FFFFFF>â€¢ !equip nombre - Equipar una prenda",
+                    "<#FFFFFF>â€¢ !remove categorÃ­a - Quitar una categorÃ­a",
+                    "<#FFFFFF>â€¢ !getoutfit - Ver el vestuario",
                 ])
             )
 
         if role == "owner":
             sections.extend([
                 "\n".join([
-                    "<#CC99FF>⚙️ ADMINISTRACIÓN",
-                    "<#FFFFFF>• !set - Guardar la posición del bot",
-                    "<#FFFFFF>• !home - Volver a la posición guardada",
-                    "<#FFFFFF>• !reset - Reiniciar el bot",
-                    "<#FFFFFF>• !role @usuario mod|vip|designer|user - Administrar roles",
+                    "<#CC99FF>âš™ï¸ ADMINISTRACIÃ“N",
+                    "<#FFFFFF>â€¢ !set - Guardar la posiciÃ³n del bot",
+                    "<#FFFFFF>â€¢ !home - Volver a la posiciÃ³n guardada",
+                    "<#FFFFFF>â€¢ !reset - Reiniciar el bot",
+                    "<#FFFFFF>â€¢ !role @usuario mod|vip|designer|user - Administrar roles",
                 ]),
                 "\n".join([
-                    "<#FFFFFF>👕 VESTUARIO",
-                    "<#FFFFFF>• !color categoría número - Cambiar color",
-                    "<#FFFFFF>• !equip nombre - Equipar una prenda",
-                    "<#FFFFFF>• !remove categoría - Quitar una categoría",
-                    "<#FFFFFF>• !getoutfit - Ver el vestuario",
+                    "<#FFFFFF>ðŸ‘• VESTUARIO",
+                    "<#FFFFFF>â€¢ !color categorÃ­a nÃºmero - Cambiar color",
+                    "<#FFFFFF>â€¢ !equip nombre - Equipar una prenda",
+                    "<#FFFFFF>â€¢ !remove categorÃ­a - Quitar una categorÃ­a",
+                    "<#FFFFFF>â€¢ !getoutfit - Ver el vestuario",
                 ]),
             ])
 
@@ -214,17 +214,17 @@ class Bot(BaseBot):
             if conversation:
                 result = await self.highrise.send_message(conversation.id, content)
                 if result is None:
-                    return "<#66FF99>📨 Te envié la lista de roles guardados por mensaje privado."
+                    return "<#66FF99>ðŸ“¨ Te enviÃ© la lista de roles guardados por mensaje privado."
                 print(f"Error enviando lista de roles: {result}")
             else:
                 result = await self.highrise.send_message_bulk([user.id], content)
                 if result is None:
-                    return "<#66FF99>📨 Te envié la lista de roles guardados por mensaje privado."
-                print(f"No se pudo iniciar la conversación privada: {result}")
+                    return "<#66FF99>ðŸ“¨ Te enviÃ© la lista de roles guardados por mensaje privado."
+                print(f"No se pudo iniciar la conversaciÃ³n privada: {result}")
         except Exception as error:
             print(f"Error enviando roles a la bandeja: {error}")
 
-        return "<#FFCC66>📨 No pude enviar la lista a tu bandeja. Escríbeme primero por mensaje privado y vuelve a usar !role."
+        return "<#FFCC66>ðŸ“¨ No pude enviar la lista a tu bandeja. EscrÃ­beme primero por mensaje privado y vuelve a usar !role."
 
     async def is_mod(self, user_id: str) -> bool:
         """Verifica si un usuario posee rol de moderador o superior."""
@@ -249,7 +249,7 @@ class Bot(BaseBot):
         return None
 
     async def get_user_position(self, user_id: str) -> Position | None:
-        """Obtiene la posición actual de un usuario en la sala."""
+        """Obtiene la posiciÃ³n actual de un usuario en la sala."""
         room_users = await self.highrise.get_room_users()
         for room_user, position in room_users.content:
             if room_user.id == user_id:
@@ -282,7 +282,7 @@ class Bot(BaseBot):
                 await asyncio.sleep(2)
 
     async def random_dance_loop(self):
-        """Ejecuta bailes aleatorios continuos únicamente para el bot."""
+        """Ejecuta bailes aleatorios continuos Ãºnicamente para el bot."""
         public_emotes = [
             emote for emote in self.emotes_list
             if isinstance(emote, dict)
@@ -290,7 +290,7 @@ class Bot(BaseBot):
             and isinstance(emote.get("emote"), str)
         ]
         if not public_emotes:
-            print("No hay emotes públicos válidos para el baile automático.")
+            print("No hay emotes pÃºblicos vÃ¡lidos para el baile automÃ¡tico.")
             return
 
         while True:
@@ -307,7 +307,7 @@ class Bot(BaseBot):
                 await asyncio.sleep(2)
 
     async def follow_owner_loop(self):
-        """Bucle para hacer que el bot siga la posición del dueño."""
+        """Bucle para hacer que el bot siga la posiciÃ³n del dueÃ±o."""
         while self.following:
             try:
                 owner_pos = await self.get_user_position(self.owner_id)
@@ -334,7 +334,7 @@ class Bot(BaseBot):
                 await self.highrise.teleport(self.bot_id, self.bot_position)
                 print(f"[POSITION] Bot restaurado en {self.bot_position}.")
         except Exception as error:
-            print(f"Error restaurando la posición del bot: {error}")
+            print(f"Error restaurando la posiciÃ³n del bot: {error}")
 
     async def on_start(self, session_metadata: SessionMetadata) -> None:
         self.bot_id = session_metadata.user_id
@@ -343,7 +343,7 @@ class Bot(BaseBot):
         print(f"Bot conectado exitosamente. Bot ID: {self.bot_id} | Owner ID: {self.owner_id}")
 
         await self.highrise.chat(
-            "<#66FF99>🤖 ¡Bot conectado! Escribe !help para ver los comandos."
+            "<#66FF99>ðŸ¤– Â¡Bot conectado! Escribe !help para ver los comandos."
         )
         if self.position_task:
             self.position_task.cancel()
@@ -378,19 +378,17 @@ class Bot(BaseBot):
                     await self.highrise.send_whisper(user.id, response)
             return
 
-        if await handle_track_command(self, user, message):
-            return
 
         if msg_lower == "!reset":
             if user.id == self.owner_id or await self.is_mod(user.id):
                 if not self.reset_task:
                     await self.highrise.chat(
-                        "<#FF6666>🔄 El bot se reiniciará en un momento..."
+                        "<#FF6666>ðŸ”„ El bot se reiniciarÃ¡ en un momento..."
                     )
                     self.reset_task = asyncio.create_task(self.restart_process())
             else:
                 await self.highrise.send_whisper(
-                    user.id, "🔒 Solo el dueño o los moderadores pueden reiniciar el bot."
+                    user.id, "ðŸ”’ Solo el dueÃ±o o los moderadores pueden reiniciar el bot."
                 )
             return
 
@@ -406,24 +404,24 @@ class Bot(BaseBot):
             except Exception as error:
                 print(f"No se pudo detener el emote de {user.id}: {error}")
             await self.highrise.send_whisper(
-                user.id, "<#FF6666>🛑 Tu emote se detuvo."
+                user.id, "<#FF6666>ðŸ›‘ Tu emote se detuvo."
             )
             return
 
         # ==========================================
-        # 2. SEGUIR AL DUEÑO (!follow / !stopfollow)
+        # 2. SEGUIR AL DUEÃ‘O (!follow / !stopfollow)
         # ==========================================
         elif msg_lower == "!follow":
             if user.id == self.owner_id or await self.is_mod(user.id):
                 if not self.following:
                     self.following = True
                     self.follow_task = asyncio.create_task(self.follow_owner_loop())
-                    await self.highrise.chat("<#66FF99>🧭 ¡Ya voy contigo!")
+                    await self.highrise.chat("<#66FF99>ðŸ§­ Â¡Ya voy contigo!")
                 else:
-                    await self.highrise.chat("<#FFCC66>🧭 Ya te estaba siguiendo.")
+                    await self.highrise.chat("<#FFCC66>ðŸ§­ Ya te estaba siguiendo.")
             else:
                 await self.highrise.send_whisper(
-                    user.id, "🔒 Solo el dueño de la sala puede usar este comando."
+                    user.id, "ðŸ”’ Solo el dueÃ±o de la sala puede usar este comando."
                 )
             return
 
@@ -433,17 +431,17 @@ class Bot(BaseBot):
                     self.following = False
                     if self.follow_task:
                         self.follow_task.cancel()
-                    await self.highrise.chat("<#66CCFF>🛑 Dejé de seguirte.")
+                    await self.highrise.chat("<#66CCFF>ðŸ›‘ DejÃ© de seguirte.")
                 else:
-                    await self.highrise.chat("<#FFCC66>🧭 No te estaba siguiendo.")
+                    await self.highrise.chat("<#FFCC66>ðŸ§­ No te estaba siguiendo.")
             else:
                 await self.highrise.send_whisper(
-                    user.id, "🔒 Solo el dueño de la sala puede usar este comando."
+                    user.id, "ðŸ”’ Solo el dueÃ±o de la sala puede usar este comando."
                 )
             return
 
         # ==========================================
-        # 3. INVOCACIÓN (!summon @usuario)
+        # 3. INVOCACIÃ“N (!summon @usuario)
         # ==========================================
         elif msg_lower.startswith("!summon "):
             if user.id == self.owner_id or await self.is_mod(user.id):
@@ -457,19 +455,19 @@ class Bot(BaseBot):
                             await self.highrise.teleport(target_id, caller_pos)
                             await self.highrise.send_whisper(
                                 user.id,
-                                f"<#66CCFF>🌀 @{target_username} ha sido invocado/a."
+                                f"<#66CCFF>ðŸŒ€ @{target_username} ha sido invocado/a."
                             )
                         else:
                             await self.highrise.send_whisper(
-                                user.id, "<#FF6666>⚠️ No pude obtener tu posición actual."
+                                user.id, "<#FF6666>âš ï¸ No pude obtener tu posiciÃ³n actual."
                             )
                     else:
                         await self.highrise.send_whisper(
-                            user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala."
+                            user.id, "<#FFCC66>ðŸ”Ž Usuario no encontrado en la sala."
                         )
             else:
                 await self.highrise.send_whisper(
-                    user.id, "🔒 No tienes permisos para invocar usuarios."
+                    user.id, "ðŸ”’ No tienes permisos para invocar usuarios."
                 )
             return
 
@@ -482,28 +480,28 @@ class Bot(BaseBot):
         if msg_lower.startswith("!tele "):
             parts = msg.split()
             if len(parts) != 2 or not parts[1].startswith("@"):
-                await self.highrise.send_whisper(user.id, "📍 Uso: !tele @usuario")
+                await self.highrise.send_whisper(user.id, "ðŸ“ Uso: !tele @usuario")
                 return
 
             target_username = parts[1][1:]
             target_id = await self.get_user_id(target_username)
             if not target_id:
                 await self.highrise.send_whisper(
-                    user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala."
+                    user.id, "<#FFCC66>ðŸ”Ž Usuario no encontrado en la sala."
                 )
                 return
 
             target_position = await self.get_user_position(target_id)
             if not target_position:
                 await self.highrise.send_whisper(
-                    user.id, "<#FF6666>📍 No pude obtener la posición del usuario."
+                    user.id, "<#FF6666>ðŸ“ No pude obtener la posiciÃ³n del usuario."
                 )
                 return
 
             await self.highrise.teleport(user.id, target_position)
             await self.highrise.send_whisper(
                 user.id,
-                f"<#66FF99>📍 ¡Te has reunido con @{target_username}!"
+                f"<#66FF99>ðŸ“ Â¡Te has reunido con @{target_username}!"
             )
             return
 
@@ -513,26 +511,26 @@ class Bot(BaseBot):
         if msg_lower.startswith("!superpunch "):
             parts = msg.split()
             if len(parts) != 2 or not parts[1].startswith("@"):
-                await self.highrise.send_whisper(user.id, "🥊 Uso: !superpunch @usuario")
+                await self.highrise.send_whisper(user.id, "ðŸ¥Š Uso: !superpunch @usuario")
                 return
 
             target_username = parts[1][1:]
             target_id = await self.get_user_id(target_username)
             if not target_id:
                 await self.highrise.send_whisper(
-                    user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala."
+                    user.id, "<#FFCC66>ðŸ”Ž Usuario no encontrado en la sala."
                 )
                 return
             if target_id == self.bot_id:
                 await self.highrise.send_whisper(
-                    user.id, "<#FF6666>🛡️ El bot tiene un escudo activo: no puedes golpearlo."
+                    user.id, "<#FF6666>ðŸ›¡ï¸ El bot tiene un escudo activo: no puedes golpearlo."
                 )
                 return
 
             target_position = await self.get_user_position(target_id)
             if not target_position:
                 await self.highrise.send_whisper(
-                    user.id, "<#FF6666>📍 No pude localizar a ese usuario."
+                    user.id, "<#FF6666>ðŸ“ No pude localizar a ese usuario."
                 )
                 return
 
@@ -555,7 +553,7 @@ class Bot(BaseBot):
             await self.highrise.send_emote("emoji-punch", user.id)
             await self.highrise.send_emote("emote-fail1", target_id)
             await self.highrise.chat(
-                f"<#FFCC66>🥊 @{user.username} lanzó un superpunch contra @{target_username}! 💥"
+                f"<#FFCC66>ðŸ¥Š @{user.username} lanzÃ³ un superpunch contra @{target_username}! ðŸ’¥"
             )
             return
 
@@ -568,19 +566,19 @@ class Bot(BaseBot):
             if position_data:
                 if position_data.get("access") == "priv" and not await self.position_manager.can_use_private_position(self, user):
                     await self.highrise.send_whisper(
-                        user.id, "🔒 No tienes permiso para usar esta posición."
+                        user.id, "ðŸ”’ No tienes permiso para usar esta posiciÃ³n."
                     )
                     return
                 try:
                     await self.highrise.teleport(user.id, self.position_manager.position_from_data(position_data))
                     await self.highrise.send_whisper(
                         user.id,
-                        f"<#66FF99>📍 ¡Has llegado a {position_name}!"
+                        f"<#66FF99>ðŸ“ Â¡Has llegado a {position_name}!"
                     )
                 except Exception as e:
                     print(f"Error al teletransportar a {position_name}: {e}")
                     await self.highrise.send_whisper(
-                        user.id, "<#FF6666>⚠️ No se pudo realizar el teletransporte."
+                        user.id, "<#FF6666>âš ï¸ No se pudo realizar el teletransporte."
                     )
                 return
 
@@ -612,7 +610,7 @@ class Bot(BaseBot):
             )
             await self.highrise.send_whisper(
                 user.id,
-                "<#66CCFF>🎲 Emotes aleatorios activados. Escribe !stop para detenerlos.",
+                "<#66CCFF>ðŸŽ² Emotes aleatorios activados. Escribe !stop para detenerlos.",
             )
             return
 
@@ -627,7 +625,7 @@ class Bot(BaseBot):
             if matched_emote.get("auth") == "vip" and not await self.is_mod(user.id) and user.id != self.owner_id:
                 await self.highrise.send_whisper(
                     user.id,
-                    "<#FF6666>🔒 Este emote es exclusivo para moderadores o dueños."
+                    "<#FF6666>ðŸ”’ Este emote es exclusivo para moderadores o dueÃ±os."
                 )
                 return
 
@@ -636,7 +634,7 @@ class Bot(BaseBot):
                 target_id = await self.get_user_id(target_username)
                 if not target_id:
                     await self.highrise.send_whisper(
-                        user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala."
+                        user.id, "<#FFCC66>ðŸ”Ž Usuario no encontrado en la sala."
                     )
                     return
 
@@ -652,7 +650,7 @@ class Bot(BaseBot):
             )
             await self.highrise.send_whisper(
                 user.id,
-                f"<#66FF99>✨ Emote activado: {matched_emote['command']}. Escribe !stop para detenerlo.",
+                f"<#66FF99>âœ¨ Emote activado: {matched_emote['command']}. Escribe !stop para detenerlo.",
             )
             return
 
@@ -664,10 +662,10 @@ class Bot(BaseBot):
                 if self.botdance_task:
                     self.botdance_task.cancel()
                 self.botdance_task = asyncio.create_task(self.random_dance_loop())
-                await self.highrise.chat("<#66FF99>💃 ¡Bailes aleatorios activados! 🎶")
+                await self.highrise.chat("<#66FF99>ðŸ’ƒ Â¡Bailes aleatorios activados! ðŸŽ¶")
             else:
                 await self.highrise.send_whisper(
-                    user.id, "🔒 Solo el dueño o los moderadores pueden usar este comando."
+                    user.id, "ðŸ”’ Solo el dueÃ±o o los moderadores pueden usar este comando."
                 )
             return
 
@@ -679,15 +677,15 @@ class Bot(BaseBot):
                 self.current_bot_emote = None
                 self.current_bot_emote_duration = 0
                 await self.highrise.send_emote("", self.bot_id)
-                await self.highrise.chat("<#66CCFF>🛑 Los bailes del bot se detuvieron.")
+                await self.highrise.chat("<#66CCFF>ðŸ›‘ Los bailes del bot se detuvieron.")
             else:
                 await self.highrise.send_whisper(
-                    user.id, "🔒 Solo el dueño puede detener los bailes del bot."
+                    user.id, "ðŸ”’ Solo el dueÃ±o puede detener los bailes del bot."
                 )
             return
 
         # ==========================================
-        # 12. MODERACIÓN (KICK Y TP)
+        # 12. MODERACIÃ“N (KICK Y TP)
         # ==========================================
         elif msg_lower.startswith("!kick "):
             if await self.is_mod(user.id):
@@ -698,15 +696,15 @@ class Bot(BaseBot):
                     if target_id:
                         await self.highrise.moderate_room(target_id, "kick")
                         await self.highrise.chat(
-                            f"<#FF6666>🚪 @{target_username} ha sido expulsado/a de la sala."
+                            f"<#FF6666>ðŸšª @{target_username} ha sido expulsado/a de la sala."
                         )
                     else:
                         await self.highrise.send_whisper(
-                            user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala."
+                            user.id, "<#FFCC66>ðŸ”Ž Usuario no encontrado en la sala."
                         )
             else:
                 await self.highrise.send_whisper(
-                    user.id, "🔒 No tienes permisos de moderación."
+                    user.id, "ðŸ”’ No tienes permisos de moderaciÃ³n."
                 )
             return
 
@@ -722,19 +720,19 @@ class Bot(BaseBot):
                             await self.highrise.teleport(target_id, Position(x, y, z))
                             await self.highrise.send_whisper(
                                 user.id,
-                                f"<#66CCFF>📍 @{target_username} fue teletransportado/a."
+                                f"<#66CCFF>ðŸ“ @{target_username} fue teletransportado/a."
                             )
                         else:
                             await self.highrise.send_whisper(
-                                user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala."
+                                user.id, "<#FFCC66>ðŸ”Ž Usuario no encontrado en la sala."
                             )
                     except ValueError:
                         await self.highrise.send_whisper(
-                            user.id, "<#FFCC66>📐 Coordenadas inválidas. Usa números."
+                            user.id, "<#FFCC66>ðŸ“ Coordenadas invÃ¡lidas. Usa nÃºmeros."
                         )
             else:
                 await self.highrise.send_whisper(
-                    user.id, "🔒 No tienes permisos de moderación."
+                    user.id, "ðŸ”’ No tienes permisos de moderaciÃ³n."
                 )
             return
 
@@ -758,18 +756,18 @@ class Bot(BaseBot):
     async def on_user_join(
         self, user: User, position: Position | AnchorPosition
     ) -> None:
-        print(f"[JOIN] {user.username} entró a la sala.")
+        print(f"[JOIN] {user.username} entrÃ³ a la sala.")
         role = await self.role_manager.get_user_role(self, user)
         try:
             await self.highrise.send_whisper(
                 user.id,
                 "\n".join([
-                    f"<#66FFCC>✨ ¡Hola, {user.username}! ✨",
-                    "<#FFFFFF>━━━━━━━━━━━━━━━━━━",
-                    f"<#FFCC66>🎭 Tu rol en la sala: <#FFFFFF>{role}",
-                    "<#66FF99>🎉 ¡Bienvenido/a! Pasa, disfruta y comparte buenas vibras.",
-                    "<#CC99FF>💫 Escribe <#FFFFFF>!help <#CC99FF>para descubrir mis comandos.",
-                    "<#FFFFFF>━━━━━━━━━━━━━━━━━━",
+                    f"<#66FFCC>âœ¨ Â¡Hola, {user.username}! âœ¨",
+                    "<#FFFFFF>â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”",
+                    f"<#FFCC66>ðŸŽ­ Tu rol en la sala: <#FFFFFF>{role}",
+                    "<#66FF99>ðŸŽ‰ Â¡Bienvenido/a! Pasa, disfruta y comparte buenas vibras.",
+                    "<#CC99FF>ðŸ’« Escribe <#FFFFFF>!help <#CC99FF>para descubrir mis comandos.",
+                    "<#FFFFFF>â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”",
                 ]),
             )
         except Exception as error:
@@ -802,7 +800,7 @@ class Bot(BaseBot):
                 user_response = await self.webapi.get_user(user_id)
                 user = User(user_id, user_response.user.username)
             except Exception as error:
-                print(f"No se pudo cargar el usuario de la conversación: {error}")
+                print(f"No se pudo cargar el usuario de la conversaciÃ³n: {error}")
 
             for section in await self.get_command_help(user):
                 await self.highrise.send_message(conversation_id, section)

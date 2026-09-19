@@ -1,4 +1,4 @@
-import asyncio, json, os
+﻿import asyncio, json, os
 from pathlib import Path
 from urllib.request import Request,urlopen
 from urllib.error import HTTPError,URLError
@@ -30,65 +30,91 @@ class Bot(BaseBot):
         for u,p in (await self.highrise.get_room_users()).content:
             if u.id==uid:return p
     async def api(self,path,method="GET",data=None):
-        body=None if data is None else json.dumps(data).encode();h={"Authorization":f"Bearer {TOKEN}"} if TOKEN else {}
-        if body:h["Content-Type"]="application/json"
+        body=None if data is None else json.dumps(data).encode()
+        h={"Authorization":f"Bearer {TOKEN}"} if TOKEN else {}
+        if body:
+            h["Content-Type"]="application/json"
+
         req=Request(AUTODJ+path,data=body,headers=h,method=method)
-        try:return json.loads((await asyncio.to_thread(urlopen,req,10)).read().decode())
-        except (HTTPError,URLError,TimeoutError,ValueError) as e:raise RuntimeError("AutoDJ no está disponible.") from e
+
+        try:
+            response=await asyncio.to_thread(urlopen,req,timeout=10)
+            return json.loads(response.read().decode())
+
+        except HTTPError as e:
+            try:
+                detail=e.read().decode()
+            except Exception:
+                detail=""
+
+            try:
+                payload=json.loads(detail)
+                message=payload.get("error") or payload.get("message") or detail
+            except Exception:
+                message=detail or str(e)
+
+            raise RuntimeError(f"AutoDJ respondió HTTP {e.code}: {message}") from e
+
+        except (URLError,TimeoutError) as e:
+            raise RuntimeError("AutoDJ no está disponible.") from e
+
+        except ValueError as e:
+            raise RuntimeError("Respuesta inválida de AutoDJ.") from e
     async def on_start(self,s:SessionMetadata):
         self.bot_id=s.user_id;self.owner_id=s.room_info.owner_id
         p=load().get("bot_position")
         if p:
             try:await asyncio.sleep(2);await self.highrise.teleport(self.bot_id,Position(p["x"],p["y"],p["z"],p["facing"]))
-            except Exception as e:print("[MUSIC] posición:",e)
+            except Exception as e:print("[MUSIC] posiciÃ³n:",e)
     async def on_chat(self,user:User,message:str):
         parts=message.strip().split(maxsplit=1);cmd=parts[0].lower() if parts else ""
         protected={"!set","!home","!color","!equip","/equip","!remove","/remove","!getoutfit","/getoutfit"}
         if cmd in protected:
-            if user.id!=self.owner_id and not await self.is_mod(user.id):return await self.highrise.send_whisper(user.id,"🔒 Sin permisos.")
+            if user.id!=self.owner_id and not await self.is_mod(user.id):return await self.highrise.send_whisper(user.id,"ðŸ”’ Sin permisos.")
             if cmd=="!set":
                 p=await self.get_user_position(user.id)
-                if not p:return await self.highrise.send_whisper(user.id,"📍 No pude obtener tu posición.")
+                if not p:return await self.highrise.send_whisper(user.id,"ðŸ“ No pude obtener tu posiciÃ³n.")
                 save({"bot_position":{"x":p.x,"y":p.y,"z":p.z,"facing":p.facing}});await self.highrise.teleport(self.bot_id,p)
-                return await self.highrise.send_whisper(user.id,"📍 Posición del bot de música guardada.")
+                return await self.highrise.send_whisper(user.id,"ðŸ“ PosiciÃ³n del bot de mÃºsica guardada.")
             if cmd=="!home":
                 p=load().get("bot_position")
                 if p:await self.highrise.teleport(self.bot_id,Position(p["x"],p["y"],p["z"],p["facing"]))
-                return await self.highrise.send_whisper(user.id,"🏠 Bot de música volvió a su posición.")
+                return await self.highrise.send_whisper(user.id,"ðŸ  Bot de mÃºsica volviÃ³ a su posiciÃ³n.")
             fn={"!color":handle_color,"!equip":handle_equip,"/equip":handle_equip,"!remove":handle_remove,"/remove":handle_remove,"!getoutfit":handle_get_outfit,"/getoutfit":handle_get_outfit}[cmd]
             return await self.highrise.send_whisper(user.id,await fn(self,user,message) or "OK")
         if cmd=="!play":
             q=parts[1] if len(parts)==2 else ""
-            if not q:return await self.highrise.send_whisper(user.id,"🎵 Uso: !play canción")
+            if not q:return await self.highrise.send_whisper(user.id,"ðŸŽµ Uso: !play canciÃ³n")
             try:
                 v=await asyncio.to_thread(search_youtube,q);await self.api("/play","POST",{"video_id":v["video_id"],"metadata":v})
-                await self.highrise.chat(f"🎵 @{user.username} añadió: {v['title']}")
-            except (YouTubeSearchError,RuntimeError) as e:await self.highrise.send_whisper(user.id,f"⚠️ {e}")
+                await self.highrise.chat(f"ðŸŽµ @{user.username} aÃ±adiÃ³: {v['title']}")
+            except (YouTubeSearchError,RuntimeError) as e:await self.highrise.send_whisper(user.id,f"âš ï¸ {e}")
             return
         if cmd=="!skip":
-            if user.id!=self.owner_id and not await self.is_mod(user.id):return await self.highrise.send_whisper(user.id,"🔒 Solo dueño/mod.")
-            try:await self.api("/skip","POST");await self.highrise.chat("⏭️ Saltando...")
-            except RuntimeError as e:await self.highrise.send_whisper(user.id,f"⚠️ {e}")
+            if user.id!=self.owner_id and not await self.is_mod(user.id):return await self.highrise.send_whisper(user.id,"ðŸ”’ Solo dueÃ±o/mod.")
+            try:await self.api("/skip","POST");await self.highrise.chat("â­ï¸ Saltando...")
+            except RuntimeError as e:await self.highrise.send_whisper(user.id,f"âš ï¸ {e}")
             return
         if cmd in ("!q","!queue","!review","!reviw"):
             try:
                 s=await self.api("/status");cur=s.get("current") or {};m=cur.get("metadata",{})
                 if cmd in ("!q","!queue"):
-                    lines=[f"🎵 Ahora: {m.get('title','Nada')}",f"📋 Cola: {len(s.get('queue',[]))}"]
+                    lines=[f"ðŸŽµ Ahora: {m.get('title','Nada')}",f"ðŸ“‹ Cola: {len(s.get('queue',[]))}"]
                     lines += [f"{i}. {(x.get('metadata') or {}).get('title','Pista')}" for i,x in enumerate(s.get("queue",[])[:8],1)]
                     return await self.highrise.send_whisper(user.id,"\n".join(lines))
                 e=int(s.get("elapsed",0));d=int(m.get("duration") or 0)
-                return await self.highrise.send_whisper(user.id,f"🎧 {m.get('title','Nada')} • {e//60}:{e%60:02d}"+(f" / {d//60}:{d%60:02d}" if d else ""))
-            except RuntimeError as e:return await self.highrise.send_whisper(user.id,f"⚠️ {e}")
+                return await self.highrise.send_whisper(user.id,f"ðŸŽ§ {m.get('title','Nada')} â€¢ {e//60}:{e%60:02d}"+(f" / {d//60}:{d%60:02d}" if d else ""))
+            except RuntimeError as e:return await self.highrise.send_whisper(user.id,f"âš ï¸ {e}")
         if cmd in ("!ap","!addplay","!rp","!removeplay"):
-            if user.id!=self.owner_id and not await self.is_mod(user.id):return await self.highrise.send_whisper(user.id,"🔒 Solo dueño/mod.")
+            if user.id!=self.owner_id and not await self.is_mod(user.id):return await self.highrise.send_whisper(user.id,"ðŸ”’ Solo dueÃ±o/mod.")
             q=parts[1].strip() if len(parts)==2 else ""
             if not q:
-                return await self.highrise.send_whisper(user.id,"🎵 Uso: !ap canción o !rp canción")
+                return await self.highrise.send_whisper(user.id,"ðŸŽµ Uso: !ap canciÃ³n o !rp canciÃ³n")
             try:
                 v=await asyncio.to_thread(search_youtube,q);path="/default-add" if cmd in ("!ap","!addplay") else "/default-remove";await self.api(path,"POST",{"video_id":v["video_id"],"metadata":v})
-                await self.highrise.chat(f"🎵 «{v['title']}» {'añadida a' if path.endswith('add') else 'eliminada de'} la playlist.")
-            except (YouTubeSearchError,RuntimeError) as e:await self.highrise.send_whisper(user.id,f"⚠️ {e}")
+                await self.highrise.chat(f"ðŸŽµ Â«{v['title']}Â» {'aÃ±adida a' if path.endswith('add') else 'eliminada de'} la playlist.")
+            except (YouTubeSearchError,RuntimeError) as e:await self.highrise.send_whisper(user.id,f"âš ï¸ {e}")
 
 definitions=[BotDefinition(Bot(),ROOM_ID,API_KEY)]
 if __name__=="__main__":asyncio.run(__import__("highrise").__main__.main(definitions))
+
