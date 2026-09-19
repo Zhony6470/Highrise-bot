@@ -8,7 +8,7 @@ from urllib.request import Request,urlopen
 from urllib.error import HTTPError,URLError
 from highrise import BaseBot, Position, SessionMetadata, User, __main__
 from highrise.__main__ import BotDefinition
-from services.youtube import search_youtube, YouTubeSearchError
+from bots.djz.services.youtube import search_youtube, YouTubeSearchError
 from commands.color import handle_color
 from commands.equip import handle_equip
 from commands.remove import handle_remove
