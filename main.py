@@ -21,7 +21,7 @@ from commands.dispatcher import CommandDispatcher
 from services.positions import PositionManager
 from services.roles import RoleManager, get_user_role
 from services.emotes import EmotesManager
-from services.track import handle_track_command, start_track_monitor
+from services.track import start_track_monitor
 from services.storage import load_json
 from tips import TipManager
 from anuncios import announcement_loop
@@ -366,7 +366,6 @@ class Bot(BaseBot):
         msg_lower = msg.lower()
 
         command_name = msg.split(maxsplit=1)[0].lower() if msg else ""
-
         if command_name in self.command_dispatcher.handlers:
             response = await self.command_dispatcher.handle(self, user, msg)
             if isinstance(response, list):

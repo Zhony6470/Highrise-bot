@@ -31,9 +31,8 @@ BLOCK = 16384
 
 queue = deque()
 lock = threading.RLock()
-priority_event = threading.Event()
 skip_event = threading.Event()
-state = {"current": None, "started_at": None, "status": "idle"}
+state = {"current": None, "started_at": None, "status": "idle", "last_default_id": None}
 
 
 def load(path: Path, default):
@@ -159,7 +158,10 @@ class IcecastOutput:
                 self.process.stdin.flush()
                 return
             except (BrokenPipeError, OSError):
-                print("[AUTODJ] Icecast desconectado; reconectando sin repetir el bloque.", flush=True)
+                print(
+                    "[AUTODJ] Icecast desconectado; reconectando sin repetir el bloque.",
+                    flush=True,
+                )
                 self.close()
                 time.sleep(1)
 
@@ -192,6 +194,11 @@ def choose_default() -> dict | None:
     ]
 
     if not items:
+        try:
+            default_files = DEFAULT.iterdir()
+        except OSError:
+            default_files = []
+
         items = [
             {
                 "file_path": str(path),
@@ -207,15 +214,14 @@ def choose_default() -> dict | None:
     if not items:
         return None
 
-    # Evita repetir inmediatamente la misma pista cuando hay alternativas.
     with lock:
         previous = state.get("last_default_id")
 
-    candidates = [item for item in items if item.get("video_id") != previous]
-    if not candidates:
-        candidates = [item for item in items if item.get("file_path") != previous] or items
-
-    return random.choice(candidates)
+    candidates = [
+        item for item in items
+        if (item.get("video_id") or item.get("file_path")) != previous
+    ]
+    return random.choice(candidates or items)
 
 
 def next_item() -> dict | None:
@@ -232,11 +238,15 @@ def next_item() -> dict | None:
 
 
 def stop_decoder(process):
+    if process is None:
+        return
+
     try:
         if process.stdout:
             process.stdout.close()
     except Exception:
         pass
+
     try:
         process.wait(timeout=2)
     except Exception:
@@ -245,6 +255,11 @@ def stop_decoder(process):
             process.wait(timeout=1)
         except Exception:
             pass
+
+
+def has_requests() -> bool:
+    with lock:
+        return bool(queue)
 
 
 def player_loop():
@@ -275,7 +290,9 @@ def player_loop():
                 state["started_at"] = time.time()
                 state["status"] = "playing"
                 if item.get("default_track"):
-                    state["last_default_id"] = item.get("video_id") or item.get("file_path")
+                    state["last_default_id"] = (
+                        item.get("video_id") or item.get("file_path")
+                    )
 
             print(
                 f"[AUTODJ] {'DEFAULT' if item.get('default_track') else 'REQUEST'}: "
@@ -290,22 +307,22 @@ def player_loop():
                     break
 
                 # Las solicitudes interrumpen únicamente una pista DEFAULT.
-                # Una solicitud en curso nunca es interrumpida por otra solicitud.
-                if item.get("default_track") and priority_event.is_set():
+                # No usamos un evento separado: consultar la cola directamente
+                # evita condiciones de carrera cuando !play llega entre pistas.
+                if item.get("default_track") and has_requests():
                     print("[AUTODJ] Solicitud prioritaria detectada.", flush=True)
                     break
 
                 pcm = process.stdout.read(BLOCK)
                 if not pcm:
                     break
+
                 output.write(pcm)
 
             stop_decoder(process)
             process = None
 
-            # Consumimos el evento que provocó la transición. La cola ya contiene
-            # la solicitud y será lo siguiente que reproduzca next_item().
-            priority_event.clear()
+            # El skip solo afecta a la pista que estaba activa cuando se solicitó.
             skip_event.clear()
 
             with lock:
@@ -317,7 +334,6 @@ def player_loop():
             print(f"[AUTODJ] error: {error}", flush=True)
             if process is not None:
                 stop_decoder(process)
-            priority_event.clear()
             skip_event.clear()
             with lock:
                 state["current"] = None
@@ -350,9 +366,9 @@ class API(BaseHTTPRequestHandler):
         if self.path == "/status":
             with lock:
                 snapshot = dict(state)
-                current = dict(state["current"]) if state.get("current") else None
-                if current:
-                    snapshot["current"] = current
+                snapshot["current"] = (
+                    dict(state["current"]) if state.get("current") else None
+                )
                 started = state.get("started_at")
                 snapshot["elapsed"] = time.time() - started if started else 0
                 snapshot["queue"] = list(queue)
@@ -373,22 +389,23 @@ class API(BaseHTTPRequestHandler):
         try:
             data = self.body()
 
-            print("[AUTODJ DEBUG] PATH:", self.path, flush=True)
-            print("[AUTODJ DEBUG] DATA:", data, flush=True)
-
             if self.path == "/play":
-                video_id = data["video_id"]
+                video_id = str(data.get("video_id", "")).strip()
+                if not video_id:
+                    return self.reply(400, {"error": "missing_video_id"})
+
                 item = {
                     "video_id": video_id,
                     "metadata": data.get("metadata", {}),
                     "requested_track": True,
                 }
+
                 with lock:
                     queue.append(item)
                     save(QUEUE_FILE, list(queue))
                     current = state.get("current")
                     if current and current.get("default_track"):
-                        priority_event.set()    
+                        priority_event.set()
                 return self.reply(200, {"ok": True, "queued": item})
 
             if self.path == "/skip":
@@ -403,11 +420,20 @@ class API(BaseHTTPRequestHandler):
 
             if self.path in ("/default-add", "/default-remove"):
                 playlist = load(PLAYLIST, [])
-                video_id = data["video_id"]
+                if not isinstance(playlist, list):
+                    playlist = []
+
+                video_id = str(data["video_id"]).strip()
+                if not video_id:
+                    return self.reply(400, {"error": "video_id_required"})
 
                 if self.path == "/default-add":
-                    if any(item.get("video_id") == video_id for item in playlist):
+                    if any(
+                        isinstance(item, dict) and item.get("video_id") == video_id
+                        for item in playlist
+                    ):
                         return self.reply(409, {"error": "already_exists"})
+
                     playlist.append({
                         "video_id": video_id,
                         "metadata": data.get("metadata", {}),
@@ -416,7 +442,8 @@ class API(BaseHTTPRequestHandler):
                     old_length = len(playlist)
                     playlist = [
                         item for item in playlist
-                        if item.get("video_id") != video_id
+                        if not isinstance(item, dict)
+                        or item.get("video_id") != video_id
                     ]
                     if len(playlist) == old_length:
                         return self.reply(404, {"error": "not_found"})
@@ -436,7 +463,13 @@ class API(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     CACHE.mkdir(parents=True, exist_ok=True)
     DEFAULT.mkdir(parents=True, exist_ok=True)
-    queue.extend(load(QUEUE_FILE, []))
+
+    stored_queue = load(QUEUE_FILE, [])
+    if isinstance(stored_queue, list):
+        queue.extend(
+            item for item in stored_queue
+            if isinstance(item, dict) and item.get("video_id")
+        )
 
     threading.Thread(target=player_loop, daemon=True).start()
     print(f"[AUTODJ] API escuchando en {HOST}:{PORT}", flush=True)
