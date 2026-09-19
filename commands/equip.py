@@ -1,4 +1,4 @@
-from highrise import BaseBot, Item, User
+from highrise import BaseBot, User
 from highrise.models_webapi import Rarity
 
 
@@ -7,8 +7,10 @@ async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
         return "<#FF6666>👗 Solo el dueño o los moderadores pueden equipar prendas."
 
     parts = message.split()
+    if len(parts) >= 2 and parts[1].startswith("@"):
+        parts = [parts[0], *parts[2:]]
     if len(parts) < 2:
-        return "<#FFCC66>👗 Uso: !equip <nombre de la prenda> [numero]"
+        return "<#FFCC66>👗 Uso: !equip @BotUsuario <nombre de la prenda> [numero]"
 
     result_index = 0
     item_name_parts = parts[1:]
@@ -58,43 +60,7 @@ async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
             if purchase_result != "success":
                 return f"<#FF6666>⚠️ No se pudo comprar la prenda '{selected_item.item_name}'."
 
-    try:
-        outfit = (await bot.highrise.get_my_outfit()).outfit
-        outfit = [
-            outfit_item
-            for outfit_item in outfit
-            if outfit_item.id.split("-", 1)[0].lower() != category
-        ]
-        outfit.append(
-            Item(
-                type="clothing",
-                amount=1,
-                id=item_id,
-                account_bound=False,
-                active_palette=0,
-            )
-        )
-
-        if category == "hair_front" and selected_item.link_ids:
-            outfit.append(
-                Item(
-                    type="clothing",
-                    amount=1,
-                    id=selected_item.link_ids[0],
-                    account_bound=False,
-                    active_palette=0,
-                )
-            )
-
-        result = await bot.highrise.set_outfit(outfit)
-        if result is not None:
-            print(f"Error de Highrise equipando la prenda: {result}")
-            return "<#FF6666>⚠️ No se pudo equipar la prenda."
-    except Exception as error:
-        print(f"Error equipando la prenda: {error}")
-        return "<#FF6666>⚠️ No se pudo equipar la prenda."
-
-    return f"<#66FF99>✨ Prenda equipada: {selected_item.item_name}."
+    return await bot.avatar_manager.equip_item(item_id, category, selected_item.item_name)
 
 
 COMMANDS = {"!equip": handle_equip, "/equip": handle_equip}

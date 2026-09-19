@@ -1,112 +1,129 @@
-# Nueva arquitectura: dos bots + AutoDJ
+# Arquitectura del proyecto
 
-## Servicios
+## Estructura
 
-- **main-bot**: comandos generales, moderación, emotes, propinas, posiciones y vestuario del bot principal.
-- **music-bot**: solo música y administración del avatar del bot de música.
-- **AutoDJ**: motor de reproducción independiente de Highrise.
-- **Icecast**: servidor de streaming público.
-
+```text
+highrise-bot/
+├── bots/
+│   ├── zeta/
+│   │   ├── main.py
+│   │   ├── data/
+│   │   │   ├── data.json
+│   │   │   └── posiciones.json
+│   │   └── services/
+│   │       ├── anuncios.py
+│   │       ├── diversion.py
+│   │       ├── tips.py
+│   │       └── track.py
+│   │
+│   └── djz/
+│       ├── music_bot.py
+│       ├── data/
+│       │   └── music_bot_data.json
+│       └── services/
+│           └── youtube.py
+│
+├── common/
+│   └── emotes.json
+│
+├── commands/          # comandos compartidos/generalizados
+├── services/          # servicios compartidos
+├── autodj/
+│   └── autodj.py
+├── infra/
+│   ├── Dockerfile.bot
+│   └── Dockerfile.autodj
+├── default_music/
+├── docker-compose.yml
+├── config.py
+└── .env
 ```
-                         HIGHRISE
-                            |
-              +-------------+-------------+
-              |                           |
-         main-bot                    music-bot
-       comandos generales       !play !skip !q !review
-       avatar/posición          !ap !rp
-       !color !equip            !set !home
-       !remove !getoutfit       !color !equip
-                                 !remove !getoutfit
-                                      |
-                                      v
-                                    AutoDJ
-                                      |
-                                      v
-                                    Icecast
-                                      |
-                                      v
-                              stream /stream
+
+## Responsabilidades
+
+### @Zeta_Bot
+
+Su código vive en `bots/bot1/`.
+
+Incluye comandos y funciones propias del bot general: moderación, propinas, diversión, anuncios, pista de emotes y sus datos/posición.
+
+### @Dj.Z
+
+Su código vive en `bots/dj/`.
+
+Incluye música, integración con AutoDJ, búsqueda de YouTube y sus datos/posición.
+
+### Código compartido
+
+`commands/` y `services/` contienen funciones que pueden reutilizar varios bots. La configuración general está en la raíz.
+
+### AutoDJ e Icecast
+
+AutoDJ e Icecast siguen siendo independientes de los bots de Highrise:
+
+```text
+HIGHRISE
+  ├── @Zeta_Bot ───────┐
+  └── @Dj.Z ───────────┤
+                        ↓
+                      AutoDJ
+                        ↓
+                      Icecast
+                        ↓
+                  /stream :8000
 ```
 
-## Independencia
+Si uno o ambos bots se desconectan, AutoDJ e Icecast pueden continuar reproduciendo la radio.
 
-AutoDJ no depende de que ningún bot de Highrise esté conectado.
+## Estado de avatar
 
-- Si **main-bot** se desconecta: la música continúa.
-- Si **music-bot** se desconecta: la música continúa.
-- Si ambos se desconectan: AutoDJ e Icecast continúan mientras sus contenedores sigan activos.
-- Al reiniciar AutoDJ, la cola de solicitudes se recupera desde `request_queue.json`.
+La siguiente fase del sistema de avatar usará el usuario objetivo del propio bot para evitar choques entre bots:
 
-## Prioridad musical
+```text
+!set @Zeta_Bot
+!set @Dj.Z
 
-- `!play` agrega una solicitud a la cola.
-- Si está sonando una pista de la playlist por defecto, la solicitud activa una transición prioritaria.
-- Las solicitudes no interrumpen otra solicitud que ya esté sonando.
-- `!skip` detiene la pista actual y AutoDJ selecciona la siguiente solicitud; si no hay solicitudes, vuelve a la playlist por defecto.
-- La salida de audio hacia Icecast es un único proceso FFmpeg persistente. No se reinicia por cada canción.
+!home @Zeta_Bot
+!home @Dj.Z
 
-## Estado y archivos
+!color @Zeta_Bot ...
+!color @Dj.Z ...
 
-El volumen `autodj_data` contiene:
+!equip @Zeta_Bot ...
+!equip @Dj.Z ...
 
-- `request_queue.json`
-- `default_playlist.json`
-- caché de audio
+!remove @Zeta_Bot
+!remove @Dj.Z
 
-Las posiciones de los bots son independientes:
+!getoutfit @Zeta_Bot
+!getoutfit @Dj.Z
+```
 
-- `data.json` → bot principal.
-- `music_bot_data.json` → bot de música.
+Los comandos de baile conservarán sus funciones existentes:
 
-El vestuario también es independiente porque `!color`, `!equip`, `!remove` y `!getoutfit` se ejecutan contra la sesión Highrise del bot que recibe el comando.
+- `!dancebot @usuario` → baile aleatorio.
+- `!stopdance @usuario` → detiene el baile aleatorio.
+- `!emote @usuario <emote>` → emote específico en bucle.
+- `!emote @usuario <emote>` → emote específico para un usuario.
+- `!emote @Zeta_Bot <emote>` → emote persistente del bot.
+- `!emote @Zeta_Bot stop` → detiene el emote persistente del bot.
 
-## AWS
+El estado persistente de estos comandos se implementará sobre los archivos de datos individuales de cada bot, sin compartir accidentalmente el estado entre @Zeta_Bot y @Dj.Z.
 
-En la EC2:
+## Despliegue
+
+Docker Compose continúa siendo el punto de entrada:
 
 ```bash
-cd ~/highrise-bot
-docker compose up -d --build
-docker compose ps
-docker compose logs -f autodj
+docker-compose up -d --build
+docker-compose ps
 ```
 
-Publica en el Security Group únicamente el puerto que realmente necesites:
+Servicios:
 
-- **8000/TCP** → Icecast público.
-- **8090/TCP** → NO publicar; AutoDJ es interno de Docker.
-- Los bots no necesitan puertos públicos para conectarse a Highrise.
+- `main-bot` → `bots/bot1/main.py`
+- `music-bot` → `bots/dj/music_bot.py`
+- `autodj` → `autodj/autodj.py`
+- `icecast` → servidor de streaming
 
-Stream:
-
-```
-http://TU_IP_PUBLICA:8000/stream
-```
-
-## Variables
-
-Usa `.env.example` como plantilla. Las credenciales reales deben permanecer fuera de Git.
-
-Necesitas dos credenciales de bot de Highrise:
-
-- `ROOM_ID` + `API_KEY` para main-bot.
-- `MUSIC_ROOM_ID` + `MUSIC_API_KEY` para music-bot.
-
-Y las credenciales de AutoDJ/Icecast:
-
-- `AUTODJ_TOKEN`
-- `ICECAST_PASSWORD`
-- `ICECAST_SOURCE`
-- `ICECAST_MOUNT`
-
-## Seguridad
-
-No subas:
-
-- `.env`
-- `cookies.txt`
-- claves privadas SSH
-- tokens de AutoDJ
-
-Si una clave privada SSH ya fue subida públicamente al repositorio, debe considerarse comprometida y **revocarse/rotarse** antes de continuar usando ese acceso.
+No se deben subir al repositorio `.env`, cookies, tokens ni claves privadas.

@@ -27,12 +27,11 @@ COOKIES = os.getenv("YOUTUBE_COOKIES_PATH", "/app/cookies.txt")
 
 SAMPLE_RATE = 44100
 CHANNELS = 2
-BLOCK = 16384
-
 queue = deque()
 lock = threading.RLock()
 skip_event = threading.Event()
 state = {"current": None, "started_at": None, "status": "idle", "last_default_id": None}
+active_request = None
 
 
 def load(path: Path, default):
@@ -63,7 +62,10 @@ def authorized(handler) -> bool:
 
 def queue_snapshot():
     with lock:
-        return list(queue)
+        items = list(queue)
+        if active_request is not None and items and items[0] is active_request:
+            return items[1:]
+        return items
 
 
 def ensure_file(item: dict) -> Path:
@@ -198,22 +200,29 @@ def choose_default():
 def next_item():
     with lock:
         if queue:
-            item = queue.popleft()
-            save(QUEUE_FILE, list(queue))
-            return item
+            return queue[0]
 
     return choose_default()
 
 
+def acknowledge_request(item):
+    with lock:
+        if queue and queue[0] is item:
+            queue.popleft()
+            save(QUEUE_FILE, list(queue))
+
+
 def has_requests() -> bool:
     with lock:
-        return bool(queue)
+        return len(queue) > (1 if active_request is not None else 0)
 
 
 def player_loop():
+    global active_request
     while True:
         item = None
         process = None
+        request_ref = None
         try:
             item = next_item()
             if not item:
@@ -223,6 +232,11 @@ def player_loop():
                 continue
 
             item = dict(item)
+            request_item = not item.get("default_track")
+            if request_item:
+                with lock:
+                    request_ref = queue[0] if queue else None
+                    active_request = request_ref
             item["file_path"] = str(ensure_file(item))
 
             if item.get("default_track") and queue_snapshot():
@@ -276,6 +290,10 @@ def player_loop():
                 state["current"] = None
                 state["started_at"] = None
                 state["status"] = "idle"
+                if request_item:
+                    active_request = None
+            if request_item:
+                acknowledge_request(request_ref)
 
         except Exception as error:
             print(f"[AUTODJ] error: {error}", flush=True)
@@ -289,6 +307,7 @@ def player_loop():
                 state["current"] = None
                 state["started_at"] = None
                 state["status"] = "recovering"
+                active_request = None
 
             time.sleep(1)
 
@@ -354,7 +373,6 @@ class API(BaseHTTPRequestHandler):
                 with lock:
                     queue.append(item)
                     save(QUEUE_FILE, list(queue))
-                    current = state.get("current")
                 return self.reply(200, {"ok": True, "queued": item})
 
             if self.path == "/skip":

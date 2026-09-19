@@ -4,6 +4,11 @@ from asyncio import run as arun
 from json import load
 import asyncio
 import os
+import sys
+
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from random import choice, randint
 from threading import Thread
@@ -21,11 +26,16 @@ from commands.dispatcher import CommandDispatcher
 from services.positions import PositionManager
 from services.roles import RoleManager, get_user_role
 from services.emotes import EmotesManager
-from services.track import start_track_monitor
+from bots.bot1.services.track import start_track_monitor
 from services.storage import load_json
-from tips import TipManager
-from anuncios import announcement_loop
-from diversion import handle_diversion_command
+from bots.bot1.services.tips import TipManager
+from bots.bot1.services.anuncios import announcement_loop
+from bots.bot1.services.diversion import handle_diversion_command
+from common.bot_manager import should_handle_for_bot
+from common.avatar import AvatarManager
+from common.positions import PositionManagerCommon
+from common.dance import DanceManager
+from common.bot_state import BotStateManager
 
 
 class HealthHandler(BaseHTTPRequestHandler):
@@ -66,13 +76,16 @@ class Bot(BaseBot):
         self.following = False
         self.follow_task = None
         self.emote_tasks = {}
-        self.botdance_task = None
         self.position_task = None
         self.reset_task = None
         self.announcement_task = None
         self.fight_tasks = set()
-        self.current_bot_emote = None
-        self.current_bot_emote_duration = 0
+        self.bot_username = os.getenv("BOT1_USERNAME", "Zeta_Bot")
+        self.avatar_manager = AvatarManager(self)
+        self.position_manager_common = PositionManagerCommon(self, DATA_FILE)
+        self.dance_manager = DanceManager(self)
+        self.bot_state_manager = BotStateManager(self)
+        self.state_file = DATA_FILE
         
         # Cargar lista de emotes desde emotes.json
         self.emotes_list = self.load_emotes_data()
@@ -101,6 +114,9 @@ class Bot(BaseBot):
         except (OSError, TypeError, ValueError) as error:
             print(f"Error al cargar emotes.json: {error}")
             return []
+
+    async def _is_targeted_for_me(self, message: str) -> bool:
+        return await should_handle_for_bot(self, message)
 
     async def get_command_help(self, user: User) -> list[str]:
         role = await self.role_manager.get_user_role(self, user)
@@ -145,8 +161,8 @@ class Bot(BaseBot):
                     "<#FF66CC>ðŸ›¡ï¸ MODERACIÃ“N",
                     "<#FFFFFF>â€¢ !kick @usuario - Expulsar un usuario",
                     "<#FFFFFF>â€¢ !tp @usuario x y z - Teletransportar un usuario",
-                    "<#FFFFFF>â€¢ !botdance - Activar baile del bot",
-                    "<#FFFFFF>â€¢ !stopbotdance - Detener baile del bot",
+                    "<#FFFFFF>â€¢ !dancebot @Zeta_Bot - Activar baile del bot",
+                    "<#FFFFFF>â€¢ !stopdance @Zeta_Bot - Detener baile del bot",
                     "<#FFFFFF>â€¢ !randomall - Activar emotes para todos",
                 ]),
                 "\n".join([
@@ -175,7 +191,7 @@ class Bot(BaseBot):
                     "<#CC99FF>âš™ï¸ ADMINISTRACIÃ“N",
                     "<#FFFFFF>â€¢ !set - Guardar la posiciÃ³n del bot",
                     "<#FFFFFF>â€¢ !home - Volver a la posiciÃ³n guardada",
-                    "<#FFFFFF>â€¢ !reset - Reiniciar el bot",
+                    "<#FFFFFF>â€¢ !reset @Zeta_Bot - Reiniciar el bot",
                     "<#FFFFFF>â€¢ !role @usuario mod|vip|designer|user - Administrar roles",
                 ]),
                 "\n".join([
@@ -281,31 +297,6 @@ class Bot(BaseBot):
                 print(f"Error enviando emote aleatorio a {user_id}: {e}")
                 await asyncio.sleep(2)
 
-    async def random_dance_loop(self):
-        """Ejecuta bailes aleatorios continuos Ãºnicamente para el bot."""
-        public_emotes = [
-            emote for emote in self.emotes_list
-            if isinstance(emote, dict)
-            and emote.get("auth") == "public"
-            and isinstance(emote.get("emote"), str)
-        ]
-        if not public_emotes:
-            print("No hay emotes pÃºblicos vÃ¡lidos para el baile automÃ¡tico.")
-            return
-
-        while True:
-            try:
-                random_emote = choice(public_emotes)
-                self.current_bot_emote = random_emote["emote"]
-                self.current_bot_emote_duration = random_emote.get("duration", 3)
-                await self.highrise.send_emote(self.current_bot_emote, self.bot_id)
-                await asyncio.sleep(self.current_bot_emote_duration)
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                print(f"Error en el baile del bot: {e}")
-                await asyncio.sleep(2)
-
     async def follow_owner_loop(self):
         """Bucle para hacer que el bot siga la posiciÃ³n del dueÃ±o."""
         while self.following:
@@ -329,8 +320,8 @@ class Bot(BaseBot):
     async def place_bot(self):
         await asyncio.sleep(5)
         try:
-            self.bot_position = self.position_manager.get_bot_position()
-            if self.bot_position != Position(0, 0, 0, "FrontRight"):
+            self.bot_position = self.position_manager_common.get_saved_position()
+            if self.bot_position:
                 await self.highrise.teleport(self.bot_id, self.bot_position)
                 print(f"[POSITION] Bot restaurado en {self.bot_position}.")
         except Exception as error:
@@ -348,9 +339,11 @@ class Bot(BaseBot):
         if self.position_task:
             self.position_task.cancel()
         self.position_task = asyncio.create_task(self.place_bot())
-        if self.botdance_task:
-            self.botdance_task.cancel()
-        self.botdance_task = asyncio.create_task(self.random_dance_loop())
+        try:
+            await self.avatar_manager.restore_saved_outfit()
+        except Exception as error:
+            print(f"Error restaurando el vestuario del bot: {error}")
+        await self.dance_manager.restore()
         if self.announcement_task:
             self.announcement_task.cancel()
         self.announcement_task = asyncio.create_task(announcement_loop(self))
@@ -366,6 +359,10 @@ class Bot(BaseBot):
         msg_lower = msg.lower()
 
         command_name = msg.split(maxsplit=1)[0].lower() if msg else ""
+        protected_commands = {"!set", "!home", "!color", "!equip", "!remove", "!getoutfit", "/equip", "/remove", "/getoutfit"}
+        if command_name in protected_commands and not await self._is_targeted_for_me(msg):
+            return
+
         if command_name in self.command_dispatcher.handlers:
             response = await self.command_dispatcher.handle(self, user, msg)
             if isinstance(response, list):
@@ -379,7 +376,9 @@ class Bot(BaseBot):
             return
 
 
-        if msg_lower == "!reset":
+        if msg_lower.startswith("!reset"):
+            if not await self._is_targeted_for_me(msg):
+                return
             if user.id == self.owner_id or await self.is_mod(user.id):
                 if not self.reset_task:
                     await self.highrise.chat(
@@ -391,6 +390,21 @@ class Bot(BaseBot):
                     user.id, "ðŸ”’ Solo el dueÃ±o o los moderadores pueden reiniciar el bot."
                 )
             return
+
+        if msg_lower.startswith("!set @") or msg_lower.startswith("!home @"):
+            if await self._is_targeted_for_me(msg):
+                if msg_lower.startswith("!set @"):
+                    position = await self.get_user_position(user.id)
+                    if position:
+                        self.position_manager_common.save_position(position)
+                        await self.highrise.send_whisper(user.id, "<#66FF99>📍 Posición del bot guardada correctamente.")
+                    else:
+                        await self.highrise.send_whisper(user.id, "<#FF6666>📍 No pude obtener tu posición actual.")
+                    return
+                if msg_lower.startswith("!home @"):
+                    response = await self.position_manager_common.return_home()
+                    await self.highrise.send_whisper(user.id, response)
+                    return
 
         if msg_lower in ["!stop", "stop"]:
             emote_task = self.emote_tasks.pop(user.id, None)
@@ -547,9 +561,6 @@ class Bot(BaseBot):
                 facing=target_position.facing,
             )
             await self.highrise.teleport(target_id, nearby_position)
-            if self.botdance_task:
-                self.botdance_task.cancel()
-            self.botdance_task = asyncio.create_task(self.random_dance_loop())
             await self.highrise.send_emote("emoji-punch", user.id)
             await self.highrise.send_emote("emote-fail1", target_id)
             await self.highrise.chat(
@@ -585,6 +596,59 @@ class Bot(BaseBot):
         # ==========================================
         # 10. COMANDOS DE EMOTES (Cargados desde emotes.json)
         # ==========================================
+        if msg_lower.startswith("!emote "):
+            emote_parts = msg.split()
+            if len(emote_parts) < 3:
+                await self.highrise.send_whisper(user.id, "<#FFCC66>🎭 Uso: !emote @usuario <emote> o !emote @Bot stop")
+                return
+            legacy_stop = emote_parts[1].lower() == "stop"
+            if legacy_stop:
+                target_username = emote_parts[2][1:] if emote_parts[2].startswith("@") else ""
+                emote_name = "stop"
+            else:
+                if not emote_parts[1].startswith("@"):
+                    await self.highrise.send_whisper(user.id, "<#FFCC66>🎭 Uso: !emote @usuario <emote>")
+                    return
+                target_username = emote_parts[1][1:]
+                emote_name = " ".join(emote_parts[2:]).lower()
+
+            if target_username.lower() == self.bot_username.lower():
+                if user.id != self.owner_id and not await self.is_mod(user.id):
+                    await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden controlar el emote del bot.")
+                    return
+                if emote_name == "stop":
+                    response = await self.dance_manager.stop_bot_emote()
+                else:
+                    matched_emote = self.emotes_manager.get_by_name(emote_name)
+                    if not matched_emote:
+                        await self.highrise.send_whisper(user.id, f"<#FFCC66>🎭 Emote no encontrado: {emote_name}.")
+                        return
+                    response = await self.dance_manager.start_bot_emote(matched_emote["emote"])
+                await self.highrise.send_whisper(user.id, response)
+                return
+            if target_username.lower() == os.getenv("DJ_BOT_USERNAME", "Dj.Z").lower():
+                return
+
+            target_id = await self.get_user_id(target_username)
+            matched_emote = self.emotes_manager.get_by_name(emote_name)
+            if not target_id:
+                await self.highrise.send_whisper(user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala.")
+                return
+            if not matched_emote:
+                await self.highrise.send_whisper(user.id, f"<#FFCC66>🎭 Emote no encontrado: {emote_name}.")
+                return
+            if matched_emote.get("auth") == "vip" and user.id != self.owner_id and not await self.is_mod(user.id):
+                await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Ese emote requiere permisos de moderación.")
+                return
+            previous_task = self.emote_tasks.pop(target_id, None)
+            if previous_task:
+                previous_task.cancel()
+            self.emote_tasks[target_id] = asyncio.create_task(
+                self.emote_loop(target_id, matched_emote["emote"], matched_emote.get("duration", 1))
+            )
+            await self.highrise.send_whisper(user.id, f"<#66FF99>✨ Emote activado para @{target_username}: {matched_emote['command']}.")
+            return
+
         emote_text = msg_lower[1:].strip() if msg_lower.startswith("!") else msg_lower
         if emote_text.startswith("/emote "):
             emote_text = emote_text[7:].strip()
@@ -655,33 +719,24 @@ class Bot(BaseBot):
             return
 
         # ==========================================
-        # 11. COMANDO PROPIO DEL BOT (!botdance / !stopbotdance)
+        # 11. COMANDOS DE BAILE DIRIGIDOS AL BOT
         # ==========================================
-        if msg_lower == "!botdance":
+        if msg_lower.startswith("!dancebot"):
+            if not await self._is_targeted_for_me(msg):
+                return
             if user.id == self.owner_id or await self.is_mod(user.id):
-                if self.botdance_task:
-                    self.botdance_task.cancel()
-                self.botdance_task = asyncio.create_task(self.random_dance_loop())
-                await self.highrise.chat("<#66FF99>ðŸ’ƒ Â¡Bailes aleatorios activados! ðŸŽ¶")
+                await self.highrise.send_whisper(user.id, await self.dance_manager.start_random_dance())
             else:
-                await self.highrise.send_whisper(
-                    user.id, "ðŸ”’ Solo el dueÃ±o o los moderadores pueden usar este comando."
-                )
+                await self.highrise.send_whisper(user.id, "ðŸ”’ Solo el dueÃ±o o los moderadores pueden usar este comando.")
             return
 
-        if msg_lower == "!stopbotdance":
+        if msg_lower.startswith("!stopdance"):
+            if not await self._is_targeted_for_me(msg):
+                return
             if user.id == self.owner_id or await self.is_mod(user.id):
-                if self.botdance_task:
-                    self.botdance_task.cancel()
-                    self.botdance_task = None
-                self.current_bot_emote = None
-                self.current_bot_emote_duration = 0
-                await self.highrise.send_emote("", self.bot_id)
-                await self.highrise.chat("<#66CCFF>ðŸ›‘ Los bailes del bot se detuvieron.")
+                await self.highrise.send_whisper(user.id, await self.dance_manager.stop_dance())
             else:
-                await self.highrise.send_whisper(
-                    user.id, "ðŸ”’ Solo el dueÃ±o puede detener los bailes del bot."
-                )
+                await self.highrise.send_whisper(user.id, "ðŸ”’ Solo el dueÃ±o puede detener los bailes del bot.")
             return
 
         # ==========================================
@@ -745,6 +800,11 @@ class Bot(BaseBot):
         command = message.lower().strip()
         if not command or (user_id != self.owner_id and not await self.is_mod(user_id)):
             return None
+
+        protected_commands = {"!set", "!home", "!color", "!equip", "!remove", "!getoutfit", "/equip", "/remove", "/getoutfit"}
+        if command.split()[0].lower() in protected_commands and not await self._is_targeted_for_me(message):
+            return None
+
         if command.startswith("!tip all "):
             command = "!tipall " + command[len("!tip all "):]
 
