@@ -32,7 +32,7 @@ services:
       - autodj_data:/data
       - ./default_music:/data/default_music:ro
       - ./services/cookies.txt:/app/cookies-source.txt:ro
-    command: ["sh", "-c", "cp /app/cookies-source.txt /app/cookies.txt && python -u autodj/autodj.py"]
+    command: ["sh", "-c", "cp /app/cookies-source.txt /app/cookies.txt && python -u autodj.py"]
   main-bot:
     build:
       context: .
