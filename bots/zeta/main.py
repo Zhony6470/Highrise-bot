@@ -26,11 +26,11 @@ from commands.dispatcher import CommandDispatcher
 from services.positions import PositionManager
 from services.roles import RoleManager, get_user_role
 from services.emotes import EmotesManager
-from services.track import start_track_monitor
+from bots.zeta.services.track import start_track_monitor
 from services.storage import load_json
-from tips import TipManager
-from anuncios import announcement_loop
-from diversion import handle_diversion_command
+from bots.zeta.services.tips import TipManager
+from bots.zeta.services.anuncios import announcement_loop
+from bots.zeta.services.diversion import handle_diversion_command
 
 
 class HealthHandler(BaseHTTPRequestHandler):
