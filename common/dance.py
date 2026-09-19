@@ -34,6 +34,7 @@ class DanceManager:
         await self._stop_runtime()
         state = self.state()
         state.dance_enabled = True
+        state.bot_emote_enabled = False
         state.active_mode = "dance"
         self.save(state)
         self.task = asyncio.create_task(self._random_dance_loop(public_emotes))
@@ -48,6 +49,8 @@ class DanceManager:
                 await asyncio.sleep(emote.get("duration", 3))
         except asyncio.CancelledError:
             return
+        except Exception as error:
+            print(f"Error en el emote persistente del bot: {error}")
         except Exception as error:
             print(f"Error en el baile del bot: {error}")
 
@@ -74,6 +77,7 @@ class DanceManager:
         state = self.state()
         state.bot_emote = emote_id
         state.bot_emote_enabled = True
+        state.dance_enabled = False
         state.active_mode = "emote"
         self.save(state)
         self.task = asyncio.create_task(self._bot_emote_loop(emote_id))

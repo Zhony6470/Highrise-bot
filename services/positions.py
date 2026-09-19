@@ -1,5 +1,3 @@
-from json import dump, load
-
 from highrise import Position, User
 from services.roles import has_role
 from services.storage import load_json, save_json
@@ -46,26 +44,3 @@ class PositionManager:
 
     async def can_use_private_position(self, bot, user: User) -> bool:
         return await has_role(bot, user, {"owner", "mod", "vip"})
-
-    def save_bot_position(self, position: Position) -> None:
-        data = load_json(self.data_file)
-        data["bot_position"] = {
-            "x": position.x, "y": position.y, "z": position.z, "facing": position.facing
-        }
-        save_json(self.data_file, data)
-
-    def get_bot_position(self) -> Position:
-        position = load_json(self.data_file)["bot_position"]
-        return Position(position["x"], position["y"], position["z"], position["facing"])
-
-    async def set_bot_position(self, bot, user_id: str) -> str:
-        position = await bot.get_user_position(user_id)
-        if not position:
-            return "No se pudo actualizar la posición del bot."
-
-        self.save_bot_position(position)
-        temporary_position = Position(position.x, position.y + 0.0000001, position.z, facing=position.facing)
-        await bot.highrise.teleport(bot.bot_id, temporary_position)
-        await bot.highrise.teleport(bot.bot_id, position)
-        await bot.highrise.walk_to(position)
-        return "Posición del bot actualizada."

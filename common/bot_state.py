@@ -29,7 +29,8 @@ class BotStateManager:
             from services.storage import load_json
             data = load_json(getattr(self.bot, "state_file", "data.json"), default={})
             return data.get(self._state_key(), {})
-        except Exception:
+        except Exception as error:
+            print(f"[STATE ERROR] No se pudo cargar {self._state_key()}: {error}")
             return {}
 
     def save(self, state: dict[str, Any]) -> None:
@@ -39,8 +40,8 @@ class BotStateManager:
             data = load_json(file_path, default={})
             data[self._state_key()] = state
             save_json(file_path, data)
-        except Exception:
-            pass
+        except Exception as error:
+            print(f"[STATE ERROR] No se pudo guardar {self._state_key()}: {error}")
 
     def get_state(self) -> BotState:
         raw = self.load()

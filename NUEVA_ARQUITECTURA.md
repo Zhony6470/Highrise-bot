@@ -101,10 +101,10 @@ La siguiente fase del sistema de avatar usará el usuario objetivo del propio bo
 
 Los comandos de baile conservarán sus funciones existentes:
 
-- `!dancebot @usuario` → baile aleatorio.
-- `!stopdance @usuario` → detiene el baile aleatorio.
+- `!dancebot @Zeta_Bot` → baile aleatorio.
+- `!stopdance @Zeta_Bot` → detiene el baile aleatorio.
 - `!emote @usuario <emote>` → emote específico en bucle.
-- `!emote @usuario <emote>` → emote específico para un usuario.
+- `rest @usuario` → emote específico para un usuario.
 - `!emote @Zeta_Bot <emote>` → emote persistente del bot.
 - `!emote @Zeta_Bot stop` → detiene el emote persistente del bot.
 

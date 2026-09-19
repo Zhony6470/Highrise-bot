@@ -42,8 +42,6 @@ def load_json(file_path: str, default=None):
     except (FileNotFoundError, json.JSONDecodeError):
         data = _default_data(file_name, default)
 
-    if _client:
-        save_json(file_path, data)
     return data
 
 

@@ -1,4 +1,4 @@
-﻿from highrise import BaseBot, __main__, CurrencyItem, GetMessagesRequest, Item, Position, AnchorPosition, Reaction, SessionMetadata, User
+﻿from highrise import BaseBot, __main__, GetMessagesRequest, Item, Position, AnchorPosition, SessionMetadata, User
 from highrise.__main__ import BotDefinition
 from asyncio import run as arun
 from json import load
@@ -15,7 +15,6 @@ from threading import Thread
 from config import (
     API_KEY,
     DATA_FILE,
-    DEFAULT_DATA,
     EMOTES_FILE,
     POSITIONS_FILE,
     ROOM_ID,
@@ -24,7 +23,7 @@ from config import (
 from commands.owner import handle_owner_command
 from commands.dispatcher import CommandDispatcher
 from services.positions import PositionManager
-from services.roles import RoleManager, get_user_role
+from services.roles import RoleManager
 from services.emotes import EmotesManager
 from bots.bot1.services.track import start_track_monitor
 from services.storage import load_json
@@ -80,6 +79,7 @@ class Bot(BaseBot):
         self.reset_task = None
         self.announcement_task = None
         self.fight_tasks = set()
+        self.current_bot_emote = None
         self.bot_username = os.getenv("BOT1_USERNAME", "Zeta_Bot")
         self.avatar_manager = AvatarManager(self)
         self.position_manager_common = PositionManagerCommon(self, DATA_FILE)
@@ -161,8 +161,11 @@ class Bot(BaseBot):
                     "<#FF66CC>ðŸ›¡ï¸ MODERACIÃ“N",
                     "<#FFFFFF>â€¢ !kick @usuario - Expulsar un usuario",
                     "<#FFFFFF>â€¢ !tp @usuario x y z - Teletransportar un usuario",
-                    "<#FFFFFF>â€¢ !dancebot @Zeta_Bot - Activar baile del bot",
-                    "<#FFFFFF>â€¢ !stopdance @Zeta_Bot - Detener baile del bot",
+                    "<#FFFFFF>â€¢ !dancebot @Zeta_Bot - Activar baile aleatorio",
+                    "<#FFFFFF>â€¢ !stopdance @Zeta_Bot - Detener baile aleatorio",
+                    "<#FFFFFF>â€¢ !emote @Zeta_Bot rest - Emote persistente del bot",
+                    "<#FFFFFF>â€¢ !emote @Zeta_Bot stop - Detener emote del bot",
+                    "<#FFFFFF>â€¢ rest @usuario - Emote para un usuario",
                     "<#FFFFFF>â€¢ !randomall - Activar emotes para todos",
                 ]),
                 "\n".join([
@@ -189,8 +192,8 @@ class Bot(BaseBot):
             sections.extend([
                 "\n".join([
                     "<#CC99FF>âš™ï¸ ADMINISTRACIÃ“N",
-                    "<#FFFFFF>â€¢ !set - Guardar la posiciÃ³n del bot",
-                    "<#FFFFFF>â€¢ !home - Volver a la posiciÃ³n guardada",
+                    "<#FFFFFF>â€¢ !set @Zeta_Bot - Guardar la posiciÃ³n del bot",
+                    "<#FFFFFF>â€¢ !home @Zeta_Bot - Volver a la posiciÃ³n guardada",
                     "<#FFFFFF>â€¢ !reset @Zeta_Bot - Reiniciar el bot",
                     "<#FFFFFF>â€¢ !role @usuario mod|vip|designer|user - Administrar roles",
                 ]),
@@ -598,19 +601,11 @@ class Bot(BaseBot):
         # ==========================================
         if msg_lower.startswith("!emote "):
             emote_parts = msg.split()
-            if len(emote_parts) < 3:
-                await self.highrise.send_whisper(user.id, "<#FFCC66>🎭 Uso: !emote @usuario <emote> o !emote @Bot stop")
+            if len(emote_parts) != 3 or not emote_parts[1].startswith("@"):
+                await self.highrise.send_whisper(user.id, "<#FFCC66>🎭 Uso: !emote @Bot <emote> o !emote @Bot stop")
                 return
-            legacy_stop = emote_parts[1].lower() == "stop"
-            if legacy_stop:
-                target_username = emote_parts[2][1:] if emote_parts[2].startswith("@") else ""
-                emote_name = "stop"
-            else:
-                if not emote_parts[1].startswith("@"):
-                    await self.highrise.send_whisper(user.id, "<#FFCC66>🎭 Uso: !emote @usuario <emote>")
-                    return
-                target_username = emote_parts[1][1:]
-                emote_name = " ".join(emote_parts[2:]).lower()
+            target_username = emote_parts[1][1:]
+            emote_name = emote_parts[2].lower()
 
             if target_username.lower() == self.bot_username.lower():
                 if user.id != self.owner_id and not await self.is_mod(user.id):
@@ -628,25 +623,7 @@ class Bot(BaseBot):
                 return
             if target_username.lower() == os.getenv("DJ_BOT_USERNAME", "Dj.Z").lower():
                 return
-
-            target_id = await self.get_user_id(target_username)
-            matched_emote = self.emotes_manager.get_by_name(emote_name)
-            if not target_id:
-                await self.highrise.send_whisper(user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala.")
-                return
-            if not matched_emote:
-                await self.highrise.send_whisper(user.id, f"<#FFCC66>🎭 Emote no encontrado: {emote_name}.")
-                return
-            if matched_emote.get("auth") == "vip" and user.id != self.owner_id and not await self.is_mod(user.id):
-                await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Ese emote requiere permisos de moderación.")
-                return
-            previous_task = self.emote_tasks.pop(target_id, None)
-            if previous_task:
-                previous_task.cancel()
-            self.emote_tasks[target_id] = asyncio.create_task(
-                self.emote_loop(target_id, matched_emote["emote"], matched_emote.get("duration", 1))
-            )
-            await self.highrise.send_whisper(user.id, f"<#66FF99>✨ Emote activado para @{target_username}: {matched_emote['command']}.")
+            await self.highrise.send_whisper(user.id, "<#FFCC66>🎭 Los usuarios usan: rest @usuario")
             return
 
         emote_text = msg_lower[1:].strip() if msg_lower.startswith("!") else msg_lower
@@ -657,6 +634,13 @@ class Bot(BaseBot):
         if len(emote_parts) > 1 and emote_parts[-1].startswith("@"):
             target_username = emote_parts.pop()[1:]
             emote_text = " ".join(emote_parts)
+
+        bot_names = {
+            self.bot_username.lower(),
+            os.getenv("DJ_BOT_USERNAME", "Dj.Z").lower(),
+        }
+        if target_username and target_username.lower() in bot_names:
+            return
 
         if emote_text == "random":
             target_id = user.id
