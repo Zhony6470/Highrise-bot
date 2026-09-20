@@ -884,13 +884,31 @@ class Bot(BaseBot):
     ) -> None:
         if user.id == self.bot_id:
             return
+
         print(f"[JOIN] {user.username} entró a la sala.")
+
+        # La bienvenida debe enviarse a TODOS los usuarios que entren.
+        # El rol solo cambia el texto mostrado, no determina si recibe el mensaje.
+        role = "user"
         try:
             role = await self.role_manager.get_user_role(self, user) or "user"
+        except Exception as error:
+            print(f"[JOIN ROLE] No pude obtener el rol de @{user.username}: {error}")
+
+        role_labels = {
+            "owner": "owner",
+            "mod": "mod",
+            "vip": "vip",
+            "designer": "designer",
+            "user": "user",
+        }
+        role = role_labels.get(str(role).lower(), "user")
+
+        try:
             await self.highrise.send_whisper(
                 user.id,
-                f"👋 ¡Bienvenido/a, @{user.username}! ¡Disfruta tu instancia! 🎉\n"
-                f"🛡️ Rol: {role}\n"
+                f"👋 ¡Bienvenido/a, @{user.username}! ¡Disfruta tu instancia! 🎉\\n"
+                f"🛡️ Rol: {role}\\n"
                 "💡 Usa !help para ver los comandos y mensajes disponibles."
             )
         except Exception as error:
