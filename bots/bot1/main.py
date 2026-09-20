@@ -879,7 +879,7 @@ class Bot(BaseBot):
             return owner_response
         return await self.tip_manager.handle_command(self, command, user_id)
 
-    async def on_user_join(async def on_user_join(
+    async def on_user_join(
         self, user: User, position: Position | AnchorPosition
     ) -> None:
         print(f"[JOIN] {user.username} entró a la sala.")
