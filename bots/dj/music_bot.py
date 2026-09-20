@@ -32,6 +32,8 @@ class Bot(BaseBot):
         self.dance_manager = DanceManager(self)
         self.bot_state_manager = BotStateManager(self)
         self.state_file = str(DATA)
+        self.playback_monitor_task = None
+        self.last_announced_track_id = None
         try:
             self.emotes_list = json.loads((Path(ROOT_DIR) / "common" / "emotes.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -75,22 +77,55 @@ class Bot(BaseBot):
 
         except ValueError as e:
             raise RuntimeError("Respuesta inválida de AutoDJ.") from e
+    async def restore_position(self):
+        for attempt in range(5):
+            try:
+                position = self.position_manager_common.get_saved_position()
+                if position:
+                    await asyncio.sleep(2 if attempt == 0 else 3)
+                    await self.highrise.teleport(self.bot_id, position)
+                    print(f"[MUSIC] Posición restaurada en {position}.")
+                    return
+            except Exception as error:
+                print(f"[MUSIC] Error restaurando posición (intento {attempt + 1}): {error}")
+            await asyncio.sleep(2)
+
+    async def playback_monitor_loop(self):
+        while True:
+            try:
+                status = await self.api("/status")
+                current = status.get("current") or {}
+                video_id = current.get("video_id")
+                if video_id and video_id != self.last_announced_track_id:
+                    metadata = current.get("metadata") or {}
+                    title = metadata.get("title", "Pista desconocida")
+                    requester = metadata.get("requested_by")
+                    if requester:
+                        await self.highrise.chat(
+                            f"<#66CCFF>🎵 Ahora sonando: <#FFFFFF>{title} <#66FF99>• petición de @{requester}"
+                        )
+                    else:
+                        await self.highrise.chat(
+                            f"<#66CCFF>🎵 Ahora sonando: <#FFFFFF>{title}"
+                        )
+                    self.last_announced_track_id = video_id
+            except asyncio.CancelledError:
+                break
+            except Exception as error:
+                print(f"[MUSIC] Error monitoreando reproducción: {error}")
+            await asyncio.sleep(2)
+
     async def on_start(self,s:SessionMetadata):
         self.bot_id=s.user_id;self.owner_id=s.room_info.owner_id
-        p=self.position_manager_common.get_saved_position()
-        if p:
-            try:await asyncio.sleep(2);await self.highrise.teleport(self.bot_id,p)
-            except Exception as e:print("[MUSIC] posición:",e)
+        if self.playback_monitor_task:
+            self.playback_monitor_task.cancel()
+        self.playback_monitor_task = asyncio.create_task(self.playback_monitor_loop())
+        asyncio.create_task(self.restore_position())
         try:
             await self.avatar_manager.restore_saved_outfit()
         except Exception as e:
             print("[MUSIC] outfit:", e)
         await self.dance_manager.restore()
-
-        try:
-            await self.highrise.chat("<#66FF99>🎵 ¡Bot de música conectado! <#FFFFFF>Estoy listo para poner tus canciones y gestionar la playlist.")
-        except Exception:
-            pass
 
     async def restart_with_message(self):
         try:
@@ -168,7 +203,10 @@ class Bot(BaseBot):
             q=parts[1] if len(parts)==2 else ""
             if not q:return await self.highrise.send_whisper(user.id,"<#FFCC66>🎵 Uso: !play canción")
             try:
-                v=await asyncio.to_thread(search_youtube,q);await self.api("/play","POST",{"video_id":v["video_id"],"metadata":v})
+                v=await asyncio.to_thread(search_youtube,q)
+                metadata=dict(v)
+                metadata["requested_by"]=user.username
+                await self.api("/play","POST",{"video_id":v["video_id"],"metadata":metadata})
                 await self.highrise.chat(f"<#66FF99>🎵 @{user.username} añadió a la cola: <#FFFFFF>{v['title']}")
             except (YouTubeSearchError,RuntimeError) as e:await self.highrise.send_whisper(user.id,f"<#FF6666>⚠️ {e}")
             return
