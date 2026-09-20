@@ -169,13 +169,19 @@ async def handle_affection(bot, user: User, message: str) -> None:
     else:
         sender_emote = "emote-heartfingers"
 
-    await asyncio.gather(
-        bot.highrise.send_emote("emoji-lying", target_id),
-        bot.highrise.send_emote(sender_emote, user.id),
-    )
-    await bot.highrise.chat(
-        choice(SECRET_ADMIRER_MESSAGES).format(target=target_username)
-    )
+    try:
+        await asyncio.gather(
+            bot.highrise.send_emote("emoji-lying", target_id),
+            bot.highrise.send_emote(sender_emote, user.id),
+        )
+        await bot.highrise.chat(
+            choice(SECRET_ADMIRER_MESSAGES).format(target=target_username)
+        )
+    except Exception as error:
+        print(f"Error en !kiss/!heart: {error}")
+        await bot.highrise.send_whisper(
+            user.id, "<#FF6666>💌 No se pudo enviar el gesto en este momento."
+        )
 
 
 async def handle_love(bot, user: User, message: str) -> None:
