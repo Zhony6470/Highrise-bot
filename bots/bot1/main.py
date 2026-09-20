@@ -882,8 +882,13 @@ class Bot(BaseBot):
     async def on_user_join(
         self, user: User, position: Position | AnchorPosition
     ) -> None:
+        if user.id == self.bot_id:
+            return
         print(f"[JOIN] {user.username} entró a la sala.")
         try:
+            await self.highrise.chat(
+                f"👋 ¡Bienvenido/a, @{user.username}! ¡Disfruta la sala! 🎉"
+            )
             role = await self.role_manager.get_user_role(self, user)
             if role and role != "user":
                 await self.highrise.send_whisper(
