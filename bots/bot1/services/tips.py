@@ -19,7 +19,7 @@ class TipManager:
     def __init__(self, data_file: str):
         self.data_file = data_file
         self.tip_data = self._load_tip_data()
-        self.session_tip_data: dict[str, dict[str, int | str]] = {}
+
 
     async def handle_tip(self, highrise, bot_id: str, sender: User, receiver: User,
                          tip: CurrencyItem | Item) -> None:
@@ -30,17 +30,6 @@ class TipManager:
         if receiver.id != bot_id:
             return
 
-        session_data = self.session_tip_data.setdefault(
-            sender.id, {"username": sender.username, "total_tips": 0}
-        )
-        session_data["username"] = sender.username
-        session_data["total_tips"] = int(session_data["total_tips"]) + tip.amount
-
-        user_data = self.tip_data.setdefault(
-            sender.id, {"username": sender.username, "total_tips": 0}
-        )
-        user_data["username"] = sender.username
-        user_data["total_tips"] += tip.amount
         self._write_tip_data(sender, tip.amount)
         await highrise.chat(
             f"<#FFCC66>💛 ¡Muchas gracias @{sender.username} por tu propina de {tip.amount}g! 🪙"
@@ -181,16 +170,16 @@ class TipManager:
 
     def get_top_tippers(self):
         sorted_tippers = sorted(
-            self.session_tip_data.items(),
-            key=lambda item: int(item[1]["total_tips"]),
+            self.tip_data.items(),
+            key=lambda item: int(item[1].get("total_tips", 0)),
             reverse=True,
         )
         return sorted_tippers[:10]
 
     def get_user_tip_amount(self, username: str) -> int | None:
         for user_data in self.tip_data.values():
-            if user_data["username"].lower() == username.lower():
-                return user_data["total_tips"]
+            if user_data.get("username", "").lower() == username.lower():
+                return int(user_data.get("total_tips", 0))
         return None
 
     def _load_tip_data(self) -> dict:
@@ -205,3 +194,4 @@ class TipManager:
         user_data["username"] = user.username
         data["users"][user.id] = user_data
         save_json(self.data_file, data)
+        self.tip_data = data["users"]
