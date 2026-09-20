@@ -165,7 +165,7 @@ async def handle_affection(bot, user: User, message: str) -> None:
         return
 
     if command.startswith("!kiss "):
-        sender_emote = "emote-blowkisses"
+        sender_emote = "emote-kiss"
     else:
         sender_emote = "emote-heartfingers"
 
