@@ -91,9 +91,9 @@ async def handle_fight(bot, user: User, message: str) -> None:
             user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala."
         )
         return
-    if target_id in (user.id, bot.bot_id):
+    if target_id == user.id or await bot.is_bot_user(target_id):
         await bot.highrise.send_whisper(
-            user.id, "<#FF6666>🛡️ No puedes iniciar una pelea contra ese objetivo."
+            user.id, "<#FF6666>🛡️ Los bots no pueden ser objetivos de este comando."
         )
         return
 
@@ -158,9 +158,9 @@ async def handle_affection(bot, user: User, message: str) -> None:
             user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala."
         )
         return
-    if target_id in (user.id, bot.bot_id):
+    if target_id == user.id or await bot.is_bot_user(target_id):
         await bot.highrise.send_whisper(
-            user.id, "<#FF6666>💌 Elige a otra persona para enviarle cariño."
+            user.id, "<#FF6666>💌 Los bots no pueden ser objetivos de este comando."
         )
         return
 
@@ -208,9 +208,13 @@ async def handle_love(bot, user: User, message: str) -> None:
             user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala."
         )
         return
-    if first_id == second_id or first_id == bot.bot_id or second_id == bot.bot_id:
+    if (
+        first_id == second_id
+        or await bot.is_bot_user(first_id)
+        or await bot.is_bot_user(second_id)
+    ):
         await bot.highrise.send_whisper(
-            user.id, "<#FF6666>💖 Elige a dos usuarios diferentes del bot."
+            user.id, "<#FF6666>💖 Los bots no pueden participar en este comando."
         )
         return
 
