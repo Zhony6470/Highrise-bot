@@ -11,6 +11,7 @@ from highrise.__main__ import BotDefinition
 from bots.dj.services.youtube import search_youtube, YouTubeSearchError
 from commands.dispatcher import CommandDispatcher
 from common.bot_manager import should_handle_for_bot
+from common.bot_runtime import BotRuntimeMixin
 from common.avatar import AvatarManager
 from common.positions import PositionManagerCommon
 from common.dance import DanceManager
@@ -21,7 +22,7 @@ ROOM_ID=os.getenv("MUSIC_ROOM_ID",os.getenv("ROOM_ID",""));API_KEY=os.getenv("MU
 AUTODJ=os.getenv("AUTODJ_URL","http://autodj:8090").rstrip("/");TOKEN=os.getenv("AUTODJ_TOKEN","")
 DATA=Path(os.getenv("MUSIC_DATA_FILE","/app/music_bot_data.json"))
 
-class Bot(BaseBot):
+class Bot(BotRuntimeMixin, BaseBot):
     def __init__(self):
         super().__init__();self.bot_id=None;self.owner_id=None
         self.bot_username = os.getenv("DJ_BOT_USERNAME", "Dj.Z")
@@ -38,14 +39,6 @@ class Bot(BaseBot):
             self.emotes_list = []
         self.emotes_manager = EmotesManager(self.emotes_list)
         self.command_dispatcher = CommandDispatcher()
-    async def is_mod(self,uid):
-        if uid==self.owner_id:return True
-        try:
-            p=await self.highrise.get_room_privilege(uid);return bool(getattr(p,"moderator",False) or getattr(p,"designer",False))
-        except Exception:return False
-    async def get_user_position(self,uid):
-        for u,p in (await self.highrise.get_room_users()).content:
-            if u.id==uid:return p
     async def api(self,path,method="GET",data=None):
         body=None if data is None else json.dumps(data).encode()
         h={"Authorization":f"Bearer {TOKEN}"} if TOKEN else {}
@@ -151,14 +144,14 @@ class Bot(BaseBot):
             return
         if cmd == "!emote":
             emote_parts = message.strip().split()
-            if len(emote_parts) != 3 or not emote_parts[1].startswith("@"):
+            if len(emote_parts) < 3 or not emote_parts[1].startswith("@"):
                 return await self.highrise.send_whisper(user.id, "<#FFCC66>🎭 Uso: !emote @Dj.Z <emote> o !emote @Dj.Z stop")
             target = emote_parts[1][1:]
             if target.lower() != self.bot_username.lower():
                 return
             if user.id != self.owner_id and not await self.is_mod(user.id):
                 return await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden controlar el emote del bot.")
-            if emote_parts[2].lower() == "stop":
+            if " ".join(emote_parts[2:]).strip().lower() == "stop":
                 response = await self.dance_manager.stop_bot_emote()
             else:
                 emote_name = " ".join(emote_parts[2:]).strip().lower()
