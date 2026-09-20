@@ -108,7 +108,7 @@ async def handle_track_command(bot, user: User, message: str) -> bool:
         user.id,
         f"<#66FF99>🎶 Pista creada: radio de {radius:g} bloques "
         f"({2 * radius + 1:g}x{2 * radius + 1:g}).\n"
-        "<#66CCFF>💃 Los usuarios dentro copiarán el emote actual del bot.",
+        "<#66CCFF>💃 Todos los usuarios dentro harán el mismo emote aleatorio de la pista.",
     )
     await start_track_monitor(bot)
     return True
