@@ -1,5 +1,7 @@
 import os
 import asyncio
+import time
+from random import choice
 
 from highrise import Position, User
 from services.storage import load_json, save_json
@@ -146,57 +148,115 @@ async def start_track_monitor(bot) -> None:
 
 
 async def track_monitor_loop(bot) -> None:
+    """
+    Monitor independiente de la pista.
+
+    Todos los usuarios dentro del radio reciben exactamente el mismo emote
+    y el cambio de emote no depende de los emotes aleatorios de Zeta.
+    """
+    active_user_ids = set()
+    current_emote = None
+    current_duration = 0.0
+    next_emote_at = 0.0
+
     try:
         while _load_track(bot) is not None:
             room_users = await bot.highrise.get_room_users()
-            active_user_ids = set()
-            for room_user, room_position in room_users.content:
-                if isinstance(room_position, Position) and room_user.id != bot.bot_id:
-                    active_user_ids.add(room_user.id)
-                    await update_user(bot, room_user, room_position)
+            inside_user_ids = set()
 
-            for user_id in set(bot.track_emote_tasks) - active_user_ids:
-                task = bot.track_emote_tasks.pop(user_id)
-                task.cancel()
-                await bot.highrise.send_emote("", user_id)
-            await asyncio.sleep(1)
+            for room_user, room_position in room_users.content:
+                if not isinstance(room_position, Position):
+                    continue
+                if room_user.id == bot.bot_id:
+                    continue
+
+                bot_names = {
+                    str(getattr(bot, "bot_username", "")).lower(),
+                    str(os.getenv("DJ_BOT_USERNAME", "Dj.Z")).lower(),
+                }
+                if room_user.username.lower() in bot_names:
+                    continue
+
+                if _is_inside(room_position, _load_track(bot)):
+                    inside_user_ids.add(room_user.id)
+
+            now = time.monotonic()
+            if not current_emote or now >= next_emote_at:
+                if not bot.emotes_list:
+                    await asyncio.sleep(1)
+                    continue
+
+                selected = choice(bot.emotes_list)
+                current_emote = selected["emote"]
+                current_duration = float(selected.get("duration", 3))
+                next_emote_at = now + current_duration
+
+                print(
+                    f"[PISTA] Nuevo emote para todos: "
+                    f"{current_emote} ({current_duration:.1f}s)"
+                )
+
+            # Nuevos usuarios reciben el mismo emote que ya está activo.
+            # Los usuarios que salieron reciben una limpieza de emote.
+            entered = inside_user_ids - active_user_ids
+            left = active_user_ids - inside_user_ids
+
+            for user_id in left:
+                try:
+                    await bot.highrise.send_emote("", user_id)
+                except Exception as error:
+                    print(f"No se pudo limpiar emote de pista de {user_id}: {error}")
+
+            if entered:
+                await asyncio.gather(
+                    *(
+                        bot.highrise.send_emote(current_emote, user_id)
+                        for user_id in entered
+                    ),
+                    return_exceptions=True,
+                )
+
+            active_user_ids = inside_user_ids
+
+            # Reaplica el mismo emote periódicamente para mantener sincronizados
+            # a todos los usuarios sin depender del estado de Zeta.
+            if active_user_ids:
+                results = await asyncio.gather(
+                    *(
+                        bot.highrise.send_emote(current_emote, user_id)
+                        for user_id in active_user_ids
+                    ),
+                    return_exceptions=True,
+                )
+                for user_id, result in zip(active_user_ids, results):
+                    if isinstance(result, Exception):
+                        print(
+                            f"Emote de pista no disponible para {user_id}: "
+                            f"{current_emote} ({result})"
+                        )
+
+            await asyncio.sleep(0.5)
+
     except asyncio.CancelledError:
         pass
     except Exception as error:
         print(f"Error monitorizando la pista de emotes: {error}")
     finally:
+        for user_id in active_user_ids:
+            try:
+                await bot.highrise.send_emote("", user_id)
+            except Exception as error:
+                print(f"No se pudo limpiar emote de pista de {user_id}: {error}")
+
         if bot.track_monitor_task is asyncio.current_task():
             bot.track_monitor_task = None
 
 
+async def update_user(bot, user: User, position: Position) -> None:
+    # Compatibilidad con llamadas externas: el monitor central controla la pista.
+    return
+
+
 async def track_emote_loop(bot, user_id: str) -> None:
-    last_emote = None
-    try:
-        while True:
-            track = _load_track(bot)
-            position = bot.user_positions.get(user_id)
-            if position is None:
-                position = await bot.get_user_position(user_id)
-            if not track or not position or not _is_inside(position, track):
-                break
-            emote_id = bot.current_bot_emote
-            if emote_id and emote_id != last_emote:
-                last_emote = emote_id
-                try:
-                    await bot.highrise.send_emote(emote_id, user_id)
-                except Exception as error:
-                    print(
-                        f"Emote de pista no disponible para {user_id}: "
-                        f"{emote_id} ({error})"
-                    )
-            await asyncio.sleep(0.05)
-    except asyncio.CancelledError:
-        pass
-    except Exception as error:
-        print(f"Error en la pista de emotes: {error}")
-    finally:
-        bot.track_emote_tasks.pop(user_id, None)
-        try:
-            await bot.highrise.send_emote("", user_id)
-        except Exception as error:
-            print(f"No se pudo limpiar el emote de pista de {user_id}: {error}")
+    # Compatibilidad con tareas antiguas: la pista ya no depende de estas tareas.
+    return
