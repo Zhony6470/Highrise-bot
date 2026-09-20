@@ -42,5 +42,10 @@ class PositionManager:
             position_data["x"], position_data["y"], position_data["z"], position_data["facing"]
         )
 
-    async def can_use_private_position(self, bot, user: User) -> bool:
+    async def can_use_private_position(self, bot, user: User, access: str = "priv") -> bool:
+        access = (access or "priv").lower()
+        if access == "vip":
+            return await has_role(bot, user, {"vip"})
+        if access == "mod":
+            return await has_role(bot, user, {"mod"})
         return await has_role(bot, user, {"owner", "mod", "vip"})
