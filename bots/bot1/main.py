@@ -147,8 +147,7 @@ class Bot(BaseBot):
                 "<#FFFFFF>â€¢ !wallet - Ver la billetera del bot",
                 "<#FFFFFF>â€¢ !get @usuario - Ver sus propinas",
             ]),
-            "\n".join([
-                "<#CC99FF>ðŸ‘¤ INFORMACIÃ“N",
+            "\n".join([                "<#CC99FF>ðŸ‘¤ INFORMACIÃ“N",
                     "<#FFFFFF>â€¢ !userinfo - Ver tu informaciÃ³n",
                 "<#FFFFFF>â€¢ !userinfo @usuario - Ver informaciÃ³n de otro usuario",
                 "<#FFFFFF>â€¢ !help - Mostrar la ayuda disponible",
@@ -297,8 +296,7 @@ class Bot(BaseBot):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                print(f"Error enviando emote aleatorio a {user_id}: {e}")
-                await asyncio.sleep(2)
+                print(f"Error enviando emote aleatorio a {user_id}: {e}")                await asyncio.sleep(2)
 
     async def follow_owner_loop(self):
         """Bucle para hacer que el bot siga la posiciÃ³n del dueÃ±o."""
@@ -447,8 +445,7 @@ class Bot(BaseBot):
                 if self.following:
                     self.following = False
                     if self.follow_task:
-                        self.follow_task.cancel()
-                    await self.highrise.chat("<#66CCFF>ðŸ›‘ DejÃ© de seguirte.")
+                        self.follow_task.cancel()                    await self.highrise.chat("<#66CCFF>ðŸ›‘ DejÃ© de seguirte.")
                 else:
                     await self.highrise.chat("<#FFCC66>ðŸ§­ No te estaba siguiendo.")
             else:
@@ -597,15 +594,14 @@ class Bot(BaseBot):
                 return
 
         # ==========================================
-        # 10. COMANDOS DE EMOTES (Cargados desde emotes.json)
-        # ==========================================
+        # 10. COMANDOS DE EMOTES (Cargados desde emotes.json)        # ==========================================
         if msg_lower.startswith("!emote "):
             emote_parts = msg.split()
-            if len(emote_parts) != 3 or not emote_parts[1].startswith("@"):
+            if len(emote_parts) < 3 or not emote_parts[1].startswith("@"):
                 await self.highrise.send_whisper(user.id, "<#FFCC66>🎭 Uso: !emote @Bot <emote> o !emote @Bot stop")
                 return
             target_username = emote_parts[1][1:]
-            emote_name = emote_parts[2].lower()
+            emote_name = " ".join(emote_parts[2:]).lower()
 
             if target_username.lower() == self.bot_username.lower():
                 if user.id != self.owner_id and not await self.is_mod(user.id):
@@ -798,62 +794,3 @@ class Bot(BaseBot):
         return await self.tip_manager.handle_command(self, command, user_id)
 
     async def on_user_join(
-        self, user: User, position: Position | AnchorPosition
-    ) -> None:
-        print(f"[JOIN] {user.username} entrÃ³ a la sala.")
-        role = await self.role_manager.get_user_role(self, user)
-        try:
-            await self.highrise.send_whisper(
-                user.id,
-                "\n".join([
-                    f"<#66FFCC>âœ¨ Â¡Hola, {user.username}! âœ¨",
-                    "<#FFFFFF>â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”",
-                    f"<#FFCC66>ðŸŽ­ Tu rol en la sala: <#FFFFFF>{role}",
-                    "<#66FF99>ðŸŽ‰ Â¡Bienvenido/a! Pasa, disfruta y comparte buenas vibras.",
-                    "<#CC99FF>ðŸ’« Escribe <#FFFFFF>!help <#CC99FF>para descubrir mis comandos.",
-                    "<#FFFFFF>â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”",
-                ]),
-            )
-        except Exception as error:
-            print(f"Error enviando la bienvenida a @{user.username}: {error}")
-
-        try:
-            await self.role_manager.apply_saved_role(self, user)
-        except Exception as error:
-            print(f"Error aplicando el rol guardado a @{user.username}: {error}")
-
-        if isinstance(position, Position):
-            self.user_positions[user.id] = position
-
-    async def on_message(
-        self, user_id: str, conversation_id: str, is_new_conversation: bool
-    ) -> None:
-        try:
-            response = await self.highrise.get_messages(conversation_id)
-            if not isinstance(response, GetMessagesRequest.GetMessagesResponse):
-                return
-            if not response.messages:
-                return
-
-            message = response.messages[-1].content.strip().lower()
-            if message != "!help":
-                return
-
-            user = User(user_id, "")
-            try:
-                user_response = await self.webapi.get_user(user_id)
-                user = User(user_id, user_response.user.username)
-            except Exception as error:
-                print(f"No se pudo cargar el usuario de la conversaciÃ³n: {error}")
-
-            for section in await self.get_command_help(user):
-                await self.highrise.send_message(conversation_id, section)
-        except Exception as error:
-            print(f"Error procesando !help en la bandeja: {error}")
-
-if __name__ == "__main__":
-    if not ROOM_ID or not API_KEY:
-        raise RuntimeError("ROOM_ID y API_KEY deben estar configuradas en el entorno")
-    Thread(target=start_health_server, daemon=True).start()
-    definitions = [BotDefinition(Bot(), ROOM_ID, API_KEY)]
-    arun(__main__.main(definitions))
