@@ -31,6 +31,7 @@ from bots.bot1.services.tips import TipManager
 from bots.bot1.services.anuncios import announcement_loop
 from bots.bot1.services.diversion import handle_diversion_command
 from common.bot_manager import should_handle_for_bot
+from common.bot_runtime import BotRuntimeMixin
 from common.avatar import AvatarManager
 from common.positions import PositionManagerCommon
 from common.dance import DanceManager
@@ -56,7 +57,7 @@ def start_health_server():
     server.serve_forever()
 
 
-class Bot(BaseBot):
+class Bot(BotRuntimeMixin, BaseBot):
     def __init__(self):
         super().__init__()
         self.bot_id = None
@@ -245,20 +246,6 @@ class Bot(BaseBot):
 
         return "<#FFCC66>📨 No pude enviar la lista a tu bandeja. Escríbeme primero por mensaje privado y vuelve a usar !role."
 
-    async def is_mod(self, user_id: str) -> bool:
-        """Verifica si un usuario posee rol de moderador o superior."""
-        if user_id == self.owner_id:
-            return True
-        try:
-            permissions = await self.highrise.get_room_privilege(user_id)
-            return bool(
-                getattr(permissions, "moderator", False)
-                or getattr(permissions, "designer", False)
-            )
-        except Exception as error:
-            print(f"Error comprobando permisos de {user_id}: {error}")
-            return False
-
     async def is_bot_user(self, user_id: str) -> bool:
         if user_id == self.bot_id:
             return True
@@ -274,22 +261,6 @@ class Bot(BaseBot):
             )
         except Exception:
             return False
-
-    async def get_user_id(self, username: str) -> str | None:
-        """Busca el ID de un usuario por su nombre de usuario en la sala."""
-        room_users = await self.highrise.get_room_users()
-        for room_user, _ in room_users.content:
-            if room_user.username.lower() == username.lower():
-                return room_user.id
-        return None
-
-    async def get_user_position(self, user_id: str) -> Position | None:
-        """Obtiene la posición actual de un usuario en la sala."""
-        room_users = await self.highrise.get_room_users()
-        for room_user, position in room_users.content:
-            if room_user.id == user_id:
-                return position
-        return None
 
     async def emote_loop(self, user_id: str, emote_id: str, duration: float):
         """Bucle continuo para ejecutar un emote en un usuario."""
