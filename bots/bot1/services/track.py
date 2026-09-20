@@ -1,3 +1,4 @@
+import os
 import asyncio
 
 from highrise import Position, User
@@ -118,6 +119,12 @@ async def _can_manage(bot, user: User) -> bool:
 async def update_user(bot, user: User, position: Position) -> None:
     track = _load_track(bot)
     if not track or user.id == bot.bot_id:
+        return
+    bot_names = {
+        str(getattr(bot, "bot_username", "")).lower(),
+        str(os.getenv("DJ_BOT_USERNAME", "Dj.Z")).lower(),
+    }
+    if user.username.lower() in bot_names:
         return
 
     inside = _is_inside(position, track)
