@@ -641,13 +641,45 @@ class Bot(BaseBot):
             return
 
         # ==========================================
+        # ==========================================
+        # 8. UBICACIONES GUARDADAS (!ubi / !u / !removeubi / !ru)
+        # ==========================================
+        if msg_lower.startswith("!ubi ") or msg_lower.startswith("!u "):
+            parts = msg.split()
+            if len(parts) > 3:
+                await self.highrise.send_whisper(user.id, "📍 Uso: !ubi nombre [vip|mod]")
+                return
+            position_name = parts[1].strip().lower() if len(parts) >= 2 else ""
+            access = parts[2].strip().lower() if len(parts) == 3 else ""
+            if not position_name or access not in {"", "vip", "mod"}:
+                await self.highrise.send_whisper(user.id, "📍 Uso: !ubi nombre [vip|mod]")
+                return
+            if access and user.id != self.owner_id and not await self.is_mod(user.id):
+                await self.highrise.send_whisper(user.id, "🔒 Solo el dueño o un moderador puede crear ubicaciones con acceso por rol.")
+                return
+            response = await self.position_manager.save_named_position(self, user.id, position_name, access)
+            await self.highrise.send_whisper(user.id, response)
+            return
+
+        if msg_lower.startswith("!removeubi ") or msg_lower.startswith("!ru "):
+            parts = msg.split()
+            if len(parts) != 2 or not parts[1].strip():
+                await self.highrise.send_whisper(user.id, "🗑️ Uso: !removeubi nombre o !ru nombre")
+                return
+            if user.id != self.owner_id and not await self.is_mod(user.id):
+                await self.highrise.send_whisper(user.id, "🔒 Solo el dueño o los moderadores pueden eliminar ubicaciones.")
+                return
+            response = self.position_manager.delete_named_position(parts[1].strip().lower())
+            await self.highrise.send_whisper(user.id, response)
+            return
+
         # 9. TELETRANSPORTE A POSICIONES GUARDADAS
         # ==========================================
         if len(msg.split()) == 1:
             position_name = msg_lower[1:] if msg_lower.startswith("!") else msg_lower
             position_data = self.position_manager.get_named_position_data(position_name)
             if position_data:
-                if position_data.get("access") == "priv" and not await self.position_manager.can_use_private_position(self, user):
+                if position_data.get("access") and not await self.position_manager.can_use_private_position(self, user, position_data.get("access")):
                     await self.highrise.send_whisper(
                         user.id, "🔒 No tienes permiso para usar esta posición."
                     )
