@@ -12,6 +12,7 @@ from urllib.parse import quote
 HOST = os.getenv("AUTODJ_HOST", "0.0.0.0")
 PORT = int(os.getenv("AUTODJ_PORT", "8090"))
 TOKEN = os.getenv("AUTODJ_TOKEN", "")
+if not TOKEN:\n    raise RuntimeError("AUTODJ_TOKEN es obligatorio.")
 
 ICECAST_HOST = os.getenv("ICECAST_HOST", "icecast")
 ICECAST_PORT = int(os.getenv("ICECAST_PORT", "8000"))
