@@ -27,6 +27,7 @@ COOKIES = os.getenv("YOUTUBE_COOKIES_PATH", "/app/cookies.txt")
 
 SAMPLE_RATE = 44100
 CHANNELS = 2
+MAX_PLAY_SECONDS = 360
 queue = deque()
 lock = threading.RLock()
 skip_event = threading.Event()
@@ -119,6 +120,7 @@ def play_file(path: Path):
         "ffmpeg", "-hide_banner", "-loglevel", "warning",
         "-re",
         "-i", str(path),
+        "-t", str(MAX_PLAY_SECONDS),
         "-vn",
         "-c:a", "libmp3lame",
         "-b:a", "128k",
@@ -341,7 +343,7 @@ class API(BaseHTTPRequestHandler):
                 )
                 started = state.get("started_at")
                 snapshot["elapsed"] = time.time() - started if started else 0
-                snapshot["queue"] = list(queue)
+                snapshot["queue"] = queue_snapshot()
             return self.reply(200, snapshot)
 
         if self.path == "/queue":
