@@ -886,17 +886,15 @@ class Bot(BaseBot):
             return
         print(f"[JOIN] {user.username} entró a la sala.")
         try:
-            await self.highrise.chat(
-                f"👋 ¡Bienvenido/a, @{user.username}! ¡Disfruta la sala! 🎉"
+            role = await self.role_manager.get_user_role(self, user) or "user"
+            await self.highrise.send_whisper(
+                user.id,
+                f"👋 ¡Bienvenido/a, @{user.username}! ¡Disfruta tu instancia! 🎉\n"
+                f"🛡️ Rol: {role}\n"
+                "💡 Usa !help para ver los comandos y mensajes disponibles."
             )
-            role = await self.role_manager.get_user_role(self, user)
-            if role and role != "user":
-                await self.highrise.send_whisper(
-                    user.id,
-                    f"👋 ¡Bienvenido/a, @{user.username}! Tu rol actual es: {role}."
-                )
         except Exception as error:
-            print(f"[JOIN ERROR] Error procesando entrada de @{user.username}: {error}")
+            print(f"[JOIN ERROR] Error enviando bienvenida a @{user.username}: {error}")
 
     async def on_user_leave(self, user: User) -> None:
         print(f"[LEAVE] {user.username} salió de la sala.")
