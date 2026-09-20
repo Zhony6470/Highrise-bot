@@ -219,7 +219,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             content = "No hay usuarios con roles guardados distintos de user."
         else:
             content = "Usuarios con roles guardados:\n" + "\n".join(
-                f"@{username}: {role}" for username, role in saved_roles
+                f"@{self.role_manager.usernames.get(username, username)}: {role}" for username, role in saved_roles
             )
 
         try:
