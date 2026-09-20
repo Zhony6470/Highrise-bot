@@ -73,6 +73,7 @@ class Bot(BaseBot):
 
         # Estado de seguimiento
         self.following = False
+        self.following_user_id = None
         self.follow_task = None
         self.emote_tasks = {}
         self.position_task = None
@@ -258,6 +259,22 @@ class Bot(BaseBot):
             print(f"Error comprobando permisos de {user_id}: {error}")
             return False
 
+    async def is_bot_user(self, user_id: str) -> bool:
+        if user_id == self.bot_id:
+            return True
+        bot_usernames = {
+            self.bot_username.lower(),
+            os.getenv("DJ_BOT_USERNAME", "Dj.Z").lower(),
+        }
+        try:
+            room_users = await self.highrise.get_room_users()
+            return any(
+                room_user.id == user_id and room_user.username.lower() in bot_usernames
+                for room_user, _ in room_users.content
+            )
+        except Exception:
+            return False
+
     async def get_user_id(self, username: str) -> str | None:
         """Busca el ID de un usuario por su nombre de usuario en la sala."""
         room_users = await self.highrise.get_room_users()
@@ -298,19 +315,27 @@ class Bot(BaseBot):
             except Exception as e:
                 print(f"Error enviando emote aleatorio a {user_id}: {e}")                await asyncio.sleep(2)
 
-    async def follow_owner_loop(self):
-        """Bucle para hacer que el bot siga la posición del dueño."""
+    async def follow_user_loop(self):
+        """Bucle para seguir al usuario que activó !follow."""
         while self.following:
             try:
-                owner_pos = await self.get_user_position(self.owner_id)
-                if owner_pos and isinstance(owner_pos, Position):
-                    bot_pos = Position(owner_pos.x + 1, owner_pos.y, owner_pos.z, owner_pos.facing)
+                target_id = self.following_user_id
+                if not target_id:
+                    break
+                target_pos = await self.get_user_position(target_id)
+                if target_pos and isinstance(target_pos, Position):
+                    bot_pos = Position(
+                        target_pos.x + 1,
+                        target_pos.y,
+                        target_pos.z,
+                        target_pos.facing,
+                    )
                     await self.highrise.walk_to(bot_pos)
                 await asyncio.sleep(2)
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                print(f"Error en follow_owner_loop: {e}")
+                print(f"Error en follow_user_loop: {e}")
                 await asyncio.sleep(2)
 
     async def restart_process(self):
@@ -434,34 +459,67 @@ class Bot(BaseBot):
             return
 
         # ==========================================
-        # 2. SEGUIR AL DUEÑO (!follow / !stopfollow)
+        # 2. SEGUIR AL USUARIO QUE ACTIVA EL COMANDO
         # ==========================================
-        elif msg_lower == "!follow":
-            if user.id == self.owner_id or await self.is_mod(user.id):
-                if not self.following:
-                    self.following = True
-                    self.follow_task = asyncio.create_task(self.follow_owner_loop())
-                    await self.highrise.chat("<#66FF99>🧭 ¡Ya voy contigo!")
-                else:
-                    await self.highrise.chat("<#FFCC66>🧭 Ya te estaba siguiendo.")
-            else:
+        elif msg_lower.startswith("!follow"):
+            parts = msg.split()
+            if len(parts) == 2 and parts[1].startswith("@"):
+                target_bot = parts[1][1:].lower()
+                if target_bot != self.bot_username.lower():
+                    return
+            elif len(parts) != 1:
                 await self.highrise.send_whisper(
-                    user.id, "🔒 Solo el dueño de la sala puede usar este comando."
+                    user.id, "📍 Uso: !follow @Zeta_Bot"
                 )
+                return
+
+            if self.following:
+                if self.following_user_id == user.id:
+                    await self.highrise.send_whisper(
+                        user.id, "<#FFCC66>🧭 Ya te estaba siguiendo."
+                    )
+                else:
+                    await self.highrise.send_whisper(
+                        user.id, "<#FFCC66>🧭 El bot ya está siguiendo a otro usuario."
+                    )
+                return
+
+            self.following = True
+            self.following_user_id = user.id
+            self.follow_task = asyncio.create_task(self.follow_user_loop())
+            await self.highrise.chat(f"<#66FF99>🧭 ¡Ya voy contigo, @{user.username}!")
             return
 
-        elif msg_lower == "!stopfollow":
-            if user.id == self.owner_id or await self.is_mod(user.id):
-                if self.following:
-                    self.following = False
-                    if self.follow_task:
-                        self.follow_task.cancel()                    await self.highrise.chat("<#66CCFF>🛑 Dejé de seguirte.")
-                else:
-                    await self.highrise.chat("<#FFCC66>🧭 No te estaba siguiendo.")
-            else:
+        elif msg_lower.startswith("!stopfollow"):
+            parts = msg.split()
+            if len(parts) == 2 and parts[1].startswith("@"):
+                target_bot = parts[1][1:].lower()
+                if target_bot != self.bot_username.lower():
+                    return
+            elif len(parts) != 1:
                 await self.highrise.send_whisper(
-                    user.id, "🔒 Solo el dueño de la sala puede usar este comando."
+                    user.id, "📍 Uso: !stopfollow @Zeta_Bot"
                 )
+                return
+
+            if not self.following:
+                await self.highrise.send_whisper(
+                    user.id, "<#FFCC66>🧭 El bot no está siguiendo a nadie."
+                )
+                return
+
+            if self.following_user_id != user.id and user.id != self.owner_id and not await self.is_mod(user.id):
+                await self.highrise.send_whisper(
+                    user.id, "<#FF6666>🔒 Solo quien activó el seguimiento, el dueño o un moderador puede detenerlo."
+                )
+                return
+
+            self.following = False
+            self.following_user_id = None
+            if self.follow_task:
+                self.follow_task.cancel()
+                self.follow_task = None
+            await self.highrise.chat("<#66CCFF>🛑 Dejé de seguir.")
             return
 
         # ==========================================
@@ -548,9 +606,9 @@ class Bot(BaseBot):
                     user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala."
                 )
                 return
-            if target_id == self.bot_id:
+            if await self.is_bot_user(target_id):
                 await self.highrise.send_whisper(
-                    user.id, "<#FF6666>🛡️ El bot tiene un escudo activo: no puedes golpearlo."
+                    user.id, "<#FF6666>🛡️ Los bots no pueden ser objetivos de este comando."
                 )
                 return
 
@@ -681,6 +739,9 @@ class Bot(BaseBot):
             os.getenv("DJ_BOT_USERNAME", "Dj.Z").lower(),
         }
         if target_username and target_username.lower() in bot_names:
+            await self.highrise.send_whisper(
+                user.id, "<#FF6666>🛡️ No se pueden poner emotes directamente a los bots."
+            )
             return
 
         if emote_text == "random":
