@@ -394,7 +394,10 @@ class Bot(BaseBot):
         msg_lower = msg.lower()
 
         command_name = msg.split(maxsplit=1)[0].lower() if msg else ""
-        protected_commands = {"!set", "!home", "!color", "!equip", "!remove", "!getoutfit", "/equip", "/remove", "/getoutfit"}
+        protected_commands = {
+            "!set", "!home", "!reset", "!dancebot", "!botdance", "!stopdance", "!stopbotdance",
+            "!color", "!equip", "!remove", "!getoutfit", "/equip", "/remove", "/getoutfit"
+        }
         if command_name in protected_commands and not await self._is_targeted_for_me(msg):
             return
 
@@ -410,45 +413,6 @@ class Bot(BaseBot):
                     await self.highrise.send_whisper(user.id, response)
             return
 
-
-        if msg_lower.startswith("!reset"):
-            if not await self._is_targeted_for_me(msg):
-                return
-            if user.id == self.owner_id or await self.is_mod(user.id):
-                if not self.reset_task:
-                    await self.highrise.chat(
-                        "<#FF6666>🔄 El bot se reiniciará en un momento..."
-                    )
-                    self.reset_task = asyncio.create_task(self.restart_process())
-            else:
-                await self.highrise.send_whisper(
-                    user.id, "🔒 Solo el dueño o los moderadores pueden reiniciar el bot."
-                )
-            return
-
-        if msg_lower.startswith("!set @") or msg_lower.startswith("!home @"):
-            if not await self._is_targeted_for_me(msg):
-                return
-            if user.id != self.owner_id and not await self.is_mod(user.id):
-                await self.highrise.send_whisper(
-                    user.id,
-                    "🔒 Solo el dueño o los moderadores pueden usar este comando."
-                )
-                return
-            if msg_lower.startswith("!set @"):
-                result = await self.position_manager_common.set_current_position(user.id)
-                if "No pude obtener" in result:
-                    await self.highrise.send_whisper(user.id, result)
-                    return
-                position = await self.get_user_position(user.id)
-                if position:
-                    await self.highrise.teleport(self.bot_id, position)
-                await self.highrise.send_whisper(user.id, result)
-                return
-            if msg_lower.startswith("!home @"):
-                response = await self.position_manager_common.return_home()
-                await self.highrise.send_whisper(user.id, response)
-                return
 
         if msg_lower in ["!stop", "stop"]:
             emote_task = self.emote_tasks.pop(user.id, None)
@@ -706,35 +670,6 @@ class Bot(BaseBot):
 
         # ==========================================
         # 10. COMANDOS DE EMOTES (Cargados desde emotes.json)        # ==========================================
-        # ==========================================
-        # 10. BAILE ALEATORIO DIRIGIDO AL BOT
-        # ==========================================
-        if msg_lower.startswith(("!dancebot", "!botdance")):
-            if not await self._is_targeted_for_me(msg):
-                return
-            if user.id == self.owner_id or await self.is_mod(user.id):
-                await self.highrise.send_whisper(
-                    user.id, await self.dance_manager.start_random_dance()
-                )
-            else:
-                await self.highrise.send_whisper(
-                    user.id, "🔒 Solo el dueño o los moderadores pueden usar este comando."
-                )
-            return
-
-        if msg_lower.startswith(("!stopdance", "!stopbotdance")):
-            if not await self._is_targeted_for_me(msg):
-                return
-            if user.id == self.owner_id or await self.is_mod(user.id):
-                await self.highrise.send_whisper(
-                    user.id, await self.dance_manager.stop_dance()
-                )
-            else:
-                await self.highrise.send_whisper(
-                    user.id, "🔒 Solo el dueño o los moderadores pueden detener el baile del bot."
-                )
-            return
-
         if msg_lower.startswith("!emote "):
             emote_parts = msg.split()
             if len(emote_parts) < 3 or not emote_parts[1].startswith("@"):
