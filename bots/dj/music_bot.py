@@ -188,9 +188,29 @@ class Bot(BaseBot):
             try:
                 s=await self.api("/status");cur=s.get("current") or {};m=cur.get("metadata",{})
                 if cmd in ("!q","!queue"):
-                    lines=[f"<#66CCFF>🎵 Ahora: <#FFFFFF>{m.get('title','Nada')}",f"<#66FF99>📋 Cola: <#FFFFFF>{len(s.get('queue',[]))}"]
-                    lines += [f"<#FFFFFF>{i}. {(x.get('metadata') or {}).get('title','Pista')}" for i,x in enumerate(s.get("queue",[])[:8],1)]
-                    return await self.highrise.send_whisper(user.id,"\n".join(lines))
+                    pending=await self.api("/queue")
+                    items=pending if isinstance(pending,list) else []
+                    count=len(items)
+                    first_lines=[
+                        f"<#66CCFF>🎵 Ahora: <#FFFFFF>{m.get('title','Nada')}",
+                        f"<#66FF99>📋 Cola: <#FFFFFF>{count}",
+                    ]
+                    if not items:
+                        first_lines.append("<#FFFFFF>Sin canciones pendientes.")
+                    else:
+                        first_lines.extend(
+                            f"<#FFFFFF>{i}. {(x.get('metadata') or {}).get('title','Pista')}"
+                            for i,x in enumerate(items[:5],1)
+                        )
+                    await self.highrise.send_whisper(user.id,"\n".join(first_lines))
+                    for offset in range(5,count,5):
+                        chunk=items[offset:offset+5]
+                        lines=[
+                            f"<#FFFFFF>{i}. {(x.get('metadata') or {}).get('title','Pista')}"
+                            for i,x in enumerate(chunk,offset+1)
+                        ]
+                        await self.highrise.send_whisper(user.id,"\n".join(lines))
+                    return
                 e=int(s.get("elapsed",0));d=int(m.get("duration") or 0)
                 return await self.highrise.send_whisper(user.id,f"<#66CCFF>🎵 {m.get('title','Nada')} <#FFFFFF>• {e//60}:{e%60:02d}"+(f" / {d//60}:{d%60:02d}" if d else ""))
             except RuntimeError as e:return await self.highrise.send_whisper(user.id,f"<#FF6666>⚠️ {e}")
