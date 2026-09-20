@@ -19,6 +19,7 @@ class TipManager:
     def __init__(self, data_file: str):
         self.data_file = data_file
         self.tip_data = self._load_tip_data()
+        self.session_tip_data: dict[str, dict[str, int | str]] = {}
 
     async def handle_tip(self, highrise, bot_id: str, sender: User, receiver: User,
                          tip: CurrencyItem | Item) -> None:
@@ -29,9 +30,16 @@ class TipManager:
         if receiver.id != bot_id:
             return
 
+        session_data = self.session_tip_data.setdefault(
+            sender.id, {"username": sender.username, "total_tips": 0}
+        )
+        session_data["username"] = sender.username
+        session_data["total_tips"] = int(session_data["total_tips"]) + tip.amount
+
         user_data = self.tip_data.setdefault(
             sender.id, {"username": sender.username, "total_tips": 0}
         )
+        user_data["username"] = sender.username
         user_data["total_tips"] += tip.amount
         self._write_tip_data(sender, tip.amount)
         await highrise.chat(
@@ -107,31 +115,47 @@ class TipManager:
                 return f"<#FF6666>💸 No hay suficiente oro. Necesitas {total_cost}g y tienes {wallet_amount}g."
 
             successful_recipients = 0
+            failed_recipients = []
             for recipient_id, recipient_username in recipients:
+                recipient_ok = True
                 for bar, _ in bars:
-                    result = await highrise.tip_user(recipient_id, bar)
+                    try:
+                        result = await highrise.tip_user(recipient_id, bar)
+                    except Exception as error:
+                        result = error
                     if result != "success":
+                        recipient_ok = False
                         print(
                             f"[TIP ERROR] No se pudo enviar {amount}g a "
                             f"@{recipient_username}: {result}"
                         )
-                        return "<#FF6666>⚠️ La propina no pudo enviarse completamente."
-                successful_recipients += 1
-                if parts[0] == "!tipall":
-                    await highrise.chat(
-                        f"<#FFCC66>💝 @{recipient_username} recibió {amount}g de propina."
-                    )
-                if parts[0] == "!tip":
-                    print(
-                        f"[TIP OUT  ] Enviados {amount}g a "
-                        f"@{recipient_username} ({recipient_id})"
-                    )
+                        break
+
+                if recipient_ok:
+                    successful_recipients += 1
+                    if parts[0] == "!tipall":
+                        await highrise.chat(
+                            f"<#FFCC66>💝 @{recipient_username} recibió {amount}g de propina."
+                        )
+                    if parts[0] == "!tip":
+                        print(
+                            f"[TIP OUT  ] Enviados {amount}g a "
+                            f"@{recipient_username} ({recipient_id})"
+                        )
+                else:
+                    failed_recipients.append(recipient_username)
 
             if parts[0] == "!tipall":
                 print(
                     f"[TIP ALL   ] Enviados {amount}g a "
-                    f"{successful_recipients} usuarios."
+                    f"{successful_recipients} usuarios; fallaron {len(failed_recipients)}."
                 )
+                if failed_recipients:
+                    return (
+                        f"<#FFCC66>💝 Enviadas: {successful_recipients}; "
+                        f"<#FF6666>fallaron: {len(failed_recipients)}. "
+                        "Revisa el oro disponible y los permisos del bot."
+                    )
             await highrise.chat(
                 f"<#66FF99>💝 Propina enviada: {amount}g a "
                 f"{successful_recipients} usuario(s)."
@@ -157,8 +181,8 @@ class TipManager:
 
     def get_top_tippers(self):
         sorted_tippers = sorted(
-            self.tip_data.items(),
-            key=lambda item: item[1]["total_tips"],
+            self.session_tip_data.items(),
+            key=lambda item: int(item[1]["total_tips"]),
             reverse=True,
         )
         return sorted_tippers[:10]
