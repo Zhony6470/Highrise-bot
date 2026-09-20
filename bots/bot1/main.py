@@ -879,4 +879,37 @@ class Bot(BaseBot):
             return owner_response
         return await self.tip_manager.handle_command(self, command, user_id)
 
-    async def on_user_join(
+    async def on_user_join(async def on_user_join(
+        self, user: User, position: Position | AnchorPosition
+    ) -> None:
+        print(f"[JOIN] {user.username} entró a la sala.")
+        try:
+            role = await self.role_manager.get_user_role(self, user)
+            if role and role != "user":
+                await self.highrise.send_whisper(
+                    user.id,
+                    f"👋 ¡Bienvenido/a, @{user.username}! Tu rol actual es: {role}."
+                )
+        except Exception as error:
+            print(f"[JOIN ERROR] Error procesando entrada de @{user.username}: {error}")
+
+    async def on_user_leave(self, user: User) -> None:
+        print(f"[LEAVE] {user.username} salió de la sala.")
+        task = self.emote_tasks.pop(user.id, None)
+        if task:
+            task.cancel()
+        self.user_positions.pop(user.id, None)
+
+    async def on_tip(self, sender: User, receiver: User, tip: CurrencyItem | Item) -> None:
+        try:
+            await self.tip_manager.handle_tip(self.highrise, self.bot_id, sender, receiver, tip)
+        except Exception as error:
+            print(f"[TIP ERROR] Error procesando propina de @{sender.username}: {error}")
+
+
+if __name__ == "__main__":
+    if not ROOM_ID or not API_KEY:
+        raise RuntimeError("ROOM_ID y API_KEY deben estar configuradas en el entorno")
+    Thread(target=start_health_server, daemon=True).start()
+    definitions = [BotDefinition(Bot(), ROOM_ID, API_KEY)]
+    arun(__main__.main(definitions))
