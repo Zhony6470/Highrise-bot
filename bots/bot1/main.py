@@ -1,4 +1,4 @@
-﻿from highrise import BaseBot, __main__, GetMessagesRequest, Item, Position, AnchorPosition, SessionMetadata, User
+﻿from highrise import BaseBot, __main__, CurrencyItem, GetMessagesRequest, Item, Position, AnchorPosition, SessionMetadata, User
 from highrise.__main__ import BotDefinition
 from asyncio import run as arun
 from json import load
@@ -25,7 +25,7 @@ from commands.dispatcher import CommandDispatcher
 from services.positions import PositionManager
 from services.roles import RoleManager
 from services.emotes import EmotesManager
-from bots.bot1.services.track import start_track_monitor
+from bots.bot1.services.track import handle_track_command, start_track_monitor
 from services.storage import load_json
 from bots.bot1.services.tips import TipManager
 from bots.bot1.services.anuncios import announcement_loop
@@ -328,6 +328,14 @@ class Bot(BaseBot):
         except Exception as error:
             print(f"Error restaurando la posición del bot: {error}")
 
+    async def on_tip(
+        self, sender: User, receiver: User, tip: CurrencyItem | Item
+    ) -> None:
+        try:
+            await self.tip_manager.handle_tip(self.highrise, self.bot_id, sender, receiver, tip)
+        except Exception as error:
+            print(f"[TIP ERROR] Error procesando propina de @{sender.username}: {error}")
+
     async def on_start(self, session_metadata: SessionMetadata) -> None:
         self.bot_id = session_metadata.user_id
         self.owner_id = session_metadata.room_info.owner_id
@@ -395,12 +403,14 @@ class Bot(BaseBot):
         if msg_lower.startswith("!set @") or msg_lower.startswith("!home @"):
             if await self._is_targeted_for_me(msg):
                 if msg_lower.startswith("!set @"):
+                    result = await self.position_manager_common.set_current_position(user.id)
+                    if "No pude obtener" in result:
+                        await self.highrise.send_whisper(user.id, result)
+                        return
                     position = await self.get_user_position(user.id)
                     if position:
-                        self.position_manager_common.save_position(position)
-                        await self.highrise.send_whisper(user.id, "<#66FF99>📍 Posición del bot guardada correctamente.")
-                    else:
-                        await self.highrise.send_whisper(user.id, "<#FF6666>📍 No pude obtener tu posición actual.")
+                        await self.highrise.teleport(self.bot_id, position)
+                    await self.highrise.send_whisper(user.id, result)
                     return
                 if msg_lower.startswith("!home @"):
                     response = await self.position_manager_common.return_home()
@@ -483,6 +493,9 @@ class Bot(BaseBot):
                 await self.highrise.send_whisper(
                     user.id, "🔒 No tienes permisos para invocar usuarios."
                 )
+            return
+
+        if await handle_track_command(self, user, msg):
             return
 
         if await handle_diversion_command(self, user, msg):
@@ -595,6 +608,35 @@ class Bot(BaseBot):
 
         # ==========================================
         # 10. COMANDOS DE EMOTES (Cargados desde emotes.json)        # ==========================================
+        # ==========================================
+        # 10. BAILE ALEATORIO DIRIGIDO AL BOT
+        # ==========================================
+        if msg_lower.startswith(("!dancebot", "!botdance")):
+            if not await self._is_targeted_for_me(msg):
+                return
+            if user.id == self.owner_id or await self.is_mod(user.id):
+                await self.highrise.send_whisper(
+                    user.id, await self.dance_manager.start_random_dance()
+                )
+            else:
+                await self.highrise.send_whisper(
+                    user.id, "🔒 Solo el dueño o los moderadores pueden usar este comando."
+                )
+            return
+
+        if msg_lower.startswith(("!stopdance", "!stopbotdance")):
+            if not await self._is_targeted_for_me(msg):
+                return
+            if user.id == self.owner_id or await self.is_mod(user.id):
+                await self.highrise.send_whisper(
+                    user.id, await self.dance_manager.stop_dance()
+                )
+            else:
+                await self.highrise.send_whisper(
+                    user.id, "🔒 Solo el dueño o los moderadores pueden detener el baile del bot."
+                )
+            return
+
         if msg_lower.startswith("!emote "):
             emote_parts = msg.split()
             if len(emote_parts) < 3 or not emote_parts[1].startswith("@"):
@@ -699,27 +741,6 @@ class Bot(BaseBot):
                 user.id,
                 f"<#66FF99>✨ Emote activado: {matched_emote['command']}. Escribe !stop para detenerlo.",
             )
-            return
-
-        # ==========================================
-        # 11. COMANDOS DE BAILE DIRIGIDOS AL BOT
-        # ==========================================
-        if msg_lower.startswith("!dancebot"):
-            if not await self._is_targeted_for_me(msg):
-                return
-            if user.id == self.owner_id or await self.is_mod(user.id):
-                await self.highrise.send_whisper(user.id, await self.dance_manager.start_random_dance())
-            else:
-                await self.highrise.send_whisper(user.id, "🔒 Solo el dueño o los moderadores pueden usar este comando.")
-            return
-
-        if msg_lower.startswith("!stopdance"):
-            if not await self._is_targeted_for_me(msg):
-                return
-            if user.id == self.owner_id or await self.is_mod(user.id):
-                await self.highrise.send_whisper(user.id, await self.dance_manager.stop_dance())
-            else:
-                await self.highrise.send_whisper(user.id, "🔒 Solo el dueño puede detener los bailes del bot.")
             return
 
         # ==========================================
