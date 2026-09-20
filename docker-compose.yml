@@ -1,8 +1,13 @@
+networks:
+  highrise:
+    driver: bridge
+
 services:
   icecast:
     image: moul/icecast
     container_name: highrise-icecast
     restart: unless-stopped
+    networks: [highrise]
     ports:
       - "8000:8000"
     environment:
@@ -16,8 +21,10 @@ services:
       dockerfile: infra/Dockerfile.autodj
     container_name: highrise-autodj
     restart: unless-stopped
+    networks: [highrise]
     depends_on:
-    - icecast
+      icecast:
+        condition: service_started
     environment:
       AUTODJ_TOKEN: ${AUTODJ_TOKEN}
       AUTODJ_HOST: 0.0.0.0
@@ -33,12 +40,14 @@ services:
       - ./default_music:/data/default_music:ro
       - ./services/cookies.txt:/app/cookies-source.txt:ro
     command: ["sh", "-c", "cp /app/cookies-source.txt /app/cookies.txt && python -u autodj.py"]
+
   main-bot:
     build:
       context: .
       dockerfile: infra/Dockerfile.bot
     container_name: highrise-main-bot
     restart: unless-stopped
+    networks: [highrise]
     env_file: .env
     command: ["python", "-u", "bots/bot1/main.py"]
 
@@ -48,6 +57,7 @@ services:
       dockerfile: infra/Dockerfile.bot
     container_name: highrise-music-bot
     restart: unless-stopped
+    networks: [highrise]
     env_file: .env
     environment:
       MUSIC_ROOM_ID: ${MUSIC_ROOM_ID}
