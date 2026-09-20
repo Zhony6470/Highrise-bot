@@ -427,21 +427,28 @@ class Bot(BaseBot):
             return
 
         if msg_lower.startswith("!set @") or msg_lower.startswith("!home @"):
-            if await self._is_targeted_for_me(msg):
-                if msg_lower.startswith("!set @"):
-                    result = await self.position_manager_common.set_current_position(user.id)
-                    if "No pude obtener" in result:
-                        await self.highrise.send_whisper(user.id, result)
-                        return
-                    position = await self.get_user_position(user.id)
-                    if position:
-                        await self.highrise.teleport(self.bot_id, position)
+            if not await self._is_targeted_for_me(msg):
+                return
+            if user.id != self.owner_id and not await self.is_mod(user.id):
+                await self.highrise.send_whisper(
+                    user.id,
+                    "🔒 Solo el dueño o los moderadores pueden usar este comando."
+                )
+                return
+            if msg_lower.startswith("!set @"):
+                result = await self.position_manager_common.set_current_position(user.id)
+                if "No pude obtener" in result:
                     await self.highrise.send_whisper(user.id, result)
                     return
-                if msg_lower.startswith("!home @"):
-                    response = await self.position_manager_common.return_home()
-                    await self.highrise.send_whisper(user.id, response)
-                    return
+                position = await self.get_user_position(user.id)
+                if position:
+                    await self.highrise.teleport(self.bot_id, position)
+                await self.highrise.send_whisper(user.id, result)
+                return
+            if msg_lower.startswith("!home @"):
+                response = await self.position_manager_common.return_home()
+                await self.highrise.send_whisper(user.id, response)
+                return
 
         if msg_lower in ["!stop", "stop"]:
             emote_task = self.emote_tasks.pop(user.id, None)
