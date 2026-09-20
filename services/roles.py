@@ -23,7 +23,7 @@ class RoleManager:
         if role=="user":self.roles.pop(user_id,None)
         else:self.roles[user_id]=role
         self._save_roles()
-        p=await bot.highrise.get_room_privilege(user_id); p.moderator=role=="mod"; p.designer=role=="designer"; await bot.highrise.change_room_privilege(user_id,p)
+        p=await bot.highrise.get_room_privilege(user_id); p.moderator=role=="mod"; p.designer=role=="designer"; await bot.highrise.set_room_privilege(user_id,p)
     async def apply_saved_role(self,bot,user):
         role=self.roles.get(user.id)
         if role in {"mod","vip","designer"}: await self.set_role(bot,user.id,role,user.username)
