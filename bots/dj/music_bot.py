@@ -9,10 +9,7 @@ from urllib.error import HTTPError,URLError
 from highrise import BaseBot, SessionMetadata, User, __main__
 from highrise.__main__ import BotDefinition
 from bots.dj.services.youtube import search_youtube, YouTubeSearchError
-from commands.color import handle_color
-from commands.equip import handle_equip
-from commands.remove import handle_remove
-from commands.outfit import handle_get_outfit
+from commands.dispatcher import CommandDispatcher
 from common.bot_manager import should_handle_for_bot
 from common.avatar import AvatarManager
 from common.positions import PositionManagerCommon
@@ -40,6 +37,7 @@ class Bot(BaseBot):
         except (OSError, ValueError):
             self.emotes_list = []
         self.emotes_manager = EmotesManager(self.emotes_list)
+        self.command_dispatcher = CommandDispatcher()
     async def is_mod(self,uid):
         if uid==self.owner_id:return True
         try:
@@ -142,24 +140,15 @@ class Bot(BaseBot):
 
     async def on_chat(self,user:User,message:str):
         parts=message.strip().split(maxsplit=1);cmd=parts[0].lower() if parts else ""
-        protected={"!set","!home","!color","!equip","/equip","!remove","/remove","!getoutfit","/getoutfit"}
-        if cmd in protected:
-            if not await self._is_targeted_for_me(message):
-                return
-            if user.id!=self.owner_id and not await self.is_mod(user.id):return await self.highrise.send_whisper(user.id,"<#FF6666>🔒 Sin permisos para usar este comando.")
-            if cmd=="!set":
-                result = await self.position_manager_common.set_current_position(user.id)
-                if "No pude obtener" in result:
-                    return await self.highrise.send_whisper(user.id, result)
-                pos = await self.get_user_position(user.id)
-                if pos:
-                    await self.highrise.teleport(self.bot_id, pos)
-                return await self.highrise.send_whisper(user.id, result)
-            if cmd=="!home":
-                return await self.highrise.send_whisper(user.id, await self.position_manager_common.return_home())
-            fn={"!color":handle_color,"!equip":handle_equip,"/equip":handle_equip,"!remove":handle_remove,"/remove":handle_remove,"!getoutfit":handle_get_outfit,"/getoutfit":handle_get_outfit}[cmd]
-            result = await fn(self,user,message) or "OK"
-            return await self.highrise.send_whisper(user.id, result)
+        protected={"!set","!home","!reset","!dancebot","!botdance","!stopdance","!stopbotdance","!color","!equip","/equip","!remove","/remove","!getoutfit","/getoutfit"}
+        if cmd in protected and not await self._is_targeted_for_me(message):
+            return
+
+        if cmd in self.command_dispatcher.handlers:
+            response = await self.command_dispatcher.handle(self, user, message.strip())
+            if response:
+                await self.highrise.send_whisper(user.id, response)
+            return
         if cmd == "!emote":
             emote_parts = message.strip().split()
             if len(emote_parts) != 3 or not emote_parts[1].startswith("@"):
@@ -184,30 +173,6 @@ class Bot(BaseBot):
                     )
                 response = await self.dance_manager.start_bot_emote(matched["emote"])
             return await self.highrise.send_whisper(user.id, response)
-        if cmd.startswith("!reset"):
-            if not await self._is_targeted_for_me(message):
-                return
-            if user.id == self.owner_id or await self.is_mod(user.id):
-                await self.restart_with_message()
-            else:
-                await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden reiniciar el bot.")
-            return
-        if cmd.startswith(("!dancebot", "!botdance")):
-            if not await self._is_targeted_for_me(message):
-                return
-            if user.id == self.owner_id or await self.is_mod(user.id):
-                await self.highrise.send_whisper(user.id, await self.dance_manager.start_random_dance())
-            else:
-                await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden controlar el baile.")
-            return
-        if cmd.startswith(("!stopdance", "!stopbotdance")):
-            if not await self._is_targeted_for_me(message):
-                return
-            if user.id == self.owner_id or await self.is_mod(user.id):
-                await self.highrise.send_whisper(user.id, await self.dance_manager.stop_dance())
-            else:
-                await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden controlar el baile.")
-            return
         if cmd=="!play":
             q=parts[1] if len(parts)==2 else ""
             if not q:return await self.highrise.send_whisper(user.id,"<#FFCC66>🎵 Uso: !play canción")
