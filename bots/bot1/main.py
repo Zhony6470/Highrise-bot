@@ -313,7 +313,8 @@ class Bot(BaseBot):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                print(f"Error enviando emote aleatorio a {user_id}: {e}")                await asyncio.sleep(2)
+                print(f"Error enviando emote aleatorio a {user_id}: {e}")
+                await asyncio.sleep(2)
 
     async def follow_user_loop(self):
         """Bucle para seguir al usuario que activó !follow."""
