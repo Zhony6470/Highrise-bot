@@ -148,7 +148,7 @@ class Bot(BaseBot):
             else:
                 await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden reiniciar el bot.")
             return
-        if cmd.startswith("!dancebot"):
+        if cmd.startswith(("!dancebot", "!botdance")):
             if not await self._is_targeted_for_me(message):
                 return
             if user.id == self.owner_id or await self.is_mod(user.id):
@@ -156,7 +156,7 @@ class Bot(BaseBot):
             else:
                 await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden controlar el baile.")
             return
-        if cmd.startswith("!stopdance"):
+        if cmd.startswith(("!stopdance", "!stopbotdance")):
             if not await self._is_targeted_for_me(message):
                 return
             if user.id == self.owner_id or await self.is_mod(user.id):
