@@ -84,9 +84,11 @@ class Bot(BotRuntimeMixin, BaseBot):
             await asyncio.sleep(2)
 
     async def playback_monitor_loop(self):
+        consecutive_errors = 0
         while True:
             try:
                 status = await self.api("/status")
+                consecutive_errors = 0
                 current = status.get("current") or {}
                 video_id = current.get("video_id")
                 if video_id and video_id != self.last_announced_track_id:
@@ -105,7 +107,11 @@ class Bot(BotRuntimeMixin, BaseBot):
             except asyncio.CancelledError:
                 break
             except Exception as error:
-                print(f"[MUSIC] Error monitoreando reproducción: {error}")
+                consecutive_errors += 1
+                delay = min(30, 2 * consecutive_errors)
+                print(f"[MUSIC] Error monitoreando reproducción (#{consecutive_errors}): {error}")
+                await asyncio.sleep(delay)
+                continue
             await asyncio.sleep(2)
 
     async def on_start(self,s:SessionMetadata):
