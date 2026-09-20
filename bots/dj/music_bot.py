@@ -18,6 +18,7 @@ from common.avatar import AvatarManager
 from common.positions import PositionManagerCommon
 from common.dance import DanceManager
 from common.bot_state import BotStateManager
+from services.emotes import EmotesManager
 
 ROOM_ID=os.getenv("MUSIC_ROOM_ID",os.getenv("ROOM_ID",""));API_KEY=os.getenv("MUSIC_API_KEY","")
 AUTODJ=os.getenv("AUTODJ_URL","http://autodj:8090").rstrip("/");TOKEN=os.getenv("AUTODJ_TOKEN","")
@@ -38,6 +39,7 @@ class Bot(BaseBot):
             self.emotes_list = json.loads((Path(ROOT_DIR) / "common" / "emotes.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
             self.emotes_list = []
+        self.emotes_manager = EmotesManager(self.emotes_list)
     async def is_mod(self,uid):
         if uid==self.owner_id:return True
         try:
@@ -170,9 +172,16 @@ class Bot(BaseBot):
             if emote_parts[2].lower() == "stop":
                 response = await self.dance_manager.stop_bot_emote()
             else:
-                matched = next((item for item in self.emotes_list if str(item.get("command", "")).lower() == emote_parts[2].lower()), None)
+                emote_name = " ".join(emote_parts[2:]).strip().lower()
+                if emote_name.isdigit():
+                    matched = self.emotes_manager.get_by_index(int(emote_name) - 1)
+                else:
+                    matched = self.emotes_manager.get_by_name(emote_name)
                 if not matched:
-                    return await self.highrise.send_whisper(user.id, "<#FFCC66>🎭 Emote no encontrado.")
+                    return await self.highrise.send_whisper(
+                        user.id,
+                        f"<#FFCC66>🎭 Emote no encontrado: {emote_name}."
+                    )
                 response = await self.dance_manager.start_bot_emote(matched["emote"])
             return await self.highrise.send_whisper(user.id, response)
         if cmd.startswith("!reset"):
