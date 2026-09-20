@@ -41,16 +41,17 @@ class DanceManager:
         return "<#66FF99>💃 Baile del bot activado." if send_message else ""
 
     async def _random_dance_loop(self, public_emotes) -> None:
-        try:
-            while True:
+        while True:
+            try:
                 emote = choice(public_emotes)
                 self.bot.current_bot_emote = emote["emote"]
                 await self.bot.highrise.send_emote(emote["emote"], self.bot.bot_id)
                 await asyncio.sleep(emote.get("duration", 3))
-        except asyncio.CancelledError:
-            return
-        except Exception as error:
-            print(f"Error en el baile del bot: {error}")
+            except asyncio.CancelledError:
+                return
+            except Exception as error:
+                print(f"Error en el baile del bot: {error}")
+                await asyncio.sleep(2)
 
     async def _stop_runtime(self) -> None:
         if self.task:
