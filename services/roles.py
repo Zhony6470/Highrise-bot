@@ -8,7 +8,9 @@ class RoleManager:
     def __init__(self,roles_file): self.roles_file=roles_file; self.roles={}; self._legacy_vip_users=set(); self._load_roles()
     async def get_user_role(self,bot,user:User)->Role:
         if user.id==bot.owner_id:return "owner"
-        saved=self.roles.get(user.id)
+        saved=self.roles.get(user.id) or self.roles.get(user.username.casefold())
+        if saved and user.id not in self.roles and user.username.casefold() in self.roles:
+            self.roles[user.id]=saved; self.roles.pop(user.username.casefold(),None); self._save_roles()
         if saved in {"mod","vip","designer"}:return saved
         try:p=await bot.highrise.get_room_privilege(user.id)
         except Exception as e: print(f"[ROLES] privilegios @{user.username}: {e}"); p=None
