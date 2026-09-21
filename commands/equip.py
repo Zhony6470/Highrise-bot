@@ -206,28 +206,23 @@ async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
         return "<#FF6666>⚠️ El artículo encontrado no es una prenda de avatar válida."
 
     if not owns_item:
-        if selected_item is None:
-            return f"<#FFCC66>🛍️ La prenda '{item_display_name}' no está en el inventario."
-
-        rarity = getattr(selected_item, "rarity", "none")
-        if rarity != "none" and not selected_item.is_purchasable:
+        # Con un ID/URL directo no necesitamos consultar el catálogo público.
+        # Intentamos comprarlo; si ya es gratis, el SDK puede devolver éxito
+        # o el equipamiento posterior puede funcionar directamente.
+        try:
+            purchase_result = await bot.highrise.buy_item(item_id)
+        except Exception as error:
+            print(f"Error comprando la prenda '{item_id}': {error}")
             return (
-                f"<#FFCC66>🛍️ La prenda '{item_display_name}' no está disponible "
-                "para compra directa."
+                f"<#FF6666>⚠️ No se pudo comprar '{item_display_name}'. "
+                "Verifica que sea comprable y que el bot tenga suficiente oro."
             )
 
-        if rarity != "none":
-            try:
-                purchase_result = await bot.highrise.buy_item(item_id)
-            except Exception as error:
-                print(f"Error comprando la prenda '{item_id}': {error}")
-                return "<#FF6666>⚠️ No se pudo comprar la prenda."
-
-            if purchase_result != "success":
-                return (
-                    f"<#FF6666>⚠️ No se pudo comprar '{item_display_name}'. "
-                    "Verifica que el bot tenga suficiente oro."
-                )
+        if purchase_result != "success":
+            return (
+                f"<#FF6666>⚠️ No se pudo comprar '{item_display_name}'. "
+                "Verifica que sea comprable y que el bot tenga suficiente oro."
+            )
 
     return await bot.avatar_manager.equip_item(item_id, category, item_display_name)
 
