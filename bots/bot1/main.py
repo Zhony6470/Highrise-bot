@@ -366,6 +366,35 @@ class Bot(BotRuntimeMixin, BaseBot):
         msg_lower = msg.lower()
 
         command_name = msg.split(maxsplit=1)[0].lower() if msg else ""
+
+        # !home / !reset admiten uso sin @ para controlar ambos bots.
+        if command_name in {"!home", "!reset"}:
+            parts = msg.split()
+            if len(parts) > 2 or (len(parts) == 2 and not parts[1].startswith("@")):
+                await self.highrise.send_whisper(
+                    user.id, f"Uso: {command_name} [@Zeta_Bot|@Dj.Z]"
+                )
+                return
+            target = parts[1][1:].casefold() if len(parts) == 2 else None
+            if target and target != self.bot_username.casefold():
+                return
+            if user.id != self.owner_id and not await self.is_mod(user.id):
+                await self.highrise.send_whisper(
+                    user.id, "🔒 Solo el dueño o moderadores pueden usar este comando."
+                )
+                return
+            if command_name == "!home":
+                await self.place_bot()
+                await self.highrise.send_whisper(
+                    user.id, f"<#66FF99>📍 @{self.bot_username} volvió a su posición guardada."
+                )
+                return
+            await self.highrise.chat(
+                f"<#FFCC66>🔄 @{self.bot_username} se está reiniciando..."
+            )
+            asyncio.create_task(self.restart_process())
+            return
+
         protected_commands = {
             "!set", "!home", "!reset", "!dancebot", "!botdance", "!stopdance", "!stopbotdance",
             "!color", "!equip", "!remove", "!getoutfit", "/equip", "/remove", "/getoutfit"
