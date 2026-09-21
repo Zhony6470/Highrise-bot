@@ -120,6 +120,10 @@ class Bot(BotRuntimeMixin, BaseBot):
     async def _is_targeted_for_me(self, message: str) -> bool:
         return await should_handle_for_bot(self, message)
 
+    async def _has_vip_access(self, user: User) -> bool:
+        role = await self.role_manager.get_user_role(self, user)
+        return role in {"vip", "mod", "owner"}
+
     async def get_command_help(self, user: User) -> list[str]:
         role = await self.role_manager.get_user_role(self, user)
         sections = [
@@ -505,7 +509,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         # 3. INVOCACIÓN (!summon @usuario)
         # ==========================================
         elif msg_lower.startswith("!summon "):
-            if user.id == self.owner_id or await self.is_mod(user.id):
+            if await self._has_vip_access(user):
                 parts = msg.split(" ")
                 if len(parts) >= 2:
                     target_username = parts[1].replace("@", "")
@@ -528,7 +532,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                         )
             else:
                 await self.highrise.send_whisper(
-                    user.id, "🔒 No tienes permisos para invocar usuarios."
+                    user.id, "<#FF6666>🔒 Solo VIP pueden usar este comando."
                 )
             return
 
@@ -542,6 +546,11 @@ class Bot(BotRuntimeMixin, BaseBot):
         # 4. TELETRANSPORTE A USUARIO (!tele @usuario)
         # ==========================================
         if msg_lower.startswith("!tele "):
+            if not await self._has_vip_access(user):
+                await self.highrise.send_whisper(
+                    user.id, "<#FF6666>🔒 Solo VIP pueden usar este comando."
+                )
+                return
             parts = msg.split()
             if len(parts) != 2 or not parts[1].startswith("@"):
                 await self.highrise.send_whisper(user.id, "📍 Uso: !tele @usuario")
@@ -706,6 +715,11 @@ class Bot(BotRuntimeMixin, BaseBot):
                 return
             if target_username.lower() == os.getenv("DJ_BOT_USERNAME", "Dj.Z").lower():
                 return
+            if not await self._has_vip_access(user):
+                await self.highrise.send_whisper(
+                    user.id, "<#FF6666>🔒 Solo VIP pueden usar emotes sobre otros usuarios."
+                )
+                return
             await self.highrise.send_whisper(user.id, "<#FFCC66>🎭 Los usuarios usan: rest @usuario")
             return
 
@@ -808,11 +822,11 @@ class Bot(BotRuntimeMixin, BaseBot):
                         )
             else:
                 await self.highrise.send_whisper(
-                    user.id, "🔒 No tienes permisos de moderación."
+                    user.id, "<#FF6666>🔒 Solo VIP pueden usar este comando."
                 )
             return
         elif msg_lower.startswith("!tp "):
-            if await self.is_mod(user.id):
+            if await self._has_vip_access(user):
                 parts = msg.split(" ")
                 if len(parts) == 5:
                     target_username = parts[1].replace("@", "")
