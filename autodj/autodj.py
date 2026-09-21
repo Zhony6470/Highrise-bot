@@ -33,7 +33,7 @@ MAX_PLAY_SECONDS = 360
 queue = deque()
 lock = threading.RLock()
 skip_event = threading.Event()
-state = {"current": None, "started_at": None, "status": "idle", "last_default_id": None, "last_request_result": None}
+state = {"current": None, "started_at": None, "status": "idle", "last_default_id": None, "last_request_results": []}
 active_request = None
 
 
@@ -224,8 +224,10 @@ def set_request_result(item: dict, status: str, error: str | None = None) -> Non
         result["error"] = error
 
     with lock:
-        state["last_request_result"] = result
-        save(RESULT_FILE, result)
+        results = state.setdefault("last_request_results", [])
+        results.append(result)
+        state["last_request_results"] = results[-200:]
+        save(RESULT_FILE, state["last_request_results"])
 
 
 def acknowledge_request(item):
@@ -480,9 +482,11 @@ if __name__ == "__main__":
     CACHE.mkdir(parents=True, exist_ok=True)
     DEFAULT.mkdir(parents=True, exist_ok=True)
 
-    stored_result = load(RESULT_FILE, None)
-    if isinstance(stored_result, dict):
-        state["last_request_result"] = stored_result
+    stored_results = load(RESULT_FILE, [])
+    if isinstance(stored_results, list):
+        state["last_request_results"] = stored_results[-200:]
+    elif isinstance(stored_results, dict):
+        state["last_request_results"] = [stored_results]
 
     stored_queue = load(QUEUE_FILE, [])
     if isinstance(stored_queue, list):
