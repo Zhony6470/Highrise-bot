@@ -223,6 +223,11 @@ async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
 
         if purchase_result != "success":
             error_message = getattr(purchase_result, "message", str(purchase_result))
+            if error_message == "Item not found.":
+                return (
+                    f"<#FFCC66>🛍️ La prenda '{item_display_name}' "
+                    "no está disponible para compra directa por el bot."
+                )
             return (
                 f"<#FF6666>⚠️ Highrise rechazó la compra de "
                 f"'{item_display_name}': {error_message}"
