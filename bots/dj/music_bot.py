@@ -230,12 +230,6 @@ class Bot(BotRuntimeMixin, BaseBot):
                     user.id, f"<#66FF99>📍 @{self.bot_username} volvió a su posición guardada."
                 )
                 return
-            try:
-                await self.highrise.chat(
-                    f"<#FFCC66>🔄 @{self.bot_username} se está reiniciando..."
-                )
-            except Exception:
-                pass
             asyncio.create_task(self.restart_with_message())
             return
 
