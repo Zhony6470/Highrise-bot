@@ -272,6 +272,20 @@ class Bot(BotRuntimeMixin, BaseBot):
         if cmd in protected and not await self._is_targeted_for_me(message):
             return
 
+        if cmd == "!help" and len(parts) == 1:
+            await self.highrise.send_whisper(
+                user.id,
+                "\n".join([
+                    "<#66CCFF>🎵 COMANDOS DE MÚSICA",
+                    "<#FFFFFF>• !play canción - Solicitar una canción.",
+                    "<#FFFFFF>• !q - Ver la cola actual.",
+                    "<#FFFFFF>• !review / !r - Ver la canción que está sonando.",
+                    "<#FFFFFF>• !ticket - Ver los tickets por cada 10g.",
+                    "<#FFFFFF>• !help music - Ver la ayuda completa del bot de música.",
+                ]),
+            )
+            return
+
         if cmd == "!help" and len(parts) == 2 and parts[1].strip().lower() == "music":
             role = "user"
             if user.id == self.owner_id:
