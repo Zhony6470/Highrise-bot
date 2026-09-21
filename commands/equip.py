@@ -185,16 +185,11 @@ async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
             item_display_name = item_id
             category = item_id.split("-", 1)[0].lower()
         else:
-            selected_item = await _get_public_item(item_id)
-            if selected_item is None:
-                return "<#FF6666>⚠️ No se pudo obtener la prenda con ese ID."
-
-            item_id = selected_item.item_id
-            item_display_name = selected_item.item_name or item_id
-            category = _item_category(selected_item)
-            if not category:
-                category = item_id.split("-", 1)[0].lower()
-            owns_item = any(item.id == item_id for item in inventory)
+            # Para IDs/URLs directos no dependemos del Web API público:
+            # ese endpoint puede devolver 403 desde ciertos servidores.
+            item_display_name = item_id
+            category = item_id.split("-", 1)[0].lower()
+            owns_item = False
     else:
         selected_item = await _search_item(bot, item_query, result_index)
         if selected_item is None:
