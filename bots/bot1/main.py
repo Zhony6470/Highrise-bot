@@ -314,9 +314,12 @@ class Bot(BotRuntimeMixin, BaseBot):
         os._exit(0)
 
     async def place_bot(self):
-        await asyncio.sleep(5)        try:
-            self.bot_position = self.position_manager_common.get_saved_position()            if self.bot_position:
-                await self.highrise.teleport(self.bot_id, self.bot_position)                print(f"[POSITION] Bot restaurado en {self.bot_position}.")
+        await asyncio.sleep(5)
+        try:
+            self.bot_position = self.position_manager_common.get_saved_position()
+            if self.bot_position:
+                await self.highrise.teleport(self.bot_id, self.bot_position)
+                print(f"[POSITION] Bot restaurado en {self.bot_position}.")
         except Exception as error:
             print(f"Error restaurando la posición del bot: {error}")
 
