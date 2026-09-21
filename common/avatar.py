@@ -5,6 +5,42 @@ from typing import Any
 from highrise import Item
 
 
+CATEGORY_LABELS = {
+    "aura": ("✨", "Aura"),
+    "bag": ("🎒", "Bag"),
+    "blush": ("🌸", "Blush"),
+    "body": ("🧍", "Body"),
+    "dress": ("👗", "Dress"),
+    "earrings": ("💎", "Earrings"),
+    "emote": ("💃", "Emote"),
+    "eye": ("👁️", "Eye"),
+    "eyebrow": ("🤨", "Eyebrow"),
+    "fishing_rod": ("🎣", "Fishing Rod"),
+    "freckle": ("✨", "Freckle"),
+    "fullsuit": ("🥋", "Fullsuit"),
+    "glasses": ("👓", "Glasses"),
+    "gloves": ("🧤", "Gloves"),
+    "hair_back": ("💇", "Hair Back"),
+    "hair_front": ("💇", "Hair Front"),
+    "handbag": ("👜", "Handbag"),
+    "hat": ("🎩", "Hat"),
+    "jacket": ("🧥", "Jacket"),
+    "lashes": ("👁️", "Lashes"),
+    "mole": ("•", "Mole"),
+    "mouth": ("👄", "Mouth"),
+    "necklace": ("📿", "Necklace"),
+    "nose": ("👃", "Nose"),
+    "rod": ("🎣", "Rod"),
+    "shirt": ("👕", "Shirt"),
+    "shoes": ("👟", "Shoes"),
+    "shorts": ("🩳", "Shorts"),
+    "skirt": ("👗", "Skirt"),
+    "sock": ("🧦", "Sock"),
+    "tattoo": ("🖋️", "Tattoo"),
+    "watch": ("⌚", "Watch"),
+}
+
+
 class AvatarManager:
     """Servicios comunes para ropa, outfit y avatar del bot."""
 
@@ -80,7 +116,19 @@ class AvatarManager:
         try:
             outfit = (await self.bot.highrise.get_my_outfit()).outfit
             filtered = [item for item in outfit if item.id.split("-", 1)[0].lower() != category]
-            filtered.append(type("TmpItem", (), {"id": item_id, "type": "clothing", "amount": 1, "account_bound": False, "active_palette": 0})())
+            filtered.append(
+                type(
+                    "TmpItem",
+                    (),
+                    {
+                        "id": item_id,
+                        "type": "clothing",
+                        "amount": 1,
+                        "account_bound": False,
+                        "active_palette": 0,
+                    },
+                )()
+            )
             result = await self.set_outfit(filtered)
             if result is not None:
                 return "<#FF6666>⚠️ No se pudo equipar la prenda."
@@ -91,7 +139,11 @@ class AvatarManager:
     async def remove_category(self, category: str) -> str:
         try:
             outfit = (await self.bot.highrise.get_my_outfit()).outfit
-            filtered = [item for item in outfit if item.id.split("-", 1)[0].lower() != category]
+            filtered = [
+                item
+                for item in outfit
+                if item.id.split("-", 1)[0].lower() != category
+            ]
             if len(filtered) == len(outfit):
                 return f"<#FFCC66>👕 El bot no usa ninguna prenda de la categoría '{category}'."
             result = await self.set_outfit(filtered)
@@ -101,12 +153,41 @@ class AvatarManager:
         except Exception:
             return "<#FF6666>⚠️ No se pudo modificar el vestuario."
 
+    async def _get_item_display_name(self, item_id: str) -> str:
+        """Intenta resolver el nombre visible del ítem y usa el ID como respaldo."""
+        try:
+            slug = item_id.split("-", 1)[-1]
+            response = await self.bot.webapi.get_items(item_name=slug)
+            for item in response.items:
+                if item.item_id == item_id:
+                    return item.item_name
+        except Exception as error:
+            print(f"[AVATAR] No se pudo resolver el nombre de {item_id}: {error}")
+
+        # Fallback legible cuando la API no devuelve el nombre.
+        readable = item_id.split("-", 1)[-1].replace("_", " ").replace("-", " ")
+        return readable.strip() or item_id
+
     async def get_outfit_summary(self) -> str:
         try:
             outfit_response = await self.bot.highrise.get_my_outfit()
             outfit_items = outfit_response.outfit
             if not outfit_items:
                 return "<#FFCC66>🧺 El bot no tiene prendas equipadas."
-            return "<#66CCFF>👔 Vestuario actual:\n" + "\n".join(f"<#FFFFFF>• {item.id}" for item in outfit_items)
-        except Exception:
+
+            lines = ["<#66CCFF>👔 Vestuario actual:"]
+            for item in outfit_items:
+                item_id = getattr(item, "id", "")
+                if not item_id:
+                    continue
+                category = item_id.split("-", 1)[0].lower()
+                emoji, label = CATEGORY_LABELS.get(
+                    category, ("👕", category.replace("_", " ").title())
+                )
+                item_name = await self._get_item_display_name(item_id)
+                lines.append(f"<#FFFFFF>{emoji} {label}: <#CCCCCC>{item_name}")
+
+            return "\n".join(lines)
+        except Exception as error:
+            print(f"[AVATAR] Error obteniendo vestuario: {error}")
             return "<#FF6666>⚠️ No se pudo obtener el vestuario del bot."
