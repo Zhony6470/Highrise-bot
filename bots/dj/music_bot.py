@@ -157,8 +157,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                 return False
 
             legacy_vips = {
-                str(value).casefold()
-                for value in (data.get("vip_users", []) if isinstance(data, dict) else [])            }
+                str(value).casefold()                for value in (data.get("vip_users", []) if isinstance(data, dict) else [])            }
             if user.username.casefold() in legacy_vips:
                 return True
         except Exception as error:
@@ -239,11 +238,11 @@ class Bot(BotRuntimeMixin, BaseBot):
         # !home / !reset admiten uso sin @ para controlar ambos bots.
         if cmd in {"!home","!reset"}:
             parts_full=message.strip().split()
-            if len(parts_full) > 2 or (len(parts_full) == 2 and not parts_full[1].startswith("@")):
-                await self.highrise.send_whisper(user.id, f"Uso: {cmd} [@Zeta_Bot|@Dj.Z]")
+            if len(parts_full) != 2 or not parts_full[1].startswith("@"):
+                await self.highrise.send_whisper(user.id, f"Uso: {cmd} @Dj.Z")
                 return
-            target=parts_full[1][1:].casefold() if len(parts_full)==2 else None
-            if target and target != self.bot_username.casefold():
+            target=parts_full[1][1:].casefold()
+            if target != self.bot_username.casefold():
                 return
             if user.id != self.owner_id and not await self.is_mod(user.id):
                 await self.highrise.send_whisper(user.id,"🔒 Solo el dueño o moderadores pueden usar este comando.")
@@ -317,8 +316,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             target = emote_parts[1][1:]
             if target.lower() != self.bot_username.lower():
                 return
-            if user.id != self.owner_id and not await self.is_mod(user.id):
-                return await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden controlar el emote del bot.")
+            if user.id != self.owner_id and not await self.is_mod(user.id):                return await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden controlar el emote del bot.")
             if " ".join(emote_parts[2:]).strip().lower() == "stop":
                 response = await self.dance_manager.stop_bot_emote()
             else:
@@ -477,8 +475,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                             line=f"<#FFFFFF>{i}. {title}"
                             if requested_by:
                                 line += f" <#66FF99>• @{requested_by}"
-                            lines.append(line)
-                    await self.highrise.chat("\n".join(lines))
+                            lines.append(line)                    await self.highrise.chat("\n".join(lines))
                     return
                 e=int(s.get("elapsed",0));d=int(m.get("duration") or 0)
                 review=f"{now_line} <#FFFFFF>• {e//60}:{e%60:02d}"
