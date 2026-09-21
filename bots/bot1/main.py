@@ -157,8 +157,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             ]),
         ]
 
-        if role in ("owner", "mod"):            sections.extend([
-                "\n".join([
+        if role in ("owner", "mod"):            sections.extend([                "\n".join([
                     "<#FF66CC>🛡️ MODERACIÓN",
                     "<#FFFFFF>• !kick @usuario - Expulsar un usuario",
                     "<#FFFFFF>• !tp @usuario x y z - Teletransportar un usuario",
@@ -317,8 +316,7 @@ class Bot(BotRuntimeMixin, BaseBot):
 
     async def place_bot(self):
         await asyncio.sleep(5)        try:
-            self.bot_position = self.position_manager_common.get_saved_position()
-            if self.bot_position:
+            self.bot_position = self.position_manager_common.get_saved_position()            if self.bot_position:
                 await self.highrise.teleport(self.bot_id, self.bot_position)
                 print(f"[POSITION] Bot restaurado en {self.bot_position}.")
         except Exception as error:
@@ -368,13 +366,13 @@ class Bot(BotRuntimeMixin, BaseBot):
         # !home / !reset admiten uso sin @ para controlar ambos bots.
         if command_name in {"!home", "!reset"}:
             parts = msg.split()
-            if len(parts) > 2 or (len(parts) == 2 and not parts[1].startswith("@")):
+            if len(parts) != 2 or not parts[1].startswith("@"):
                 await self.highrise.send_whisper(
-                    user.id, f"Uso: {command_name} [@Zeta_Bot|@Dj.Z]"
+                    user.id, f"Uso: {command_name} @Zeta_Bot"
                 )
                 return
-            target = parts[1][1:].casefold() if len(parts) == 2 else None
-            if target and target != self.bot_username.casefold():
+            target = parts[1][1:].casefold()
+            if target != self.bot_username.casefold():
                 return
             if user.id != self.owner_id and not await self.is_mod(user.id):
                 await self.highrise.send_whisper(
@@ -477,8 +475,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                 )
                 return
 
-            if not self.following:
-                await self.highrise.send_whisper(
+            if not self.following:                await self.highrise.send_whisper(
                     user.id, "<#FFCC66>🧭 El bot no está siguiendo a nadie."                )
                 return
 
@@ -637,8 +634,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         if msg_lower.startswith("!removeubi ") or msg_lower.startswith("!ru "):
             parts = msg.split()
             if len(parts) != 2 or not parts[1].strip():
-                await self.highrise.send_whisper(user.id, "🗑️ Uso: !removeubi nombre o !ru nombre")
-                return            if user.id != self.owner_id and not await self.is_mod(user.id):
+                await self.highrise.send_whisper(user.id, "🗑️ Uso: !removeubi nombre o !ru nombre")                return            if user.id != self.owner_id and not await self.is_mod(user.id):
                 await self.highrise.send_whisper(user.id, "🔒 Solo el dueño o los moderadores pueden eliminar ubicaciones.")
                 return
             response = self.position_manager.delete_named_position(parts[1].strip().lower())
@@ -797,8 +793,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                     else:
                         await self.highrise.send_whisper(
                             user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala."
-                        )            else:
-                await self.highrise.send_whisper(
+                        )            else:                await self.highrise.send_whisper(
                     user.id, "🔒 No tienes permisos de moderación."
                 )
             return
