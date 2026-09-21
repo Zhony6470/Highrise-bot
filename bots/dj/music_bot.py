@@ -215,6 +215,50 @@ class Bot(BotRuntimeMixin, BaseBot):
         if cmd in protected and not await self._is_targeted_for_me(message):
             return
 
+        if cmd == "!help" and len(parts) == 2 and parts[1].strip().lower() == "music":
+            role = "user"
+            if user.id == self.owner_id:
+                role = "owner"
+            else:
+                try:
+                    privileges = await self.highrise.get_room_privilege(user.id)
+                    if getattr(privileges, "moderator", False):
+                        role = "mod"
+                    elif getattr(privileges, "designer", False):
+                        role = "designer"
+                except Exception as error:
+                    print(f"[MUSIC HELP] Error comprobando privilegios de @{user.username}: {error}")
+
+                try:
+                    data = load_json(os.path.join(ROOT_DIR, "roles.json"), default={})
+                    users = data.get("users", {}) if isinstance(data, dict) else {}
+                    saved_role = str(users.get(user.id, "")).lower()
+                    if saved_role in {"vip", "mod", "designer"}:
+                        role = saved_role
+                except Exception as error:
+                    print(f"[MUSIC HELP] Error leyendo roles de @{user.username}: {error}")
+
+            sections = [
+                "<#66CCFF>🎵 COMANDOS DE MÚSICA",
+                "<#FFFFFF>• !play canción - Solicitar una canción (usa 1 ticket).",
+                "<#FFFFFF>• !q - Ver la cola actual.",
+                "<#FFFFFF>• !review / !r - Ver la canción que está sonando.",
+                "<#FFFFFF>• !ticket - Ver cuántos tickets entrega el bot por 10g.",
+            ]
+            if role in {"owner", "mod"}:
+                sections.extend([
+                    "<#FFFFFF>• !skip - Saltar la canción actual.",
+                    "<#FFFFFF>• !ap canción - Agregar una canción a la playlist.",
+                    "<#FFFFFF>• !rp canción - Quitar una canción de la playlist.",
+                    "<#FFFFFF>• !addticket numero @usuario - Regalar tickets.",
+                    "<#FFFFFF>• !at numero @usuario - Alias para regalar tickets.",
+                    "<#FFFFFF>• !ticket for numero - Configurar tickets por cada 10g.",
+                ])
+            elif role == "designer":
+                sections.append("<#FFFFFF>• !skip - Saltar la canción actual.")
+            await self.highrise.send_whisper(user.id, "\n".join(sections))
+            return
+
         if cmd in self.command_dispatcher.handlers:
             response = await self.command_dispatcher.handle(self, user, message.strip())
             if response:
@@ -363,36 +407,41 @@ class Bot(BotRuntimeMixin, BaseBot):
                 return await self.highrise.send_whisper(user.id,"<#FF6666>⚠️ No se pudieron agregar los tickets.")
             return
 
-        if cmd in ("!q","!queue","!review","!reviw"):
+        if cmd in ("!q","!queue","!review","!r"):
             try:
                 s=await self.api("/status");cur=s.get("current") or {};m=cur.get("metadata",{})
+                requester=m.get("requested_by")
+                now_line=f"<#66CCFF>🎵 Ahora: <#FFFFFF>{m.get('title','Nada')}"
+                if requester:
+                    now_line += f" <#66FF99>• solicitada por @{requester}"
                 if cmd in ("!q","!queue"):
                     pending=await self.api("/queue")
                     items=pending if isinstance(pending,list) else []
                     count=len(items)
-                    first_lines=[
-                        f"<#66CCFF>🎵 Ahora: <#FFFFFF>{m.get('title','Nada')}",
+                    lines=[
+                        now_line,
                         f"<#66FF99>📋 Cola: <#FFFFFF>{count}",
                     ]
                     if not items:
-                        first_lines.append("<#FFFFFF>Sin canciones pendientes.")
+                        lines.append("<#FFFFFF>Sin canciones pendientes.")
                     else:
-                        first_lines.extend(
-                            f"<#FFFFFF>{i}. {(x.get('metadata') or {}).get('title','Pista')}"
-                            for i,x in enumerate(items[:5],1)
-                        )
-                    await self.highrise.send_whisper(user.id,"\n".join(first_lines))
-                    for offset in range(5,count,5):
-                        chunk=items[offset:offset+5]
-                        lines=[
-                            f"<#FFFFFF>{i}. {(x.get('metadata') or {}).get('title','Pista')}"
-                            for i,x in enumerate(chunk,offset+1)
-                        ]
-                        await self.highrise.send_whisper(user.id,"\n".join(lines))
+                        for i,x in enumerate(items,1):
+                            metadata=x.get("metadata") or {}
+                            title=metadata.get("title","Pista")
+                            requested_by=metadata.get("requested_by")
+                            line=f"<#FFFFFF>{i}. {title}"
+                            if requested_by:
+                                line += f" <#66FF99>• @{requested_by}"
+                            lines.append(line)
+                    await self.highrise.chat("\n".join(lines))
                     return
                 e=int(s.get("elapsed",0));d=int(m.get("duration") or 0)
-                return await self.highrise.send_whisper(user.id,f"<#66CCFF>🎵 {m.get('title','Nada')} <#FFFFFF>• {e//60}:{e%60:02d}"+(f" / {d//60}:{d%60:02d}" if d else ""))
-            except RuntimeError as e:return await self.highrise.send_whisper(user.id,f"<#FF6666>⚠️ {e}")
+                review=f"{now_line} <#FFFFFF>• {e//60}:{e%60:02d}"
+                if d:
+                    review += f" / {d//60}:{d%60:02d}"
+                return await self.highrise.chat(review)
+            except RuntimeError as e:
+                return await self.highrise.send_whisper(user.id,f"<#FF6666>⚠️ {e}")
         if cmd in ("!ap","!addplay","!rp","!removeplay"):
             if user.id!=self.owner_id and not await self.is_mod(user.id):return await self.highrise.send_whisper(user.id,"<#FF6666>🔒 Solo el dueño o moderadores pueden gestionar la playlist.")
             q=parts[1].strip() if len(parts)==2 else ""
