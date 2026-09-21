@@ -640,10 +640,15 @@ class Bot(BotRuntimeMixin, BaseBot):
         if msg_lower.startswith("!removeubi ") or msg_lower.startswith("!ru "):
             parts = msg.split()
             if len(parts) != 2 or not parts[1].strip():
-                await self.highrise.send_whisper(user.id, "🗑️ Uso: !removeubi nombre o !ru nombre")                return            if user.id != self.owner_id and not await self.is_mod(user.id):
+                await self.highrise.send_whisper(
+                    user.id, "🗑️ Uso: !removeubi nombre o !ru nombre"
+                )
+                return
+            if user.id != self.owner_id and not await self.is_mod(user.id):
                 await self.highrise.send_whisper(user.id, "🔒 Solo el dueño o los moderadores pueden eliminar ubicaciones.")
                 return
-            response = self.position_manager.delete_named_position(parts[1].strip().lower())            await self.highrise.send_whisper(user.id, response)
+            response = self.position_manager.delete_named_position(parts[1].strip().lower())
+            await self.highrise.send_whisper(user.id, response)
             return
 
         # 9. TELETRANSPORTE A POSICIONES GUARDADAS
@@ -798,7 +803,9 @@ class Bot(BotRuntimeMixin, BaseBot):
                     else:
                         await self.highrise.send_whisper(
                             user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala."
-                        )            else:                await self.highrise.send_whisper(
+                        )
+            else:
+                await self.highrise.send_whisper(
                     user.id, "🔒 No tienes permisos de moderación."
                 )
             return
