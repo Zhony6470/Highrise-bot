@@ -195,8 +195,8 @@ class Bot(BotRuntimeMixin, BaseBot):
                 "\n".join([
                     "<#CC99FF>⚙️ ADMINISTRACIÓN",
                     "<#FFFFFF>• !set @Zeta_Bot - Guardar la posición del bot",
-                    "<#FFFFFF>• !home @Zeta_Bot - Volver a la posición guardada",
-                    "<#FFFFFF>• !reset @Zeta_Bot - Reiniciar el bot",
+                    "<#FFFFFF>• !home [@Bot] - Volver a la posición guardada",
+                    "<#FFFFFF>• !reset [@Bot] - Reiniciar el bot",
                     "<#FFFFFF>• !role @usuario mod|vip|designer|user - Administrar roles",
                 ]),
                 "\n".join([
