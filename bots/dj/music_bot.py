@@ -157,8 +157,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                 return False
 
             legacy_vips = {
-                str(value).casefold()                for value in (data.get("vip_users", []) if isinstance(data, dict) else [])            }
-            if user.username.casefold() in legacy_vips:
+                str(value).casefold()                for value in (data.get("vip_users", []) if isinstance(data, dict) else [])            }            if user.username.casefold() in legacy_vips:
                 return True
         except Exception as error:
             print(f"[TICKETS] Error leyendo roles de @{user.username}: {error}")
@@ -236,24 +235,34 @@ class Bot(BotRuntimeMixin, BaseBot):
         parts=message.strip().split(maxsplit=1);cmd=parts[0].lower() if parts else ""
 
         # !home / !reset admiten uso sin @ para controlar ambos bots.
-        if cmd in {"!home","!reset"}:
+        if cmd == "!reset":
+            if message.strip() != "!reset" and (len(message.strip().split()) != 2 or not message.strip().split()[1].startswith("@")):
+                await self.highrise.send_whisper(user.id, "Uso: !reset o !reset @Dj.Z")
+                return
+            if user.id != self.owner_id and not await self.is_mod(user.id):
+                await self.highrise.send_whisper(user.id,"🔒 Solo el dueño o moderadores pueden usar este comando.")
+                return
+            target = message.strip().split()[1][1:].casefold() if len(message.strip().split()) == 2 else None
+            if target and target != self.bot_username.casefold():
+                return
+            asyncio.create_task(self.restart_with_message())
+            return
+
+        if cmd == "!home":
             parts_full=message.strip().split()
             if len(parts_full) != 2 or not parts_full[1].startswith("@"):
-                await self.highrise.send_whisper(user.id, f"Uso: {cmd} @Dj.Z")
+                await self.highrise.send_whisper(user.id, "Uso: !home @Dj.Z")
                 return
             target=parts_full[1][1:].casefold()
             if target != self.bot_username.casefold():
                 return
             if user.id != self.owner_id and not await self.is_mod(user.id):
-                await self.highrise.send_whisper(user.id,"🔒 Solo el dueño o moderadores pueden usar este comando.")
+                await self.highrise.send_whisper(user.id, f"<#66FF99>📍 @{self.bot_username} volvió a su posición guardada.")
                 return
-            if cmd=="!home":
-                await self.restore_position()
-                await self.highrise.send_whisper(
-                    user.id, f"<#66FF99>📍 @{self.bot_username} volvió a su posición guardada."
-                )
-                return
-            asyncio.create_task(self.restart_with_message())
+            await self.restore_position()
+            await self.highrise.send_whisper(
+                user.id, f"<#66FF99>📍 @{self.bot_username} volvió a su posición guardada."
+            )
             return
 
         protected={"!set","!home","!reset","!dancebot","!botdance","!stopdance","!stopbotdance","!color","!equip","/equip","!remove","/remove","!getoutfit","/getoutfit"}
@@ -317,8 +326,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             if target.lower() != self.bot_username.lower():
                 return
             if user.id != self.owner_id and not await self.is_mod(user.id):                return await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden controlar el emote del bot.")
-            if " ".join(emote_parts[2:]).strip().lower() == "stop":
-                response = await self.dance_manager.stop_bot_emote()
+            if " ".join(emote_parts[2:]).strip().lower() == "stop":                response = await self.dance_manager.stop_bot_emote()
             else:
                 emote_name = " ".join(emote_parts[2:]).strip().lower()
                 if emote_name.isdigit():
@@ -477,8 +485,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                                 line += f" <#66FF99>• @{requested_by}"
                             lines.append(line)                    await self.highrise.chat("\n".join(lines))
                     return
-                e=int(s.get("elapsed",0));d=int(m.get("duration") or 0)
-                review=f"{now_line} <#FFFFFF>• {e//60}:{e%60:02d}"
+                e=int(s.get("elapsed",0));d=int(m.get("duration") or 0)                review=f"{now_line} <#FFFFFF>• {e//60}:{e%60:02d}"
                 if d:
                     review += f" / {d//60}:{d%60:02d}"
                 return await self.highrise.chat(review)
