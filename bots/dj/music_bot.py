@@ -157,7 +157,10 @@ class Bot(BotRuntimeMixin, BaseBot):
                 return False
 
             legacy_vips = {
-                str(value).casefold()                for value in (data.get("vip_users", []) if isinstance(data, dict) else [])            }            if user.username.casefold() in legacy_vips:
+                str(value).casefold()
+                for value in (data.get("vip_users", []) if isinstance(data, dict) else [])
+            }
+            if user.username.casefold() in legacy_vips:
                 return True
         except Exception as error:
             print(f"[TICKETS] Error leyendo roles de @{user.username}: {error}")
