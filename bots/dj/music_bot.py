@@ -35,6 +35,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         self.ticket_manager = MusicTicketManager()
         self.state_file = str(DATA)
         self.playback_monitor_task = None
+        self.announcement_task = None
         self.last_announced_track_id = None
         self.processed_ticket_result_ids = set()
         try:
@@ -157,8 +158,7 @@ class Bot(BotRuntimeMixin, BaseBot):
 
             legacy_vips = {
                 str(value).casefold()
-                for value in (data.get("vip_users", []) if isinstance(data, dict) else [])
-            }
+                for value in (data.get("vip_users", []) if isinstance(data, dict) else [])            }
             if user.username.casefold() in legacy_vips:
                 return True
         except Exception as error:
@@ -180,16 +180,40 @@ class Bot(BotRuntimeMixin, BaseBot):
                 sender.id,
                 f"<#66FF99>💰 ¡Gracias por tu {tip.amount}g!\n"
                 f"<#66CCFF>🎟️ Tickets recibidos: <#FFFFFF>{result['tickets_added']}\n"
-                f"<#66CCFF>🎟️ Tickets disponibles: <#FFFFFF>{result['tickets']}\n"
-                f"<#CC99FF>📦 Tickets comprados: <#FFFFFF>{result['purchased']}"
-            )
+                f"<#66CCFF>🎟️ Tickets disponibles: <#FFFFFF>{result['tickets']}\n"            )
         except Exception as error:
             print(f"[TICKETS] Error procesando oro de @{sender.username}: {error}")
 
+    async def announcement_loop(self):
+        messages = [
+            "<#66CCFF>🎵 ¿Quieres pedir una canción? Usa !play canción.",
+            "<#FFCC66>🎟️ Cada 10g que das al bot te da tickets para pedir canciones.",
+            "<#66FF99>🎶 ¡Anímate y pide tu canción favorita con !play! Hagamos ambiente en la sala.",
+            "<#CC99FF>💜 Dale vida a la sala: pide música, baila y disfruta con todos.",
+        ]
+        index = 0
+        try:
+            await asyncio.sleep(300)
+            while True:
+                if index % len(messages) == 1:
+                    rate = self.ticket_manager.get_rate()
+                    message = f"<#FFCC66>🎟️ Cada 10g que das al bot te da <#FFFFFF>{rate} ticket(s) <#FFCC66>para pedir canciones."
+                else:
+                    message = messages[index % len(messages)]
+                await self.highrise.chat(message)
+                index += 1
+                await asyncio.sleep(300)
+        except asyncio.CancelledError:
+            pass
+        except Exception as error:
+            print(f"[MUSIC] Error en anuncios periódicos: {error}")
     async def on_start(self,s:SessionMetadata):
         self.bot_id=s.user_id;self.owner_id=s.room_info.owner_id
         if self.playback_monitor_task:
             self.playback_monitor_task.cancel()
+        if self.announcement_task:
+            self.announcement_task.cancel()
+        self.announcement_task = asyncio.create_task(self.announcement_loop())
         self.playback_monitor_task = asyncio.create_task(self.playback_monitor_loop())
         asyncio.create_task(self.restore_position())
         try:
@@ -318,7 +342,6 @@ class Bot(BotRuntimeMixin, BaseBot):
             try:
                 role_requires_ticket = await self._requires_ticket(user)
                 v=await asyncio.to_thread(search_youtube,q)
-
                 request_id = None
                 if role_requires_ticket:
                     request_id, ticket_error = self.ticket_manager.charge_request(
@@ -477,4 +500,3 @@ class Bot(BotRuntimeMixin, BaseBot):
 
 definitions=[BotDefinition(Bot(),ROOM_ID,API_KEY)]
 if __name__=="__main__":asyncio.run(__import__("highrise").__main__.main(definitions))
-
