@@ -211,6 +211,34 @@ class Bot(BotRuntimeMixin, BaseBot):
 
     async def on_chat(self,user:User,message:str):
         parts=message.strip().split(maxsplit=1);cmd=parts[0].lower() if parts else ""
+
+        # !home / !reset admiten uso sin @ para controlar ambos bots.
+        if cmd in {"!home","!reset"}:
+            parts_full=message.strip().split()
+            if len(parts_full) > 2 or (len(parts_full) == 2 and not parts_full[1].startswith("@")):
+                await self.highrise.send_whisper(user.id, f"Uso: {cmd} [@Zeta_Bot|@Dj.Z]")
+                return
+            target=parts_full[1][1:].casefold() if len(parts_full)==2 else None
+            if target and target != self.bot_username.casefold():
+                return
+            if user.id != self.owner_id and not await self.is_mod(user.id):
+                await self.highrise.send_whisper(user.id,"🔒 Solo el dueño o moderadores pueden usar este comando.")
+                return
+            if cmd=="!home":
+                await self.restore_position()
+                await self.highrise.send_whisper(
+                    user.id, f"<#66FF99>📍 @{self.bot_username} volvió a su posición guardada."
+                )
+                return
+            try:
+                await self.highrise.chat(
+                    f"<#FFCC66>🔄 @{self.bot_username} se está reiniciando..."
+                )
+            except Exception:
+                pass
+            asyncio.create_task(self.restart_with_message())
+            return
+
         protected={"!set","!home","!reset","!dancebot","!botdance","!stopdance","!stopbotdance","!color","!equip","/equip","!remove","/remove","!getoutfit","/getoutfit"}
         if cmd in protected and not await self._is_targeted_for_me(message):
             return
