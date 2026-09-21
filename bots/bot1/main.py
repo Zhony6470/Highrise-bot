@@ -184,7 +184,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                 "\n".join([
                     "<#CC99FF>🎨 DISEÑADOR",
                     "<#FFFFFF>• !color categoría número - Cambiar color",
-                    "<#FFFFFF>• !equip nombre - Equipar una prenda",
+                    "<#FFFFFF>• !equip nombre, ID o URL - Equipar una prenda",
                     "<#FFFFFF>• !remove categoría - Quitar una categoría",
                     "<#FFFFFF>• !getoutfit - Ver el vestuario",
                 ])
@@ -202,7 +202,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                 "\n".join([
                     "<#FFFFFF>👕 VESTUARIO",
                     "<#FFFFFF>• !color categoría número - Cambiar color",
-                    "<#FFFFFF>• !equip nombre - Equipar una prenda",
+                    "<#FFFFFF>• !equip nombre, ID o URL - Equipar una prenda",
                     "<#FFFFFF>• !remove categoría - Quitar una categoría",
                     "<#FFFFFF>• !getoutfit - Ver el vestuario",
                 ]),
