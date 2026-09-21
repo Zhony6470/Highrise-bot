@@ -6,7 +6,7 @@ if ROOT_DIR not in sys.path:
 from pathlib import Path
 from urllib.request import Request,urlopen
 from urllib.error import HTTPError,URLError
-from highrise import BaseBot, SessionMetadata, User, __main__
+from highrise import BaseBot, CurrencyItem, SessionMetadata, User, __main__
 from highrise.__main__ import BotDefinition
 from bots.dj.services.youtube import search_youtube, YouTubeSearchError
 from commands.dispatcher import CommandDispatcher
@@ -16,6 +16,8 @@ from common.avatar import AvatarManager
 from common.positions import PositionManagerCommon
 from common.dance import DanceManager
 from common.bot_state import BotStateManager
+from services.music_tickets import MusicTicketManager
+from services.storage import load_json
 from services.emotes import EmotesManager
 
 ROOM_ID=os.getenv("MUSIC_ROOM_ID",os.getenv("ROOM_ID",""));API_KEY=os.getenv("MUSIC_API_KEY","")
@@ -30,9 +32,11 @@ class Bot(BotRuntimeMixin, BaseBot):
         self.position_manager_common = PositionManagerCommon(self, str(DATA))
         self.dance_manager = DanceManager(self)
         self.bot_state_manager = BotStateManager(self)
+        self.ticket_manager = MusicTicketManager()
         self.state_file = str(DATA)
         self.playback_monitor_task = None
         self.last_announced_track_id = None
+        self.last_ticket_result_id = None
         try:
             self.emotes_list = json.loads((Path(ROOT_DIR) / "common" / "emotes.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -104,6 +108,21 @@ class Bot(BotRuntimeMixin, BaseBot):
                             f"<#66CCFF>🎵 Ahora sonando: <#FFFFFF>{title}"
                         )
                     self.last_announced_track_id = video_id
+
+                result = status.get("last_request_result") or {}
+                result_id = result.get("request_id")
+                if result_id and result_id != self.last_ticket_result_id:
+                    self.last_ticket_result_id = result_id
+                    if result.get("status") == "played":
+                        self.ticket_manager.mark_played(result_id)
+                    elif result.get("status") == "failed":
+                        refund = self.ticket_manager.refund_request(result_id)
+                        if refund:
+                            await self.highrise.send_whisper(
+                                refund["user_id"],
+                                f"<#FFCC66>↩️ Tu canción «{refund['title']}» no pudo reproducirse. "
+                                f"Te devolví 1 ticket. <#FFFFFF>🎟️ Tickets disponibles: {refund['tickets']}"
+                            )
             except asyncio.CancelledError:
                 break
             except Exception as error:
@@ -113,6 +132,57 @@ class Bot(BotRuntimeMixin, BaseBot):
                 await asyncio.sleep(delay)
                 continue
             await asyncio.sleep(2)
+
+    async def _requires_ticket(self, user:User) -> bool:
+        if user.id == self.owner_id or await self.is_mod(user.id):
+            return False
+
+        try:
+            privileges = await self.highrise.get_room_privilege(user.id)
+            if getattr(privileges, "designer", False):
+                return False
+        except Exception as error:
+            print(f"[TICKETS] Error comprobando privilegios de @{user.username}: {error}")
+
+        try:
+            data = load_json(os.path.join(ROOT_DIR, "roles.json"), default={})
+            users = data.get("users", {}) if isinstance(data, dict) else {}
+            saved_role = str(users.get(user.id, "")).lower()
+            if saved_role == "vip":
+                return True
+            if saved_role in {"mod", "designer", "owner"}:
+                return False
+
+            legacy_vips = {
+                str(value).casefold()
+                for value in (data.get("vip_users", []) if isinstance(data, dict) else [])
+            }
+            if user.username.casefold() in legacy_vips:
+                return True
+        except Exception as error:
+            print(f"[TICKETS] Error leyendo roles de @{user.username}: {error}")
+
+        return True
+
+    async def on_tip(self, sender:User, receiver:User, tip:CurrencyItem|object) -> None:
+        if receiver.id != self.bot_id or not isinstance(tip, CurrencyItem):
+            return
+
+        try:
+            result = self.ticket_manager.register_tip(
+                sender.id,
+                sender.username,
+                int(tip.amount),
+            )
+            await self.highrise.send_whisper(
+                sender.id,
+                f"<#66FF99>💰 ¡Gracias por tu {tip.amount}g!\n"
+                f"<#66CCFF>🎟️ Tickets recibidos: <#FFFFFF>{result['tickets_added']}\n"
+                f"<#66CCFF>🎟️ Tickets disponibles: <#FFFFFF>{result['tickets']}\n"
+                f"<#CC99FF>📦 Tickets comprados: <#FFFFFF>{result['purchased']}"
+            )
+        except Exception as error:
+            print(f"[TICKETS] Error procesando oro de @{sender.username}: {error}")
 
     async def on_start(self,s:SessionMetadata):
         self.bot_id=s.user_id;self.owner_id=s.room_info.owner_id
@@ -174,14 +244,53 @@ class Bot(BotRuntimeMixin, BaseBot):
             return await self.highrise.send_whisper(user.id, response)
         if cmd=="!play":
             q=parts[1] if len(parts)==2 else ""
-            if not q:return await self.highrise.send_whisper(user.id,"<#FFCC66>🎵 Uso: !play canción")
+            if not q:
+                return await self.highrise.send_whisper(user.id,"<#FFCC66>🎵 Uso: !play canción")
+
             try:
+                role_requires_ticket = await self._requires_ticket(user)
                 v=await asyncio.to_thread(search_youtube,q)
+
+                request_id = None
+                if role_requires_ticket:
+                    request_id, ticket_error = self.ticket_manager.charge_request(
+                        user.id, user.username, v["video_id"], v["title"]
+                    )
+                    if ticket_error:
+                        return await self.highrise.send_whisper(
+                            user.id,
+                            f"<#FF6666>🎟️ {ticket_error}"
+                        )
+
                 metadata=dict(v)
                 metadata["requested_by"]=user.username
-                await self.api("/play","POST",{"video_id":v["video_id"],"metadata":metadata})
-                await self.highrise.chat(f"<#66FF99>🎵 @{user.username} añadió a la cola: <#FFFFFF>{v['title']}")
-            except (YouTubeSearchError,RuntimeError) as e:await self.highrise.send_whisper(user.id,f"<#FF6666>⚠️ {e}")
+                if request_id:
+                    metadata["request_id"]=request_id
+
+                try:
+                    await self.api(
+                        "/play",
+                        "POST",
+                        {"video_id":v["video_id"],"metadata":metadata,"request_id":request_id},
+                    )
+                except Exception:
+                    if request_id:
+                        self.ticket_manager.refund_request(request_id)
+                    raise
+
+                if request_id:
+                    balance=self.ticket_manager.get_balance(user.id,user.username)
+                    await self.highrise.send_whisper(
+                        user.id,
+                        f"<#66FF99>🎵 Petición enviada: <#FFFFFF>{v['title']}\n"
+                        f"<#66CCFF>🎟️ Te queda(n): <#FFFFFF>{balance['tickets']} ticket(s)."
+                    )
+                else:
+                    await self.highrise.chat(
+                        f"<#66FF99>🎵 @{user.username} añadió a la cola: <#FFFFFF>{v['title']}"
+                    )
+            except (YouTubeSearchError,RuntimeError) as e:
+                await self.highrise.send_whisper(user.id,f"<#FF6666>⚠️ {e}")
             return
         if cmd=="!skip":
             if user.id!=self.owner_id and not await self.is_mod(user.id):return await self.highrise.send_whisper(user.id,"<#FF6666>🔒 Solo el dueño o moderadores pueden saltar.")
@@ -195,6 +304,63 @@ class Bot(BotRuntimeMixin, BaseBot):
             else:
                 await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden reiniciar el bot.")
             return
+        if cmd in ("!ticket","!addticket","!at"):
+            parts_full=message.strip().split()
+            if cmd=="!ticket":
+                if len(parts_full)==3 and parts_full[1].lower()=="for":
+                    if user.id!=self.owner_id and not await self.is_mod(user.id):
+                        return await self.highrise.send_whisper(user.id,"<#FF6666>🔒 Solo el dueño o moderadores pueden configurar los tickets.")
+                    try:
+                        amount=int(parts_full[2])
+                        rate=self.ticket_manager.set_rate(amount)
+                        return await self.highrise.send_whisper(
+                            user.id,
+                            f"<#66FF99>🎟️ Configuración actualizada: <#FFFFFF>{rate} ticket(s) por cada 10g."
+                        )
+                    except ValueError as error:
+                        return await self.highrise.send_whisper(user.id,f"<#FFCC66>🎟️ {error}")
+                rate=self.ticket_manager.get_rate()
+                return await self.highrise.send_whisper(
+                    user.id,
+                    f"<#66CCFF>🎟️ El bot entrega <#FFFFFF>{rate} ticket(s) por cada 10g."
+                )
+
+            if user.id!=self.owner_id and not await self.is_mod(user.id):
+                return await self.highrise.send_whisper(user.id,"<#FF6666>🔒 Solo el dueño o moderadores pueden regalar tickets.")
+            if len(parts_full)!=3 or not parts_full[2].startswith("@"):
+                return await self.highrise.send_whisper(
+                    user.id,
+                    f"<#FFCC66>🎟️ Uso: {parts_full[0]} numero @usuario"
+                )
+            try:
+                amount=int(parts_full[1])
+                if amount<1:
+                    raise ValueError("La cantidad de tickets debe ser mayor que 0.")
+            except ValueError as error:
+                return await self.highrise.send_whisper(user.id,f"<#FFCC66>🎟️ {error}")
+
+            target_username=parts_full[2][1:]
+            target_id=await self.get_user_id(target_username)
+            if not target_id:
+                return await self.highrise.send_whisper(user.id,"<#FFCC66>🔎 Usuario no encontrado en la sala.")
+
+            try:
+                balance=self.ticket_manager.add_tickets(target_id,target_username,amount)
+                await self.highrise.send_whisper(
+                    user.id,
+                    f"<#66FF99>🎁 Añadiste {amount} ticket(s) a @{target_username}. "
+                    f"<#FFFFFF>Ahora tiene {balance['tickets']} ticket(s)."
+                )
+                await self.highrise.send_whisper(
+                    target_id,
+                    f"<#66FF99>🎁 @{user.username} te regaló {amount} ticket(s). "
+                    f"<#FFFFFF>Ahora tienes {balance['tickets']} ticket(s)."
+                )
+            except Exception as error:
+                print(f"[TICKETS] Error regalando tickets: {error}")
+                return await self.highrise.send_whisper(user.id,"<#FF6666>⚠️ No se pudieron agregar los tickets.")
+            return
+
         if cmd in ("!q","!queue","!review","!reviw"):
             try:
                 s=await self.api("/status");cur=s.get("current") or {};m=cur.get("metadata",{})
