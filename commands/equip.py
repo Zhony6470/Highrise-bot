@@ -1,5 +1,104 @@
+from __future__ import annotations
+
+import re
+import unicodedata
+from urllib.parse import parse_qs, urlparse
+
 from highrise import BaseBot, User
 from highrise.models_webapi import Rarity
+
+from common.avatar import CATEGORY_LABELS
+
+
+def _normalize(value: str) -> str:
+    value = unicodedata.normalize("NFKD", value)
+    value = "".join(char for char in value if not unicodedata.combining(char))
+    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
+
+
+def _extract_item_id(value: str) -> str | None:
+    value = value.strip()
+    if value.startswith(("http://", "https://")):
+        parsed = urlparse(value)
+        item_id = parse_qs(parsed.query).get("id", [None])[0]
+        return item_id.strip() if item_id else None
+
+    category = value.split("-", 1)[0].lower() if "-" in value else ""
+    if category in CATEGORY_LABELS and value.count("-") >= 1:
+        return value
+
+    return None
+
+
+def _is_avatar_category(category: str) -> bool:
+    return bool(category) and category in CATEGORY_LABELS
+
+
+def _pick_item(items, query: str, result_index: int):
+    if not items:
+        return None
+
+    normalized_query = _normalize(query)
+    exact = [
+        item for item in items
+        if _normalize(getattr(item, "item_name", "")) == normalized_query
+    ]
+    candidates = exact or [
+        item for item in items
+        if _is_avatar_category(
+            str(getattr(getattr(item, "category", None), "value", "") or "").lower()
+        )
+    ]
+    if not candidates:
+        return None
+
+    if exact:
+        candidates = exact
+    else:
+        query_tokens = set(normalized_query.split())
+
+        def score(item):
+            name = _normalize(getattr(item, "item_name", ""))
+            name_tokens = set(name.split())
+            return (
+                len(query_tokens & name_tokens),
+                int(normalized_query in name),
+                -abs(len(name_tokens) - len(query_tokens)),
+            )
+
+        candidates = sorted(candidates, key=score, reverse=True)
+
+    if result_index < 0 or result_index >= len(candidates):
+        return None
+    return candidates[result_index]
+
+
+async def _search_item(bot: BaseBot, query: str, result_index: int):
+    queries = [query]
+    words = query.split()
+    if len(words) >= 3:
+        queries.extend([" ".join(words[:2]), " ".join(words[-2:])])
+
+    seen = set()
+    all_items = []
+    for search_query in queries:
+        if not search_query or search_query.lower() in seen:
+            continue
+        seen.add(search_query.lower())
+        try:
+            response = await bot.webapi.get_items(item_name=search_query, limit=50)
+        except Exception as error:
+            print(f"Error buscando el artículo '{search_query}': {error}")
+            continue
+        for item in response.items:
+            if item.item_id not in {existing.item_id for existing in all_items}:
+                all_items.append(item)
+
+        selected = _pick_item(all_items, query, result_index)
+        if selected is not None:
+            return selected
+
+    return _pick_item(all_items, query, result_index)
 
 
 async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
@@ -10,7 +109,7 @@ async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
     if len(parts) >= 2 and parts[1].startswith("@"):
         parts = [parts[0], *parts[2:]]
     if len(parts) < 2:
-        return "<#FFCC66>👗 Uso: !equip @BotUsuario <nombre de la prenda o ID> [numero]"
+        return "<#FFCC66>👗 Uso: !equip @BotUsuario <nombre, ID o URL de la prenda> [numero]"
 
     result_index = 0
     item_name_parts = parts[1:]
@@ -19,72 +118,84 @@ async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
         if result_index < 0:
             return "<#FFCC66>🔢 El número de resultado debe ser mayor que 0."
 
-    item_name = " ".join(item_name_parts)
-    if not item_name:
-        return "<#FFCC66>👚 Debes indicar el nombre o ID de la prenda."
+    item_query = " ".join(item_name_parts).strip()
+    if not item_query:
+        return "<#FFCC66>👚 Debes indicar el nombre, ID o URL de la prenda."
 
-    # Si se proporciona un ID de Highrise, intentamos localizarlo directamente
-    # en el inventario del bot. Esto evita enviar IDs a get_items(item_name=...).
-    selected_item = None
-    item_id = None
-    category = ""
     try:
         inventory = (await bot.highrise.get_inventory()).items
     except Exception as error:
         print(f"Error consultando el inventario: {error}")
         return "<#FF6666>⚠️ No se pudo consultar el inventario del bot."
 
-    inventory_item = next(
-        (item for item in inventory if item.id == item_name),
-        None,
-    )
-    if inventory_item is not None:
-        item_id = inventory_item.id
-        category = item_id.split("-", 1)[0].lower()
-        item_display_name = item_id
-        owns_item = True
+    item_id = _extract_item_id(item_query)
+    selected_item = None
+    owns_item = False
+    item_display_name = item_query
+    category = ""
+
+    if item_id:
+        inventory_item = next((item for item in inventory if item.id == item_id), None)
+        if inventory_item is not None:
+            selected_item = None
+            owns_item = True
+            item_display_name = item_id
+            category = item_id.split("-", 1)[0].lower()
+        else:
+            try:
+                response = await bot.webapi.get_item(item_id)
+                selected_item = response.item
+            except Exception as error:
+                print(f"Error obteniendo el artículo '{item_id}': {error}")
+                return "<#FF6666>⚠️ No se pudo obtener la prenda con ese ID."
+
+            item_id = selected_item.item_id
+            item_display_name = selected_item.item_name
+            category = str(
+                selected_item.category.value if selected_item.category else ""
+            ).lower()
+            if not category:
+                category = item_id.split("-", 1)[0].lower()
+            owns_item = any(item.id == item_id for item in inventory)
     else:
-        try:
-            response = await bot.webapi.get_items(item_name=item_name)
-            items = response.items
-        except Exception as error:
-            print(f"Error buscando el artículo: {error}")
-            return "<#FF6666>⚠️ No se pudo buscar la prenda."
+        selected_item = await _search_item(bot, item_query, result_index)
+        if selected_item is None:
+            return f"<#FFCC66>🔎 No se encontró la prenda '{item_query}'."
 
-        if not items:
-            return f"<#FFCC66>🔎 No se encontró la prenda '{item_name}'."
-        if result_index >= len(items):
-            return f"<#FFCC66>🔢 Resultado inválido. Hay {len(items)} resultados disponibles."
-
-        selected_item = items[result_index]
         item_id = selected_item.item_id
+        item_display_name = selected_item.item_name
         category = str(
             selected_item.category.value if selected_item.category else ""
         ).lower()
-        item_display_name = selected_item.item_name
-        owns_item = any(inventory_item.id == item_id for inventory_item in inventory)
+        if not category:
+            category = item_id.split("-", 1)[0].lower()
+        owns_item = any(item.id == item_id for item in inventory)
 
-    if not item_id or not category:
-        return "<#FF6666>⚠️ No se pudo determinar la categoría de la prenda."
+    if not item_id or not _is_avatar_category(category):
+        return "<#FF6666>⚠️ El artículo encontrado no es una prenda de avatar válida."
 
     if not owns_item:
         if selected_item is None:
+            return f"<#FFCC66>🛍️ La prenda '{item_display_name}' no está en el inventario."
+
+        if selected_item.rarity != Rarity.NONE and not selected_item.is_purchasable:
             return (
-                f"<#FFCC66>🛍️ La prenda '{item_name}' no está en el inventario "
-                "y debe buscarse por nombre para poder comprarla."
+                f"<#FFCC66>🛍️ La prenda '{item_display_name}' no está disponible "
+                "para compra directa."
             )
-        if selected_item.rarity == Rarity.NONE:
-            pass
-        elif not selected_item.is_purchasable:
-            return f"<#FFCC66>🛍️ La prenda '{selected_item.item_name}' no se puede comprar."
-        else:
+
+        if selected_item.rarity != Rarity.NONE:
             try:
                 purchase_result = await bot.highrise.buy_item(item_id)
             except Exception as error:
-                print(f"Error comprando la prenda: {error}")
+                print(f"Error comprando la prenda '{item_id}': {error}")
                 return "<#FF6666>⚠️ No se pudo comprar la prenda."
+
             if purchase_result != "success":
-                return f"<#FF6666>⚠️ No se pudo comprar la prenda '{selected_item.item_name}'."
+                return (
+                    f"<#FF6666>⚠️ No se pudo comprar '{item_display_name}'. "
+                    "Verifica que el bot tenga suficiente oro."
+                )
 
     return await bot.avatar_manager.equip_item(item_id, category, item_display_name)
 
