@@ -14,6 +14,12 @@ services:
       ICECAST_HOSTNAME: ${ICECAST_PUBLIC_HOST:-localhost}
       ICECAST_SOURCE_PASSWORD: ${ICECAST_PASSWORD}
       ICECAST_ADMIN_PASSWORD: ${ICECAST_ADMIN_PASSWORD:-change-me-admin}
+    volumes:
+      - icecast_config:/etc/icecast2
+      - icecast_config_data:/config
+      - icecast_logs:/var/log/icecast2
+    networks:
+      - highrise
 
   autodj:
     build:
@@ -25,6 +31,7 @@ services:
     depends_on:
       icecast:
         condition: service_started
+
     environment:
       AUTODJ_TOKEN: ${AUTODJ_TOKEN}
       AUTODJ_HOST: 0.0.0.0
@@ -39,7 +46,16 @@ services:
       - autodj_data:/data
       - ./default_music:/data/default_music:ro
       - ./services/cookies.txt:/app/cookies-source.txt:ro
+
     command: ["sh", "-c", "cp /app/cookies-source.txt /app/cookies.txt && python -u autodj.py"]
+
+    command:
+      - sh
+      - -c
+      - cp /app/cookies-source.txt /app/cookies.txt && python -u autodj.py
+    networks:
+      - highrise
+
 
   main-bot:
     build:
@@ -47,9 +63,21 @@ services:
       dockerfile: infra/Dockerfile.bot
     container_name: highrise-main-bot
     restart: unless-stopped
+
     networks: [highrise]
     env_file: .env
     command: ["python", "-u", "bots/bot1/main.py"]
+
+    env_file:
+      - .env
+    command:
+      - python
+      - -u
+      - -m
+      - bots.bot1.main
+    networks:
+      - highrise
+
 
   music-bot:
     build:
@@ -57,8 +85,13 @@ services:
       dockerfile: infra/Dockerfile.bot
     container_name: highrise-music-bot
     restart: unless-stopped
+
     networks: [highrise]
     env_file: .env
+
+    env_file:
+      - .env
+
     environment:
       MUSIC_ROOM_ID: ${MUSIC_ROOM_ID}
       MUSIC_API_KEY: ${MUSIC_API_KEY}
@@ -69,7 +102,31 @@ services:
       - autodj
     volumes:
       - ./bots/dj/data/music_bot_data.json:/app/music_bot_data.json
-    command: ["python", "-u", "bots/dj/music_bot.py"]
+    command:
+      - python
+      - -u
+      - -m
+      - bots.dj.music_bot
+    networks:
+      - highrise
+
+networks:
+  highrise:
+    driver: bridge
 
 volumes:
   autodj_data:
+    external: true
+    name: refactor-test_autodj_data
+
+  icecast_config:
+    external: true
+    name: 8148267c2068f4e62ebbcd2bb08435f0a26b66a2719d1df7d8e284e12a2a3dfd
+
+  icecast_config_data:
+    external: true
+    name: 4c068b1fdd28aded52191cf3b3fc201329f10cb3cccf4c1fb47cf0bd71a05972
+
+  icecast_logs:
+    external: true
+    name: 8266eb46a27567117008f8d26170e5bf406064530346e0804e6033695f1f350d
