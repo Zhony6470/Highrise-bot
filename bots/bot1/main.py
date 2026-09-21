@@ -157,8 +157,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             ]),
         ]
 
-        if role in ("owner", "mod"):
-            sections.extend([
+        if role in ("owner", "mod"):            sections.extend([
                 "\n".join([
                     "<#FF66CC>🛡️ MODERACIÓN",
                     "<#FFFFFF>• !kick @usuario - Expulsar un usuario",
@@ -317,8 +316,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         os._exit(0)
 
     async def place_bot(self):
-        await asyncio.sleep(5)
-        try:
+        await asyncio.sleep(5)        try:
             self.bot_position = self.position_manager_common.get_saved_position()
             if self.bot_position:
                 await self.highrise.teleport(self.bot_id, self.bot_position)
@@ -402,6 +400,10 @@ class Bot(BotRuntimeMixin, BaseBot):
         if command_name in protected_commands and not await self._is_targeted_for_me(msg):
             return
 
+        # !help music es exclusivo del bot de música; Zeta no debe responder.
+        if command_name == "!help" and len(msg.split()) == 2 and msg.split()[1].strip().lower() == "music":
+            return
+
         if command_name in self.command_dispatcher.handlers:
             response = await self.command_dispatcher.handle(self, user, msg)
             if isinstance(response, list):
@@ -477,8 +479,7 @@ class Bot(BotRuntimeMixin, BaseBot):
 
             if not self.following:
                 await self.highrise.send_whisper(
-                    user.id, "<#FFCC66>🧭 El bot no está siguiendo a nadie."
-                )
+                    user.id, "<#FFCC66>🧭 El bot no está siguiendo a nadie."                )
                 return
 
             if self.following_user_id != user.id and user.id != self.owner_id and not await self.is_mod(user.id):
@@ -637,8 +638,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             parts = msg.split()
             if len(parts) != 2 or not parts[1].strip():
                 await self.highrise.send_whisper(user.id, "🗑️ Uso: !removeubi nombre o !ru nombre")
-                return
-            if user.id != self.owner_id and not await self.is_mod(user.id):
+                return            if user.id != self.owner_id and not await self.is_mod(user.id):
                 await self.highrise.send_whisper(user.id, "🔒 Solo el dueño o los moderadores pueden eliminar ubicaciones.")
                 return
             response = self.position_manager.delete_named_position(parts[1].strip().lower())
@@ -797,8 +797,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                     else:
                         await self.highrise.send_whisper(
                             user.id, "<#FFCC66>🔎 Usuario no encontrado en la sala."
-                        )
-            else:
+                        )            else:
                 await self.highrise.send_whisper(
                     user.id, "🔒 No tienes permisos de moderación."
                 )
