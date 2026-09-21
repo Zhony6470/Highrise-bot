@@ -213,15 +213,19 @@ async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
             purchase_result = await bot.highrise.buy_item(item_id)
         except Exception as error:
             print(f"Error comprando la prenda '{item_id}': {error}")
+            return f"<#FF6666>⚠️ Error comprando '{item_display_name}': {error}"
+
+        if purchase_result == "insufficient_funds":
             return (
-                f"<#FF6666>⚠️ No se pudo comprar '{item_display_name}'. "
-                "Verifica que sea comprable y que el bot tenga suficiente oro."
+                f"<#FFCC66>🪙 No hay suficiente oro para comprar "
+                f"'{item_display_name}'."
             )
 
         if purchase_result != "success":
+            error_message = getattr(purchase_result, "message", str(purchase_result))
             return (
-                f"<#FF6666>⚠️ No se pudo comprar '{item_display_name}'. "
-                "Verifica que sea comprable y que el bot tenga suficiente oro."
+                f"<#FF6666>⚠️ Highrise rechazó la compra de "
+                f"'{item_display_name}': {error_message}"
             )
 
     return await bot.avatar_manager.equip_item(item_id, category, item_display_name)
