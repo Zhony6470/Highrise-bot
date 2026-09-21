@@ -482,8 +482,10 @@ class Bot(BotRuntimeMixin, BaseBot):
                 )
                 return
 
-            if not self.following:                await self.highrise.send_whisper(
-                    user.id, "<#FFCC66>🧭 El bot no está siguiendo a nadie."                )
+            if not self.following:
+                await self.highrise.send_whisper(
+                    user.id, "<#FFCC66>🧭 El bot no está siguiendo a nadie."
+                )
                 return
             if self.following_user_id != user.id and user.id != self.owner_id and not await self.is_mod(user.id):
                 await self.highrise.send_whisper(
