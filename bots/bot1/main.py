@@ -153,6 +153,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                     "<#FFFFFF>• !userinfo - Ver tu información",
                 "<#FFFFFF>• !userinfo @usuario - Ver información de otro usuario",
                 "<#FFFFFF>• !help - Mostrar la ayuda disponible",
+                "<#FFFFFF>• !help music - Ver los comandos del bot de música",
             ]),
         ]
 
