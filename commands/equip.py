@@ -48,12 +48,12 @@ def _pick_item(items, query: str, result_index: int):
 
     normalized_query = _normalize(query)
     exact = [
-        item for item in items
+        item
+        for item in items
         if _normalize(getattr(item, "item_name", "")) == normalized_query
     ]
     candidates = exact or [
-        item for item in items
-        if _is_avatar_category(_item_category(item))
+        item for item in items if _is_avatar_category(_item_category(item))
     ]
     if not candidates:
         return None
@@ -81,7 +81,12 @@ def _public_item_request(path: str, params: dict | None = None):
     url = f"https://webapi.highrise.game{path}"
     if params:
         url = f"{url}?{urlencode(params)}"
-    api_key = os.environ.get("MUSIC_API_KEY") or os.environ.get("BOT1_API_KEY") or os.environ.get("HIGHRISE_API_KEY") or ""
+    api_key = (
+        os.environ.get("MUSIC_API_KEY")
+        or os.environ.get("BOT1_API_KEY")
+        or os.environ.get("HIGHRISE_API_KEY")
+        or ""
+    )
     headers = {"Accept": "application/json"}
     if api_key:
         headers["x-api-key"] = api_key
@@ -206,9 +211,15 @@ async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
         return "<#FF6666>⚠️ El artículo encontrado no es una prenda de avatar válida."
 
     if not owns_item:
-        # Con un ID/URL directo no necesitamos consultar el catálogo público.
-        # Intentamos comprarlo; si ya es gratis, el SDK puede devolver éxito
-        # o el equipamiento posterior puede funcionar directamente.
+        # Los artículos gratuitos (rarity=none) se pueden equipar sin comprarlos.
+        # Primero intentamos equipar directamente. Si Highrise lo rechaza porque
+        # el bot no posee el artículo, entonces intentamos comprarlo.
+        direct_result = await bot.avatar_manager.equip_item(
+            item_id, category, item_display_name
+        )
+        if direct_result.startswith("<#66FF99>"):
+            return direct_result
+
         try:
             purchase_result = await bot.highrise.buy_item(item_id)
         except Exception as error:
