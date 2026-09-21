@@ -71,10 +71,15 @@ services:
     env_file:
       - .env
     command:
-      - python
-      - -u
-      - -m
-      - bots.bot1.main
+      - sh
+      - -c
+      - |
+        while true; do
+          python -u -m bots.bot1.main
+          code=$?
+          echo "[MAIN] Proceso finalizó con código $code; reiniciando en 2s..."
+          sleep 2
+        done
     networks:
       - highrise
 
@@ -103,10 +108,15 @@ services:
     volumes:
       - ./bots/dj/data/music_bot_data.json:/app/music_bot_data.json
     command:
-      - python
-      - -u
-      - -m
-      - bots.dj.music_bot
+      - sh
+      - -c
+      - |
+        while true; do
+          python -u -m bots.dj.music_bot
+          code=$?
+          echo "[MUSIC] Proceso finalizó con código $code; reiniciando en 2s..."
+          sleep 2
+        done
     networks:
       - highrise
 
