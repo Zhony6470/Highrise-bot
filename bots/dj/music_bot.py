@@ -36,7 +36,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         self.state_file = str(DATA)
         self.playback_monitor_task = None
         self.last_announced_track_id = None
-        self.last_ticket_result_id = None
+        self.processed_ticket_result_ids = set()
         try:
             self.emotes_list = json.loads((Path(ROOT_DIR) / "common" / "emotes.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -109,10 +109,12 @@ class Bot(BotRuntimeMixin, BaseBot):
                         )
                     self.last_announced_track_id = video_id
 
-                result = status.get("last_request_result") or {}
-                result_id = result.get("request_id")
-                if result_id and result_id != self.last_ticket_result_id:
-                    self.last_ticket_result_id = result_id
+                results = status.get("last_request_results") or []
+                for result in results:
+                    result_id = result.get("request_id")
+                    if not result_id or result_id in self.processed_ticket_result_ids:
+                        continue
+                    self.processed_ticket_result_ids.add(result_id)
                     if result.get("status") == "played":
                         self.ticket_manager.mark_played(result_id)
                     elif result.get("status") == "failed":
