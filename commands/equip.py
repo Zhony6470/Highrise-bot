@@ -80,7 +80,11 @@ def _public_item_request(path: str, params: dict | None = None):
     url = f"https://webapi.highrise.game{path}"
     if params:
         url = f"{url}?{urlencode(params)}"
-    api_key = os.environ.get("MUSIC_API_KEY") or os.environ.get("BOT1_API_KEY") or os.environ.get("HIGHRISE_API_KEY") or ""\n    headers = {"Accept": "application/json"}\n    if api_key:\n        headers["x-api-key"] = api_key\n    request = Request(url, headers=headers)
+    api_key = os.environ.get("MUSIC_API_KEY") or os.environ.get("BOT1_API_KEY") or os.environ.get("HIGHRISE_API_KEY") or ""
+    headers = {"Accept": "application/json"}
+    if api_key:
+        headers["x-api-key"] = api_key
+    request = Request(url, headers=headers)
     with urlopen(request, timeout=15) as response:
         return json.loads(response.read().decode("utf-8"))
 
