@@ -114,26 +114,63 @@ class AvatarManager:
 
     async def equip_item(self, item_id: str, category: str, item_name: str = "") -> str:
         try:
-            outfit = (await self.bot.highrise.get_my_outfit()).outfit
-            filtered = [item for item in outfit if item.id.split("-", 1)[0].lower() != category]
-            filtered.append(
-                type(
-                    "TmpItem",
-                    (),
-                    {
-                        "id": item_id,
-                        "type": "clothing",
-                        "amount": 1,
-                        "account_bound": False,
-                        "active_palette": 0,
-                    },
-                )()
+            # Flujo oficial de Highrise: partir del outfit actual y sustituir
+            # solamente el artículo de la categoría que se está equipando.
+            outfit = list((await self.bot.highrise.get_my_outfit()).outfit)
+
+            # El outfit enviado siempre debe conservar los elementos mínimos
+            # del avatar. Partimos del outfit actual para no eliminarlos.
+            filtered = [
+                outfit_item
+                for outfit_item in outfit
+                if outfit_item.id.split("-", 1)[0].lower() != category
+            ]
+
+            new_item = Item(
+                type="clothing",
+                amount=1,
+                id=item_id,
+                account_bound=False,
+                active_palette=0,
             )
+
+            # Highrise requiere también hair_back cuando se equipa hair_front.
+            if category == "hair_front":
+                try:
+                    response = await self.bot.webapi.get_item(item_id)
+                    link_ids = getattr(response.item, "link_ids", []) or []
+                except Exception as error:
+                    print(f"[AVATAR] No se pudo obtener hair_back para {item_id}: {error}")
+                    link_ids = []
+
+                hair_back_id = link_ids[0] if link_ids else None
+                if hair_back_id:
+                    filtered = [
+                        outfit_item
+                        for outfit_item in filtered
+                        if outfit_item.id.split("-", 1)[0].lower() != "hair_back"
+                    ]
+                    filtered.append(
+                        Item(
+                            type="clothing",
+                            amount=1,
+                            id=hair_back_id,
+                            account_bound=False,
+                            active_palette=0,
+                        )
+                    )
+
+            filtered.append(new_item)
+
+            # Conserva body-flesh y las categorías obligatorias porque partimos
+            # del outfit actual, tal como recomienda la guía oficial.
             result = await self.set_outfit(filtered)
             if result is not None:
                 return "<#FF6666>⚠️ No se pudo equipar la prenda."
+
             return f"<#66FF99>✨ Prenda equipada: {item_name or item_id}."
-        except Exception:
+        except Exception as error:
+            print(f"[AVATAR] Error equipando {item_id}: {error}")
             return "<#FF6666>⚠️ No se pudo equipar la prenda."
 
     async def remove_category(self, category: str) -> str:
