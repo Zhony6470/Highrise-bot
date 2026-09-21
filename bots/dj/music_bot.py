@@ -486,9 +486,12 @@ class Bot(BotRuntimeMixin, BaseBot):
                             line=f"<#FFFFFF>{i}. {title}"
                             if requested_by:
                                 line += f" <#66FF99>• @{requested_by}"
-                            lines.append(line)                    await self.highrise.chat("\n".join(lines))
+                            lines.append(line)
+                    await self.highrise.chat("\n".join(lines))
                     return
-                e=int(s.get("elapsed",0));d=int(m.get("duration") or 0)                review=f"{now_line} <#FFFFFF>• {e//60}:{e%60:02d}"
+                e=int(s.get("elapsed",0))
+                d=int(m.get("duration") or 0)
+                review=f"{now_line} <#FFFFFF>• {e//60}:{e%60:02d}"
                 if d:
                     review += f" / {d//60}:{d%60:02d}"
                 return await self.highrise.chat(review)
