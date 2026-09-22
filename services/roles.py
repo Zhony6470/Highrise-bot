@@ -79,19 +79,52 @@ class RoleManager:
         self._save_roles()
 
         if not user_id:
-            return
+            return True
 
         try:
             privilege = await bot.highrise.get_room_privilege(user_id)
             privilege.moderator = role == "mod"
             privilege.designer = role == "designer"
             await bot.highrise.set_room_privilege(user_id, privilege)
+            return True
         except Exception as error:
             print(
                 f"[ROLES] No se pudo aplicar privilegio de sala a "
                 f"@{username or user_id}: {error}"
             )
             # El rol persistente ya quedó guardado. Se aplicará al entrar.
+            return False
+
+    async def delete_role(self, bot, user_id, username: str = ""):
+        """Elimina el rol guardado y devuelve al usuario a privilegios normales."""
+        username_key = username.strip().lstrip("@").casefold()
+
+        if user_id:
+            self.roles.pop(user_id, None)
+            self.usernames.pop(user_id, None)
+        if username_key:
+            self.roles.pop(username_key, None)
+            self.usernames.pop(username_key, None)
+
+        self._legacy_vip_users.discard(user_id)
+        self._legacy_vip_users.discard(username_key)
+        self._save_roles()
+
+        if not user_id:
+            return False
+
+        try:
+            privilege = await bot.highrise.get_room_privilege(user_id)
+            privilege.moderator = False
+            privilege.designer = False
+            await bot.highrise.set_room_privilege(user_id, privilege)
+            return True
+        except Exception as error:
+            print(
+                f"[ROLES] No se pudo quitar el privilegio de sala a "
+                f"@{username or user_id}: {error}"
+            )
+            return False
 
     async def apply_saved_role(self, bot, user):
         role = self.roles.get(user.id) or self.roles.get(user.username.casefold())
