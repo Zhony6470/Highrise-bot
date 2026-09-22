@@ -17,6 +17,7 @@ from common.positions import PositionManagerCommon
 from common.dance import DanceManager
 from common.bot_state import BotStateManager
 from services.music_tickets import MusicTicketManager
+from bots.bot1.services.tips import TipManager
 from services.storage import load_json
 from services.emotes import EmotesManager
 
@@ -33,6 +34,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         self.dance_manager = DanceManager(self)
         self.bot_state_manager = BotStateManager(self)
         self.ticket_manager = MusicTicketManager()
+        self.tip_manager = TipManager()
         self.state_file = str(DATA)
         self.playback_monitor_task = None
         self.announcement_task = None
@@ -297,8 +299,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                     data = load_json(os.path.join(ROOT_DIR, "roles.json"), default={})
                     users = data.get("users", {}) if isinstance(data, dict) else {}
                     saved_role = str(users.get(user.id, "")).lower()
-                    if saved_role in {"vip", "mod", "designer"}:
-                        role = saved_role
+                    if saved_role in {"vip", "mod", "designer"}:                        role = saved_role
                 except Exception as error:
                     print(f"[MUSIC HELP] Error leyendo roles de @{user.username}: {error}")
 
@@ -308,6 +309,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                 "<#FFFFFF>• !q - Ver la cola actual.",
                 "<#FFFFFF>• !review / !r - Ver la canción que está sonando.",
                 "<#FFFFFF>• !ticket - Ver cuántos tickets entrega el bot por 10g.",
+                "<#FFFFFF>• !wallet - Ver el oro de Dj.Z.",
             ]
             if role in {"owner", "mod"}:
                 sections.extend([
@@ -317,6 +319,9 @@ class Bot(BotRuntimeMixin, BaseBot):
                     "<#FFFFFF>• !addticket numero @usuario - Regalar tickets.",
                     "<#FFFFFF>• !at numero @usuario - Alias para regalar tickets.",
                     "<#FFFFFF>• !ticket for numero - Configurar tickets por cada 10g.",
+                    "<#FFFFFF>• !mtipme cantidad - Enviarte oro desde Dj.Z.",
+                    "<#FFFFFF>• !mtip @usuario cantidad - Enviar oro desde Dj.Z.",
+                    "<#FFFFFF>• !mtipall cantidad - Enviar oro desde Dj.Z a todos.",
                 ])
             elif role == "designer":
                 sections.append("<#FFFFFF>• !skip - Saltar la canción actual.")
