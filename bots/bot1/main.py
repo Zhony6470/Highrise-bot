@@ -949,7 +949,6 @@ class Bot(BotRuntimeMixin, BaseBot):
             result = await self.highrise.send_whisper(user.id, welcome)
             if result is not None:
                 print(f"[JOIN ERROR] Highrise rechazó la bienvenida a @{user.username}: {result}")
-            else:
         except Exception as error:
             print(f"[JOIN ERROR] Error enviando bienvenida a @{user.username}: {error}")
 
