@@ -283,6 +283,9 @@ class Bot(BotRuntimeMixin, BaseBot):
 
         # 💰 Comandos de billetera y propinas de Dj.Z.
         if cmd == "!wallet":
+            if user.id != self.owner_id and not await self.is_mod(user.id):
+                await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden usar !wallet.")
+                return
             response = await self.tip_manager.handle_command(self, message.strip().lower(), user.id)
             if response:
                 await self.highrise.send_whisper(user.id, response)
