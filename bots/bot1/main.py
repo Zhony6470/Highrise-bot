@@ -890,8 +890,6 @@ class Bot(BotRuntimeMixin, BaseBot):
         command = message.lower().strip()
         if not command:
             return None
-        if command.split()[0].lower() == "!wallet":
-            return await self.tip_manager.handle_command(self, command, user_id)
         if user_id != self.owner_id and not await self.is_mod(user_id):
             return None
 
