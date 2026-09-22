@@ -76,17 +76,20 @@ class Bot(BotRuntimeMixin, BaseBot):
         except ValueError as e:
             raise RuntimeError("Respuesta inválida de AutoDJ.") from e
     async def restore_position(self):
-        for attempt in range(5):
+        # Esperamos a que la sesión termine de entrar a la sala y luego
+        # reintentamos cargar la última posición guardada.
+        await asyncio.sleep(5)
+        for attempt in range(8):
             try:
                 position = self.position_manager_common.get_saved_position()
                 if position:
-                    await asyncio.sleep(2 if attempt == 0 else 3)
                     await self.highrise.teleport(self.bot_id, position)
                     print(f"[MUSIC] Posición restaurada en {position}.")
                     return
+                print("[MUSIC] No hay posición guardada todavía; reintentando...")
             except Exception as error:
                 print(f"[MUSIC] Error restaurando posición (intento {attempt + 1}): {error}")
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
 
     async def playback_monitor_loop(self):
         consecutive_errors = 0
@@ -253,15 +256,19 @@ class Bot(BotRuntimeMixin, BaseBot):
 
         if cmd == "!home":
             parts_full=message.strip().split()
-            if len(parts_full) != 2 or not parts_full[1].startswith("@"):
-                await self.highrise.send_whisper(user.id, "Uso: !home @Dj.Z")
+            if len(parts_full) > 2 or (len(parts_full) == 2 and not parts_full[1].startswith("@")):
+                await self.highrise.send_whisper(user.id, "Uso: !home o !home @Dj.Z")
                 return
-            target=parts_full[1][1:].casefold()
-            if target != self.bot_username.casefold():
-                return
+
             if user.id != self.owner_id and not await self.is_mod(user.id):
-                await self.highrise.send_whisper(user.id, f"<#66FF99>📍 @{self.bot_username} volvió a su posición guardada.")
+                await self.highrise.send_whisper(user.id, "🔒 Solo el dueño o moderadores pueden usar este comando.")
                 return
+
+            if len(parts_full) == 2:
+                target=parts_full[1][1:].casefold()
+                if target != self.bot_username.casefold():
+                    return
+
             await self.restore_position()
             await self.highrise.send_whisper(
                 user.id, f"<#66FF99>📍 @{self.bot_username} volvió a su posición guardada."
