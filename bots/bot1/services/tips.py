@@ -1,3 +1,5 @@
+import os
+
 from highrise import CurrencyItem, Item, User
 from services.storage import load_json, save_json
 
@@ -105,9 +107,8 @@ class TipManager:
                 room_users = await highrise.get_room_users()
                 bot_names = {
                     str(getattr(bot, "bot_username", "")).casefold(),
-                    str(getattr(bot, "bot_username", "")).casefold(),
-                    str(__import__("os").getenv("BOT1_USERNAME", "Zeta_Bot")).casefold(),
-                    str(__import__("os").getenv("DJ_BOT_USERNAME", "Dj.Z")).casefold(),
+                    os.getenv("BOT1_USERNAME", "Zeta_Bot").casefold(),
+                    os.getenv("DJ_BOT_USERNAME", "Dj.Z").casefold(),
                 }
                 bot_names.discard("")
                 recipients = [
