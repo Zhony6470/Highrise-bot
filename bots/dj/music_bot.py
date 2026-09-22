@@ -281,6 +281,25 @@ class Bot(BotRuntimeMixin, BaseBot):
         if cmd in protected and not await self._is_targeted_for_me(message):
             return
 
+        # 💰 Comandos de billetera y propinas de Dj.Z.
+        if cmd == "!wallet":
+            response = await self.tip_manager.handle_command(self, message.strip().lower(), user.id)
+            if response:
+                await self.highrise.send_whisper(user.id, response)
+            return
+
+        if cmd in ("!mtip", "!mtipme", "!mtipall"):
+            if user.id != self.owner_id and not await self.is_mod(user.id):
+                await self.highrise.send_whisper(
+                    user.id,
+                    "<#FF6666>🔒 Solo el dueño o moderadores pueden usar estos comandos."
+                )
+                return
+            response = await self.tip_manager.handle_command(self, message.strip().lower(), user.id)
+            if response:
+                await self.highrise.send_whisper(user.id, response)
+            return
+
         if cmd == "!help" and len(parts) == 2 and parts[1].strip().lower() == "music":
             role = "user"
             if user.id == self.owner_id:
