@@ -173,11 +173,6 @@ async def track_monitor_loop(bot) -> None:
                 next_emote_at = now + max(duration, 0.1)
                 emote_changed = True
 
-                print(
-                    f"[PISTA] Nuevo emote para todos: "
-                    f"{current_emote} ({duration:.1f}s)"
-                )
-
             left = active_user_ids - inside_user_ids
             for user_id in left:
                 try:
