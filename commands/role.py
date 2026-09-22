@@ -13,16 +13,19 @@ async def handle_role(bot: BaseBot, user: User, message: str) -> Optional[str]:
     if len(parts) == 1:
         return await bot.send_saved_roles_to_inbox(user)
     if len(parts) != 3:
-        return "<#FFCC66>🛡️ Uso: !role o !role @usuario <mod|vip|designer|user>"
+        return "<#FFCC66>🛡️ Uso: !role o !role @usuario <mod|vip|designer|delete>"
 
     username = parts[1].lstrip("@").strip()
     role = parts[2].lower()
     if not username:
         return "<#FF6666>❌ Usuario inválido."
-    if role not in ROLES:
-        return "<#FF6666>❌ Rol inválido. Usa: mod, vip, designer o user."
+    if role == "user":
+        return "<#FFCC66>🛡️ Para quitar un rol usa: !role @usuario delete"
+    if role not in {"mod", "vip", "designer", "delete"}:
+        return "<#FF6666>❌ Rol inválido. Usa: mod, vip, designer o delete."
 
     target_id = None
+    in_room = False
 
     # Primero buscamos por nombre en la Web API para que funcione
     # aunque el usuario no esté actualmente en la sala.
@@ -63,21 +66,51 @@ async def handle_role(bot: BaseBot, user: User, message: str) -> Optional[str]:
     if target_id == bot.owner_id:
         return "<#FFCC66>👑 El dueño no puede cambiarse de rol."
 
+    # Comprobamos si está actualmente en la sala. La Web API permite
+    # encontrarlo aunque esté fuera, pero los privilegios de sala solo
+    # pueden cambiarse cuando el bot está en la sala y el usuario también.
+    if target_id:
+        try:
+            room_users = (await bot.highrise.get_room_users()).content
+            in_room = any(room_user.id == target_id for room_user, _ in room_users)
+        except Exception as error:
+            print(f"[ROLES] Error comprobando presencia de @{username}: {error}")
+
     try:
-        # Aunque no tengamos el ID todavía, RoleManager conserva el rol
-        # por username y lo migra al ID cuando el usuario entre a la sala.
-        await bot.role_manager.set_role(bot, target_id, role, username)
+        if role == "delete":
+            applied = await bot.role_manager.delete_role(bot, target_id, username)
+            if not in_room:
+                return (
+                    f"<#66FF99>🗑️ Rol eliminado para @{username}. "
+                    "No queda guardado en la base de datos."
+                )
+            if applied:
+                message = f"<#66FF99>🗑️ @{username} volvió a ser user."
+            else:
+                message = (
+                    f"<#FFCC66>🗑️ Rol eliminado de la base de datos para @{username}, "
+                    "pero no pude quitar el privilegio de sala."
+                )
+        else:
+            applied = await bot.role_manager.set_role(
+                bot, target_id, role, username, apply_privilege=in_room
+            )
+            if in_room and not applied:
+                return (
+                    f"<#FFCC66>⚠️ @{username} quedó guardado como {role}, "
+                    "pero no pude aplicar el privilegio de sala."
+                )
+            if in_room:
+                message = f"<#66FF99>✅ @{username} ahora tiene el rol {role}."
+            else:
+                message = (
+                    f"<#66FF99>✅ Rol {role} guardado para @{username}. "
+                    "Se aplicará cuando entre a la sala."
+                )
     except Exception as error:
-        print(f"[ROLES] Error asignando el rol {role} a @{username}: {error}")
+        print(f"[ROLES] Error procesando rol {role} para @{username}: {error}")
         return "<#FF6666>⚠️ No se pudo guardar el rol del usuario."
 
-    if target_id:
-        message = f"<#66FF99>✅ @{username} ahora tiene el rol {role}."
-    else:
-        message = (
-            f"<#66FF99>✅ Rol {role} guardado para @{username}. "
-            "Se aplicará cuando entre a la sala."
-        )
     await bot.highrise.chat(message)
     return None
 
