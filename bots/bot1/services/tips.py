@@ -16,9 +16,9 @@ TIP_BARS = {
 
 
 class TipManager:
-    def __init__(self, data_file: str):
+    def __init__(self, data_file: str | None = None):
         self.data_file = data_file
-        self.tip_data = self._load_tip_data()
+        self.tip_data = self._load_tip_data() if data_file else {}
 
 
     async def handle_tip(self, highrise, bot_id: str, sender: User, receiver: User,
@@ -52,16 +52,17 @@ class TipManager:
                 return f"<#66FF99>💰 {username} ha dado {tip_amount}g."
             return f"<#FFCC66>🔎 {username} todavía no ha dado propina."
 
-        if command.startswith("!wallet"):
+        if command == "!wallet":
             wallet = await highrise.get_wallet()
             for currency in wallet.content:
                 if currency.type == "gold":
-                    return f"<#FFCC66>👛 Mi billetera tiene {currency.amount}g."
+                    bot_name = getattr(bot, "bot_username", "el bot")
+                    return f"<#FFCC66>👛 @{bot_name} tiene {currency.amount}g."
             return "<#FFCC66>👛 No hay oro en la billetera."
 
         parts = command.split()
-        if parts and parts[0] in ("!tipme", "!tipall", "!tip"):
-            if parts[0] == "!tip" and len(parts) == 3:
+        if parts and parts[0] in ("!tipme", "!tipall", "!tip", "!mtipme", "!mtipall", "!mtip"):
+            if parts[0] in ("!tip", "!mtip") and len(parts) == 3:
                 username = parts[1].lstrip("@")
                 amount_text = parts[2]
                 target_id = await bot.get_user_id(username)
@@ -83,10 +84,10 @@ class TipManager:
                         print(f"[TIP] Error buscando @{username} en Web API: {error}")
                 if not target_id:
                     return "<#FFCC66>🔎 Usuario no encontrado."
-            elif parts[0] == "!tipme" and len(parts) == 2:
+            elif parts[0] in ("!tipme", "!mtipme") and len(parts) == 2:
                 target_id = user_id
                 amount_text = parts[1]
-            elif parts[0] == "!tipall" and len(parts) == 2:
+            elif parts[0] in ("!tipall", "!mtipall") and len(parts) == 2:
                 target_id = None
                 amount_text = parts[1]
             else:
@@ -100,7 +101,7 @@ class TipManager:
                 return "<#FFCC66>🔢 La cantidad debe ser mayor que 0."
 
             recipients = []
-            if parts[0] == "!tipall":
+            if parts[0] in ("!tipall", "!mtipall"):
                 room_users = await highrise.get_room_users()
                 recipients = [
                     (room_user.id, room_user.username)
@@ -110,7 +111,7 @@ class TipManager:
                 if not recipients:
                     return "<#FFCC66>🪙 No hay usuarios a quienes enviar propinas."
             else:
-                recipient_username = username if parts[0] == "!tip" else "el usuario solicitante"
+                recipient_username = username if parts[0] in ("!tip", "!mtip") else "el usuario solicitante"
                 recipients = [(target_id, recipient_username)]
 
             bars = self._make_tip_bars(amount)
@@ -143,7 +144,7 @@ class TipManager:
                         await highrise.chat(
                             f"<#FFCC66>💝 @{recipient_username} recibió {amount}g de propina."
                         )
-                    if parts[0] == "!tip":
+                    if parts[0] in ("!tip", "!mtip"):
                         print(
                             f"[TIP OUT  ] Enviados {amount}g a "
                             f"@{recipient_username} ({recipient_id})"
@@ -200,7 +201,10 @@ class TipManager:
         return None
 
     def _load_tip_data(self) -> dict:
-        return load_json(self.data_file)["users"]
+        if not self.data_file:
+            return {}
+        data = load_json(self.data_file, default={})
+        return data.get("users", {}) if isinstance(data, dict) else {}
 
     def _write_tip_data(self, user: User, tip: int) -> None:
         data = load_json(self.data_file)
