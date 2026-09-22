@@ -371,6 +371,17 @@ class Bot(BotRuntimeMixin, BaseBot):
         msg = message.strip()
         msg_lower = msg.lower()
 
+        # !mtip* pertenece exclusivamente a Dj.Z.
+        # Este bloqueo va al inicio de on_chat para impedir que Zeta lo
+        # procese por cualquier ruta anterior al command_handler.
+        if (
+            msg_lower == "!mtip"
+            or msg_lower.startswith("!mtip ")
+            or msg_lower == "!mtipall"
+            or msg_lower.startswith("!mtipall ")
+        ):
+            return
+
         command_name = msg.split(maxsplit=1)[0].lower() if msg else ""
 
         # !home / !reset admiten uso sin @ para controlar ambos bots.
