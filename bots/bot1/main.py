@@ -897,6 +897,11 @@ class Bot(BotRuntimeMixin, BaseBot):
         if command.split()[0].lower() in protected_commands and not await self._is_targeted_for_me(message):
             return None
 
+        # Los comandos !mtip* pertenecen exclusivamente a Dj.Z.
+        # Zeta solo debe procesar !tip*, nunca !mtip*.
+        if command == "!mtip" or command.startswith("!mtip "):
+            return None
+
         if command.startswith("!tip all "):
             command = "!tipall " + command[len("!tip all "):]
 
@@ -938,12 +943,16 @@ class Bot(BotRuntimeMixin, BaseBot):
         role = role_labels.get(str(role).lower(), "user")
 
         try:
-            await self.highrise.send_whisper(
-                user.id,
-                f"👋 ¡Bienvenido/a, @{user.username}! ¡Disfruta tu instancia! 🎉\\n"
-                f"🛡️ Rol: {role}\\n"
+            welcome = (
+                f"👋 ¡Bienvenido/a, @{user.username}! ¡Disfruta tu instancia! 🎉\n"
+                f"🛡️ Rol: {role}\n"
                 "💡 Usa !help para ver los comandos y mensajes disponibles."
             )
+            result = await self.highrise.send_whisper(user.id, welcome)
+            if result is not None:
+                print(f"[JOIN ERROR] Highrise rechazó la bienvenida a @{user.username}: {result}")
+            else:
+                print(f"[JOIN] Bienvenida enviada a @{user.username}.")
         except Exception as error:
             print(f"[JOIN ERROR] Error enviando bienvenida a @{user.username}: {error}")
 
