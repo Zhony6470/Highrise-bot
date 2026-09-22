@@ -103,10 +103,18 @@ class TipManager:
             recipients = []
             if parts[0] in ("!tipall", "!mtipall"):
                 room_users = await highrise.get_room_users()
+                bot_names = {
+                    str(getattr(bot, "bot_username", "")).casefold(),
+                    str(getattr(bot, "bot_username", "")).casefold(),
+                    str(__import__("os").getenv("BOT1_USERNAME", "Zeta_Bot")).casefold(),
+                    str(__import__("os").getenv("DJ_BOT_USERNAME", "Dj.Z")).casefold(),
+                }
+                bot_names.discard("")
                 recipients = [
                     (room_user.id, room_user.username)
                     for room_user, _ in room_users.content
                     if room_user.id != bot.bot_id
+                    and room_user.username.casefold() not in bot_names
                 ]
                 if not recipients:
                     return "<#FFCC66>🪙 No hay usuarios a quienes enviar propinas."
@@ -152,7 +160,7 @@ class TipManager:
                 else:
                     failed_recipients.append(recipient_username)
 
-            if parts[0] == "!tipall":
+            if parts[0] in ("!tipall", "!mtipall"):
                 print(
                     f"[TIP ALL   ] Enviados {amount}g a "
                     f"{successful_recipients} usuarios; fallaron {len(failed_recipients)}."
@@ -163,6 +171,13 @@ class TipManager:
                         f"<#FF6666>fallaron: {len(failed_recipients)}. "
                         "Revisa el oro disponible y los permisos del bot."
                     )
+
+                await highrise.chat(
+                    f"<#66FF99>💝 Enviadas: {successful_recipients} usuario(s) "
+                    f"recibieron {amount}g."
+                )
+                return None
+
             await highrise.chat(
                 f"<#66FF99>💝 Propina enviada: {amount}g a "
                 f"{successful_recipients} usuario(s)."
