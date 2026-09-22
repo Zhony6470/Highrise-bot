@@ -28,6 +28,7 @@ CATEGORY_LABELS = {
     "lashes": ("👁️", "Lashes"),
     "mole": ("•", "Mole"),
     "mouth": ("👄", "Mouth"),
+    "pants": ("👖", "Pants"),
     "necklace": ("📿", "Necklace"),
     "nose": ("👃", "Nose"),
     "rod": ("🎣", "Rod"),
