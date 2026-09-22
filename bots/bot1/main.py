@@ -198,7 +198,8 @@ class Bot(BotRuntimeMixin, BaseBot):
                     "<#FFFFFF>• !set @Zeta_Bot - Guardar la posición del bot",
                     "<#FFFFFF>• !home [@Bot] - Volver a la posición guardada",
                     "<#FFFFFF>• !reset [@Bot] - Reiniciar el bot",
-                    "<#FFFFFF>• !role @usuario mod|vip|designer|user - Administrar roles",
+                    "<#FFFFFF>• !role @usuario mod|vip|designer - Agregar un rol",
+                    "<#FFFFFF>• !role @usuario delete [rol] - Quitar uno o todos los roles",
                 ]),
                 "\n".join([
                     "<#FFFFFF>👕 VESTUARIO",
@@ -213,16 +214,19 @@ class Bot(BotRuntimeMixin, BaseBot):
 
     async def send_saved_roles_to_inbox(self, user: User) -> str:
         saved_roles = [
-            (username, role)
-            for username, role in sorted(self.role_manager.roles.items())
-            if role != "user"
+            (username, roles)
+            for username, roles in sorted(self.role_manager.roles.items())
+            if self.role_manager._normalize_roles(roles)
         ]
         if not saved_roles:
-            content = "No hay usuarios con roles guardados distintos de user."
+            content = "No hay usuarios con roles guardados."
         else:
-            content = "Usuarios con roles guardados:\n" + "\n".join(
-                f"@{self.role_manager.usernames.get(username, username)}: {role}" for username, role in saved_roles
-            )
+            lines = ["Usuarios con roles guardados:"]
+            for username, roles in saved_roles:
+                normalized = self.role_manager._normalize_roles(roles)
+                display_name = self.role_manager.usernames.get(username, username)
+                lines.append(f"@{display_name}: {', '.join(normalized)}")
+            content = "\n".join(lines)
 
         try:
             conversations = await self.highrise.get_conversations()
@@ -387,18 +391,23 @@ class Bot(BotRuntimeMixin, BaseBot):
 
         if command_name == "!home":
             parts = msg.split()
-            if len(parts) != 2 or not parts[1].startswith("@"):
-                await self.highrise.send_whisper(user.id, "Uso: !home @Zeta_Bot")
+            if len(parts) > 2 or (len(parts) == 2 and not parts[1].startswith("@")):
+                await self.highrise.send_whisper(user.id, "Uso: !home o !home @Zeta_Bot")
                 return
-            target = parts[1][1:].casefold()
-            if target != self.bot_username.casefold():
-                return
+
             if user.id != self.owner_id and not await self.is_mod(user.id):
                 await self.highrise.send_whisper(user.id, "🔒 Solo el dueño o moderadores pueden usar este comando.")
                 return
+
+            if len(parts) == 2:
+                target = parts[1][1:].casefold()
+                if target != self.bot_username.casefold():
+                    return
+
             await self.place_bot()
             await self.highrise.send_whisper(
-                user.id, f"<#66FF99>📍 @{self.bot_username} volvió a su posición guardada."
+                user.id,
+                f"<#66FF99>📍 @{self.bot_username} volvió a su posición guardada."
             )
             return
 
