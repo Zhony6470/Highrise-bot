@@ -146,6 +146,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                 "<#FFFFFF>• !tele @usuario - Ir junto a un usuario",
                 "<#FFFFFF>• !follow - Seguir al dueño",
                 "<#FFFFFF>• !stopfollow - Dejar de seguir al dueño",
+                "<#FFFFFF>• !ubi - Ver las ubicaciones guardadas",
             ]),
             "\n".join([
                 "<#FFCC66>💰 PROPINAS",
@@ -421,6 +422,24 @@ class Bot(BotRuntimeMixin, BaseBot):
         # !help music es exclusivo del bot de música; Zeta no debe responder.
         if command_name == "!help" and len(msg.split()) == 2 and msg.split()[1].strip().lower() == "music":
             return
+
+        # !ubi: lista pública de las ubicaciones guardadas de Zeta.
+        if command_name == "!ubi":
+            try:
+                positions_data = load_json(self.position_manager.positions_file, default={})
+                positions = positions_data.get("posiciones", {}) if isinstance(positions_data, dict) else {}
+                names = sorted(str(name) for name in positions)
+                if not names:
+                    await self.highrise.chat("<#FFCC66>📍 No hay ubicaciones guardadas.")
+                else:
+                    lines = ["<#66CCFF>📍 UBICACIONES DISPONIBLES"]
+                    lines.extend(f"<#FFFFFF>• {name}" for name in names)
+                    await self.highrise.chat("\n".join(lines))
+            except Exception as error:
+                print(f"[UBI] Error listando ubicaciones: {error}")
+                await self.highrise.send_whisper(user.id, "<#FF6666>⚠️ No pude consultar las ubicaciones.")
+            return
+
 
         if command_name in self.command_dispatcher.handlers:
             response = await self.command_dispatcher.handle(self, user, msg)
@@ -869,7 +888,11 @@ class Bot(BotRuntimeMixin, BaseBot):
 
     async def command_handler(self, user_id: str, message: str) -> str | None:
         command = message.lower().strip()
-        if not command or (user_id != self.owner_id and not await self.is_mod(user_id)):
+        if not command:
+            return None
+        if command.split()[0].lower() == "!wallet":
+            return await self.tip_manager.handle_command(self, command, user_id)
+        if user_id != self.owner_id and not await self.is_mod(user_id):
             return None
 
         protected_commands = {"!set", "!home", "!color", "!equip", "!remove", "!getoutfit", "/equip", "/remove", "/getoutfit"}
