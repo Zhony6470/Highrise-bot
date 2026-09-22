@@ -885,6 +885,13 @@ class Bot(BotRuntimeMixin, BaseBot):
 
         # La bienvenida debe enviarse a TODOS los usuarios que entren.
         # El rol solo cambia el texto mostrado, no determina si recibe el mensaje.
+        # Si tiene un rol guardado, aplicamos también el privilegio real
+        # de Highrise al momento de entrar a la sala.
+        try:
+            await self.role_manager.apply_saved_role(self, user)
+        except Exception as error:
+            print(f"[JOIN ROLE] No pude aplicar el rol guardado de @{user.username}: {error}")
+
         role = "user"
         try:
             role = await self.role_manager.get_user_role(self, user) or "user"
