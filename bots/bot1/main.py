@@ -916,8 +916,6 @@ class Bot(BotRuntimeMixin, BaseBot):
         if user.id == self.bot_id:
             return
 
-        print(f"[JOIN] {user.username} entró a la sala.")
-
         # La bienvenida debe enviarse a TODOS los usuarios que entren.
         # El rol solo cambia el texto mostrado, no determina si recibe el mensaje.
         # Si tiene un rol guardado, aplicamos también el privilegio real
@@ -952,7 +950,6 @@ class Bot(BotRuntimeMixin, BaseBot):
             if result is not None:
                 print(f"[JOIN ERROR] Highrise rechazó la bienvenida a @{user.username}: {result}")
             else:
-                print(f"[JOIN] Bienvenida enviada a @{user.username}.")
         except Exception as error:
             print(f"[JOIN ERROR] Error enviando bienvenida a @{user.username}: {error}")
 
