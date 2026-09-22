@@ -51,7 +51,7 @@ class RoleManager:
 
         return "user"
 
-    async def set_role(self, bot, user_id, role: Role, username: str = ""):
+    async def set_role(self, bot, user_id, role: Role, username: str = "", apply_privilege: bool = True):
         username_key = username.strip().lstrip("@").casefold()
 
         if user_id:
@@ -78,7 +78,7 @@ class RoleManager:
         # privilegios de sala. Así el rol no se pierde si el usuario está fuera.
         self._save_roles()
 
-        if not user_id:
+        if not user_id or not apply_privilege:
             return True
 
         try:
