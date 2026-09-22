@@ -167,11 +167,18 @@ class RoleManager:
             self.roles.pop(key, None)
             self.usernames.pop(key, None)
 
-        self._legacy_vip_users.discard(user_id)
-        self._legacy_vip_users.discard(username_key)
+        if role is None or role == "user":
+            self._legacy_vip_users.discard(user_id)
+            self._legacy_vip_users.discard(username_key)
+
         self._save_roles()
 
         if not user_id:
+            return True
+
+        # Si se elimina un rol concreto que no estaba guardado, no tocamos
+        # privilegios manuales que el usuario ya tuviera en la sala.
+        if role not in {None, "user"} and not current:
             return True
 
         return await self._apply_room_privileges(bot, user_id, set(remaining))
