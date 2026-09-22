@@ -66,7 +66,23 @@ class TipManager:
                 amount_text = parts[2]
                 target_id = await bot.get_user_id(username)
                 if not target_id:
-                    return "<#FFCC66>🔎 Usuario no encontrado en la sala."
+                    try:
+                        users_response = await bot.webapi.get_users(username=username)
+                        matched_user = next(
+                            (
+                                public_user
+                                for public_user in users_response.users
+                                if public_user.username.casefold() == username.casefold()
+                            ),
+                            None,
+                        )
+                        if matched_user is not None:
+                            target_id = matched_user.id
+                            username = matched_user.username
+                    except Exception as error:
+                        print(f"[TIP] Error buscando @{username} en Web API: {error}")
+                if not target_id:
+                    return "<#FFCC66>🔎 Usuario no encontrado."
             elif parts[0] == "!tipme" and len(parts) == 2:
                 target_id = user_id
                 amount_text = parts[1]
@@ -110,13 +126,14 @@ class TipManager:
                 for bar, _ in bars:
                     try:
                         result = await highrise.tip_user(recipient_id, bar)
+                        result_value = getattr(result, "result", result)
                     except Exception as error:
-                        result = error
-                    if result != "success":
+                        result_value = error
+                    if result_value != "success":
                         recipient_ok = False
                         print(
                             f"[TIP ERROR] No se pudo enviar {amount}g a "
-                            f"@{recipient_username}: {result}"
+                            f"@{recipient_username}: {result_value}"
                         )
                         break
 
