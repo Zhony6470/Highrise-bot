@@ -24,6 +24,7 @@ CATEGORIES = {
     "lashes",
     "mole",
     "mouth",
+    "pants",
     "necklace",
     "nose",
     "rod",
@@ -48,6 +49,8 @@ async def handle_remove(bot: BaseBot, user: User, message: str) -> str:
         return "<#FFCC66>🧥 Uso: !remove @BotUsuario <categoria>"
 
     category = parts[1].lower()
+    if category == "pants":
+        return "<#FFCC66>👖 Highrise requiere una prenda de parte inferior. No se pueden quitar los pantalones sin reemplazarlos."
     if category not in CATEGORIES:
         return "<#FF6666>❌ Categoría inválida."
 
