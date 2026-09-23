@@ -151,7 +151,9 @@ class PersistentIcecastEncoder:
                 command,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                # Heredar stderr permite ver en Docker los errores reales de FFmpeg
+                # si Icecast cierra la conexión o el encoder falla.
+                stderr=None,
             )
             print("[AUTODJ] Encoder FFmpeg persistente conectado a Icecast.", flush=True)
 
@@ -168,7 +170,6 @@ class PersistentIcecastEncoder:
                 raise RuntimeError("El encoder FFmpeg de Icecast no está disponible.")
             try:
                 process.stdin.write(data)
-                process.stdin.flush()
             except (BrokenPipeError, OSError) as error:
                 raise RuntimeError(f"Se perdió la conexión del encoder con Icecast: {error}") from error
 
@@ -211,25 +212,33 @@ def start_decoder(path: Path):
     return subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
+        # Los avisos/errores del decoder deben quedar visibles en los logs
+        # del contenedor para poder diagnosticar pistas defectuosas.
+        stderr=None,
     )
 
 
 def stop_decoder(process):
     if process is None:
         return
+
+    # Primero detenemos FFmpeg y esperamos su salida. Cerrar stdout antes
+    # puede provocar un SIGPIPE/Broken pipe innecesario mientras el proceso
+    # todavía está intentando escribir audio.
     try:
-        if process.stdout:
-            process.stdout.close()
-    except Exception:
-        pass
-    try:
-        process.terminate()
-        process.wait(timeout=2)
+        if process.poll() is None:
+            process.terminate()
+            process.wait(timeout=2)
     except Exception:
         try:
             process.kill()
             process.wait(timeout=1)
+        except Exception:
+            pass
+    finally:
+        try:
+            if process.stdout:
+                process.stdout.close()
         except Exception:
             pass
 
