@@ -118,29 +118,109 @@ def icecast_url():
     )
 
 
-def play_file(path: Path):
+class PersistentIcecastEncoder:
+    """Encoder FFmpeg persistente: mantiene una sola conexión con Icecast."""
+
+    def __init__(self):
+        self.process = None
+        self.lock = threading.RLock()
+
+    def start(self):
+        with self.lock:
+            if self.process is not None and self.process.poll() is None:
+                return
+
+            command = [
+                "ffmpeg", "-hide_banner", "-loglevel", "warning",
+                "-f", "s16le",
+                "-ar", str(SAMPLE_RATE),
+                "-ac", str(CHANNELS),
+                "-i", "pipe:0",
+                "-vn",
+                "-c:a", "libmp3lame",
+                "-b:a", "128k",
+                "-ar", str(SAMPLE_RATE),
+                "-ac", str(CHANNELS),
+                "-content_type", "audio/mpeg",
+                "-f", "mp3",
+                icecast_url(),
+            ]
+            self.process = subprocess.Popen(
+                command,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            print("[AUTODJ] Encoder FFmpeg persistente conectado a Icecast.", flush=True)
+
+    def alive(self):
+        with self.lock:
+            return self.process is not None and self.process.poll() is None
+
+    def write(self, data: bytes):
+        if not data:
+            return
+        with self.lock:
+            process = self.process
+            if process is None or process.poll() is not None or process.stdin is None:
+                raise RuntimeError("El encoder FFmpeg de Icecast no está disponible.")
+            try:
+                process.stdin.write(data)
+                process.stdin.flush()
+            except (BrokenPipeError, OSError) as error:
+                raise RuntimeError(f"Se perdió la conexión del encoder con Icecast: {error}") from error
+
+    def stop(self):
+        with self.lock:
+            process = self.process
+            self.process = None
+            if process is None:
+                return
+            try:
+                if process.stdin:
+                    process.stdin.close()
+            except Exception:
+                pass
+            try:
+                process.wait(timeout=3)
+            except Exception:
+                try:
+                    process.kill()
+                    process.wait(timeout=1)
+                except Exception:
+                    pass
+
+
+icecast_encoder = PersistentIcecastEncoder()
+
+
+def start_decoder(path: Path):
     command = [
         "ffmpeg", "-hide_banner", "-loglevel", "warning",
         "-re",
         "-i", str(path),
         "-t", str(MAX_PLAY_SECONDS),
         "-vn",
-        "-c:a", "libmp3lame",
-        "-b:a", "128k",
+        "-f", "s16le",
         "-ar", str(SAMPLE_RATE),
         "-ac", str(CHANNELS),
-        "-content_type", "audio/mpeg",
-        "-f", "mp3",
-        icecast_url(),
+        "pipe:1",
     ]
-
-    return subprocess.Popen(command)
+    return subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
 
 
 def stop_decoder(process):
     if process is None:
         return
-
+    try:
+        if process.stdout:
+            process.stdout.close()
+    except Exception:
+        pass
     try:
         process.terminate()
         process.wait(timeout=2)
@@ -245,13 +325,23 @@ def has_requests() -> bool:
 
 def player_loop():
     global active_request
+
+    try:
+        icecast_encoder.start()
+    except Exception as error:
+        print(f"[AUTODJ] No se pudo iniciar el encoder de Icecast: {error}", flush=True)
+
     while True:
         item = None
-        process = None
+        decoder = None
         request_ref = None
         request_item = False
         playback_started_at = None
+
         try:
+            if not icecast_encoder.alive():
+                icecast_encoder.start()
+
             item = next_item()
             if not item:
                 with lock:
@@ -261,17 +351,18 @@ def player_loop():
 
             item = dict(item)
             request_item = not item.get("default_track")
+
             if request_item:
                 with lock:
                     request_ref = queue[0] if queue else None
                     active_request = request_ref
+
             item["file_path"] = str(ensure_file(item))
 
             if item.get("default_track") and queue_snapshot():
-                print(
-                    "[AUTODJ] Solicitud pendiente; descartando DEFAULT antes de reproducir.",
-                    flush=True,
-                )
+                print("[AUTODJ] Solicitud pendiente; descartando DEFAULT antes de reproducir.", flush=True)
+                with lock:
+                    active_request = None
                 continue
 
             item["metadata"] = metadata(item)
@@ -281,17 +372,15 @@ def player_loop():
                 state["started_at"] = time.time()
                 state["status"] = "playing"
                 if item.get("default_track"):
-                    state["last_default_id"] = (
-                        item.get("video_id") or item.get("file_path")
-                    )
+                    state["last_default_id"] = item.get("video_id") or item.get("file_path")
 
             print(
-                f"[AUTODJ] {'DEFAULT' if item.get('default_track') else 'REQUEST'}: "
+                f"[AUTODJ] {'DEFAULT' if not request_item else 'REQUEST'}: "
                 f"{item['metadata'].get('title', 'Pista')}",
                 flush=True,
             )
 
-            process = play_file(Path(item["file_path"]))
+            decoder = start_decoder(Path(item["file_path"]))
             playback_started_at = time.monotonic()
 
             while True:
@@ -299,16 +388,22 @@ def player_loop():
                     break
 
                 if item.get("default_track") and has_requests():
-                    print(
-                        "[AUTODJ] Solicitud prioritaria detectada.",
-                        flush=True,
-                    )
+                    print("[AUTODJ] Solicitud prioritaria detectada.", flush=True)
                     break
 
-                if process.poll() is not None:
+                if not icecast_encoder.alive():
+                    raise RuntimeError("El encoder persistente de Icecast se detuvo.")
+
+                if decoder.poll() is not None:
                     break
 
-                time.sleep(0.25)
+                chunk = decoder.stdout.read(16384) if decoder.stdout else b""
+                if chunk:
+                    icecast_encoder.write(chunk)
+                elif decoder.poll() is not None:
+                    break
+                else:
+                    time.sleep(0.01)
 
             was_skipped = skip_event.is_set()
             elapsed_playback = (
@@ -316,22 +411,17 @@ def player_loop():
                 if playback_started_at is not None
                 else 0
             )
-            return_code = process.poll() if process is not None else None
+            return_code = decoder.poll() if decoder is not None else None
 
-            stop_decoder(process)
-            process = None
-
+            stop_decoder(decoder)
+            decoder = None
             skip_event.clear()
 
             if request_item and request_ref and item.get("request_id"):
-                if was_skipped or (return_code == 0) or elapsed_playback >= 2:
+                if was_skipped or return_code == 0 or elapsed_playback >= 2:
                     set_request_result(item, "played")
                 else:
-                    set_request_result(
-                        item,
-                        "failed",
-                        "FFmpeg terminó antes de reproducir la solicitud.",
-                    )
+                    set_request_result(item, "failed", "FFmpeg terminó antes de reproducir la solicitud.")
 
             with lock:
                 state["current"] = None
@@ -339,14 +429,14 @@ def player_loop():
                 state["status"] = "idle"
                 if request_item:
                     active_request = None
+
             if request_item:
                 acknowledge_request(request_ref)
 
         except Exception as error:
             print(f"[AUTODJ] error: {error}", flush=True)
-
-            if process is not None:
-                stop_decoder(process)
+            if decoder is not None:
+                stop_decoder(decoder)
 
             if request_item and request_ref and item and item.get("request_id"):
                 set_request_result(item, "failed", str(error))
@@ -498,4 +588,7 @@ if __name__ == "__main__":
 
     threading.Thread(target=player_loop, daemon=True).start()
     print(f"[AUTODJ] API escuchando en {HOST}:{PORT}", flush=True)
-    ThreadingHTTPServer((HOST, PORT), API).serve_forever()
+    try:
+        ThreadingHTTPServer((HOST, PORT), API).serve_forever()
+    finally:
+        icecast_encoder.stop()
