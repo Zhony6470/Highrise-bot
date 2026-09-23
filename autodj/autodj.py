@@ -393,7 +393,7 @@ def prefetch_next(current_item: dict) -> None:
     with lock:
         candidate = (
             queue[1]
-            if active_request is not None and queue and queue[0] is active_request
+            if active_request is not None and len(queue) > 1 and queue[0] is active_request
             else (queue[0] if queue else None)
         )
 
