@@ -97,11 +97,18 @@ def ensure_file(item: dict) -> Path:
     if Path(COOKIES).exists():
         command += ["--cookies", COOKIES]
 
-    subprocess.run(
-        command + [f"https://www.youtube.com/watch?v={video_id}"],
-        check=True,
-        timeout=180,
-    )
+    with download_lock:
+        # Re comprobar después de adquirir el lock: otra tarea puede haber
+        # terminado la descarga mientras esperábamos.
+        matches = list(CACHE.glob(video_id + ".*"))
+        if matches:
+            return matches[0]
+
+        subprocess.run(
+            command + [f"https://www.youtube.com/watch?v={video_id}"],
+            check=True,
+            timeout=180,
+        )
 
     matches = list(CACHE.glob(video_id + ".*"))
     if not matches:
@@ -335,6 +342,63 @@ def has_requests() -> bool:
         return len(queue) > (1 if active_request is not None else 0)
 
 
+
+def prefetch_item(item: dict) -> None:
+    """Descarga en segundo plano la siguiente pista para evitar huecos entre canciones."""
+    if not item:
+        return
+
+    video_id = item.get("video_id")
+    file_path = item.get("file_path")
+    key = video_id or file_path
+    if not key:
+        return
+
+    with prefetch_lock:
+        if key in prefetching:
+            return
+        prefetching.add(key)
+
+    def worker():
+        try:
+            path = ensure_file(dict(item))
+            request_id = item.get("request_id")
+            with lock:
+                if request_id:
+                    for queued in queue:
+                        if queued.get("request_id") == request_id:
+                            queued["file_path"] = str(path)
+                            break
+                    save(QUEUE_FILE, list(queue))
+            print(
+                f"[AUTODJ] PRELOAD: {item.get('metadata', {}).get('title', item.get('title', 'Pista'))}",
+                flush=True,
+            )
+        except Exception as error:
+            print(f"[AUTODJ] Error precargando pista: {error}", flush=True)
+        finally:
+            with prefetch_lock:
+                prefetching.discard(key)
+
+    threading.Thread(target=worker, daemon=True, name="autodj-prefetch").start()
+
+
+def prefetch_next(current_item: dict) -> None:
+    """Mantiene preparada una sola pista siguiente sin bloquear la reproducción."""
+    with lock:
+        candidate = (
+            queue[1]
+            if active_request is not None and queue and queue[0] is active_request
+            else (queue[0] if queue else None)
+        )
+
+    if candidate is None:
+        candidate = choose_default()
+
+    if candidate:
+        prefetch_item(candidate)
+
+
 def player_loop():
     global active_request
 
@@ -395,6 +459,11 @@ def player_loop():
             decoder = start_decoder(Path(item["file_path"]))
             playback_started_at = time.monotonic()
 
+            # Descargar la siguiente pista mientras la actual suena. Así, un
+            # cambio de canción no deja al encoder sin audio durante los
+            # segundos que yt-dlp necesita para resolver/descargar YouTube.
+            prefetch_next(item)
+
             while True:
                 if skip_event.is_set():
                     break
@@ -430,7 +499,9 @@ def player_loop():
             skip_event.clear()
 
             if request_item and request_ref and item.get("request_id"):
-                if was_skipped or return_code == 0 or elapsed_playback >= 2:
+                if was_skipped:
+                    set_request_result(item, "skipped")
+                elif return_code == 0 or elapsed_playback >= 2:
                     set_request_result(item, "played")
                 else:
                     set_request_result(item, "failed", "FFmpeg terminó antes de reproducir la solicitud.")
@@ -527,6 +598,9 @@ class API(BaseHTTPRequestHandler):
                 with lock:
                     queue.append(item)
                     save(QUEUE_FILE, list(queue))
+                # Resolver la URL mientras la pista actual sigue sonando.
+                # Esto hace que !play/!skip no tenga que esperar a yt-dlp.
+                prefetch_item(item)
                 return self.reply(200, {"ok": True, "queued": item})
 
             if self.path == "/skip":
