@@ -151,6 +151,7 @@ class PersistentIcecastEncoder:
                 command,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.DEVNULL,
+                bufsize=0,
                 # Heredar stderr permite ver en Docker los errores reales de FFmpeg
                 # si Icecast cierra la conexión o el encoder falla.
                 stderr=None,
