@@ -132,6 +132,7 @@ class PersistentIcecastEncoder:
 
             command = [
                 "ffmpeg", "-hide_banner", "-loglevel", "warning",
+                "-nostdin",
                 "-f", "s16le",
                 "-ar", str(SAMPLE_RATE),
                 "-ac", str(CHANNELS),
@@ -142,6 +143,7 @@ class PersistentIcecastEncoder:
                 "-ar", str(SAMPLE_RATE),
                 "-ac", str(CHANNELS),
                 "-content_type", "audio/mpeg",
+                "-flush_packets", "1",
                 "-f", "mp3",
                 icecast_url(),
             ]
