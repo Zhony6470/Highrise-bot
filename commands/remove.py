@@ -24,6 +24,7 @@ CATEGORIES = {
     "lashes",
     "mole",
     "mouth",
+    "pants",
     "necklace",
     "nose",
     "rod",
@@ -42,32 +43,18 @@ async def handle_remove(bot: BaseBot, user: User, message: str) -> str:
         return "<#FF6666>🧥 Solo el dueño o los moderadores pueden modificar el vestuario."
 
     parts = message.split()
+    if len(parts) >= 2 and parts[1].startswith("@"):
+        parts = [parts[0], *parts[2:]]
     if len(parts) != 2:
-        return "<#FFCC66>🧥 Uso: !remove <categoria>"
+        return "<#FFCC66>🧥 Uso: !remove @BotUsuario <categoria>"
 
     category = parts[1].lower()
+    if category == "pants":
+        return "<#FFCC66>👖 Highrise requiere una prenda de parte inferior. No se pueden quitar los pantalones sin reemplazarlos."
     if category not in CATEGORIES:
         return "<#FF6666>❌ Categoría inválida."
 
-    try:
-        outfit = (await bot.highrise.get_my_outfit()).outfit
-        filtered_outfit = [
-            item
-            for item in outfit
-            if item.id.split("-", 1)[0].lower() != category
-        ]
-
-        if len(filtered_outfit) == len(outfit):
-            return f"<#FFCC66>👕 El bot no usa ninguna prenda de la categoría '{category}'."
-
-        result = await bot.highrise.set_outfit(filtered_outfit)
-        if result is not None:
-            print(f"Error de Highrise eliminando la categoría '{category}': {result}")
-            return "<#FF6666>⚠️ No se pudo modificar el vestuario."
-        return f"<#66FF99>✨ Categoría '{category}' eliminada correctamente."
-    except Exception as error:
-        print(f"Error eliminando la categoría '{category}': {error}")
-        return "<#FF6666>⚠️ No se pudo modificar el vestuario."
+    return await bot.avatar_manager.remove_category(category)
 
 
 COMMANDS = {"!remove": handle_remove, "/remove": handle_remove}

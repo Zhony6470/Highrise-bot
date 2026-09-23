@@ -1,3 +1,7 @@
+networks:
+  highrise:
+    driver: bridge
+
 services:
   icecast:
     image: moul/icecast
@@ -9,15 +13,24 @@ services:
       ICECAST_HOSTNAME: ${ICECAST_PUBLIC_HOST:-localhost}
       ICECAST_SOURCE_PASSWORD: ${ICECAST_PASSWORD}
       ICECAST_ADMIN_PASSWORD: ${ICECAST_ADMIN_PASSWORD:-change-me-admin}
+    volumes:
+      - icecast_config:/etc/icecast2
+      - icecast_config_data:/config
+      - icecast_logs:/var/log/icecast2
+    networks:
+      - highrise
 
   autodj:
     build:
       context: .
-      dockerfile: Dockerfile.autodj
+      dockerfile: infra/Dockerfile.autodj
     container_name: highrise-autodj
     restart: unless-stopped
+    networks:
+      - highrise
     depends_on:
-    - icecast
+      icecast:
+        condition: service_started
     environment:
       AUTODJ_TOKEN: ${AUTODJ_TOKEN}
       AUTODJ_HOST: 0.0.0.0
@@ -32,23 +45,42 @@ services:
       - autodj_data:/data
       - ./default_music:/data/default_music:ro
       - ./services/cookies.txt:/app/cookies-source.txt:ro
-    command: ["sh", "-c", "cp /app/cookies-source.txt /app/cookies.txt && python -u autodj.py"]
+    command:
+      - sh
+      - -c
+      - cp /app/cookies-source.txt /app/cookies.txt && python -u autodj.py
+
   main-bot:
     build:
       context: .
-      dockerfile: Dockerfile.bot
+      dockerfile: infra/Dockerfile.bot
     container_name: highrise-main-bot
     restart: unless-stopped
-    env_file: .env
-    command: ["python", "-u", "main.py"]
+    networks:
+      - highrise
+    env_file:
+      - .env
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          python -u -m bots.bot1.main
+          code=$$?
+          echo "[MAIN] Proceso finalizó con código $$code; reiniciando en 2s..."
+          sleep 2
+        done
 
   music-bot:
     build:
       context: .
-      dockerfile: Dockerfile.bot
+      dockerfile: infra/Dockerfile.bot
     container_name: highrise-music-bot
     restart: unless-stopped
-    env_file: .env
+    networks:
+      - highrise
+    env_file:
+      - .env
     environment:
       MUSIC_ROOM_ID: ${MUSIC_ROOM_ID}
       MUSIC_API_KEY: ${MUSIC_API_KEY}
@@ -58,8 +90,22 @@ services:
     depends_on:
       - autodj
     volumes:
-      - ./music_bot_data.json:/app/music_bot_data.json
-    command: ["python", "-u", "music_bot.py"]
+      - ./bots/dj/data/music_bot_data.json:/app/music_bot_data.json
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          python -u -m bots.dj.music_bot
+          code=$$?
+          echo "[MUSIC] Proceso finalizó con código $$code; reiniciando en 2s..."
+          sleep 2
+        done
 
 volumes:
   autodj_data:
+    external: true
+    name: refactor-test_autodj_data
+  icecast_config:
+  icecast_config_data:
+  icecast_logs:
