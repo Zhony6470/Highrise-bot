@@ -37,6 +37,11 @@ skip_event = threading.Event()
 state = {"current": None, "started_at": None, "status": "idle", "last_default_id": None, "last_request_results": []}
 active_request = None
 
+# Locks for concurrent yt-dlp downloads and background prefetch workers.
+download_lock = threading.RLock()
+prefetch_lock = threading.RLock()
+prefetching = set()
+
 
 def load(path: Path, default):
     try:
