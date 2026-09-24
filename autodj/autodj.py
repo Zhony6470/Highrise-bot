@@ -721,12 +721,12 @@ def player_loop():
             playback_started_at = time.monotonic()
 
             # Preparar la siguiente pista desde el principio de la actual.
-            next_item = candidate_for_current(item)
-            if next_item is None:
-                next_item = fallback_next_candidate()
+            next_candidate = candidate_for_current(item)
+            if next_candidate is None:
+                next_candidate = fallback_next_candidate()
 
-            if next_item is not None:
-                next_prepared = PreparedTrack(next_item, initial=False).start()
+            if next_candidate is not None:
+                next_prepared = PreparedTrack(next_candidate, initial=False).start()
 
             # Solo la primera conexión necesita el pequeño colchón inicial.
             # Las siguientes ya están preparadas en paralelo.
