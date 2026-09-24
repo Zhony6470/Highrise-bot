@@ -212,8 +212,20 @@ icecast_encoder = PersistentIcecastEncoder()
 
 
 PCM_CHUNK_BYTES = 16384
-PCM_BUFFER_SECONDS = 1.5
-PCM_BUFFER_CHUNKS = max(1, int(PCM_BUFFER_SECONDS / (PCM_CHUNK_BYTES / (SAMPLE_RATE * CHANNELS * 2))))
+# Mantener varios segundos de PCM listos evita que un pequeño jitter del
+# decoder se convierta en un hueco audible para los clientes.
+# Buscamos recuperar el comportamiento estable que teníamos: ~7 s de
+# latencia fija, en lugar de intentar reproducir casi pegados al tiempo real.
+PCM_BUFFER_SECONDS = 8.0
+PCM_INITIAL_BUFFER_SECONDS = 7.0
+PCM_BUFFER_CHUNKS = max(
+    1,
+    int(PCM_BUFFER_SECONDS / (PCM_CHUNK_BYTES / (SAMPLE_RATE * CHANNELS * 2))),
+)
+PCM_INITIAL_BUFFER_CHUNKS = max(
+    1,
+    int(PCM_INITIAL_BUFFER_SECONDS / (PCM_CHUNK_BYTES / (SAMPLE_RATE * CHANNELS * 2))),
+)
 PCM_CHUNK_SECONDS = PCM_CHUNK_BYTES / (SAMPLE_RATE * CHANNELS * 2)
 
 
@@ -550,17 +562,14 @@ def player_loop():
             # segundos que yt-dlp necesita para resolver/descargar YouTube.
             prefetch_next(item)
 
-            # El lector del decoder corre en un hilo separado y puede
-            # adelantarse hasta ~1.5 s. El hilo de reproducción solo consume
-            # el buffer a velocidad real. A diferencia del buffer anterior,
-            # aquí una pausa breve de decoder/yt-dlp/Python no vacía el stream.
+            # El lector corre por delante y llena hasta ~8 s de PCM.
+            # Esperamos ~7 s antes de empezar el primer envío de la pista.
+            # Así recuperamos un colchón fijo frente a jitter del decoder,
+            # en lugar de arrancar prácticamente pegados al tiempo real.
             pcm_reader = PCMDecoderReader(decoder)
             pcm_reader.start()
 
-            # Arrancamos con ~0.5 s de colchón. Es suficiente para absorber
-            # jitter sin recuperar la latencia de varios segundos que tenía
-            # la implementación anterior.
-            target_initial_chunks = max(1, int(0.5 / PCM_CHUNK_SECONDS))
+            target_initial_chunks = PCM_INITIAL_BUFFER_CHUNKS
             while (
                 pcm_reader.buffered_chunks() < target_initial_chunks
                 and not pcm_reader.eof.is_set()
