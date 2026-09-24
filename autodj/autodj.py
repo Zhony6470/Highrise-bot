@@ -210,10 +210,17 @@ class PersistentIcecastEncoder:
 icecast_encoder = PersistentIcecastEncoder()
 
 
+PCM_CHUNK_BYTES = 16384
+PCM_BUFFER_CHUNKS = 8  # ~0.74 s de audio a 44.1 kHz estéreo s16le
+PCM_CHUNK_SECONDS = PCM_CHUNK_BYTES / (SAMPLE_RATE * CHANNELS * 2)
+
+
 def start_decoder(path: Path):
     command = [
         "ffmpeg", "-hide_banner", "-loglevel", "warning",
-        "-re",
+        # El decoder corre ligeramente por delante y el loop de reproducción
+        # entrega PCM a velocidad real. Esto crea un pequeño colchón contra
+        # jitter/pausas del proceso sin introducir varios segundos de latencia.
         "-i", str(path),
         "-t", str(MAX_PLAY_SECONDS),
         "-vn",
@@ -469,27 +476,45 @@ def player_loop():
             # segundos que yt-dlp necesita para resolver/descargar YouTube.
             prefetch_next(item)
 
+            # El decoder puede adelantarse hasta ~0.74 s. El reproductor
+            # mantiene ese PCM en un buffer pequeño y lo entrega a FFmpeg a
+            # velocidad real. Así una pausa breve del decoder/Python no llega
+            # al stream, pero !skip no queda atrapado detrás de varios segundos.
+            pcm_buffer = deque(maxlen=PCM_BUFFER_CHUNKS)
+            decoder_eof = False
+
             while True:
                 if skip_event.is_set():
+                    pcm_buffer.clear()
                     break
 
                 if item.get("default_track") and has_requests():
                     print("[AUTODJ] Solicitud prioritaria detectada.", flush=True)
+                    pcm_buffer.clear()
                     break
 
                 if not icecast_encoder.alive():
                     raise RuntimeError("El encoder persistente de Icecast se detuvo.")
 
-                if decoder.poll() is not None:
+                if not decoder_eof and len(pcm_buffer) < PCM_BUFFER_CHUNKS:
+                    chunk = decoder.stdout.read(PCM_CHUNK_BYTES) if decoder.stdout else b""
+                    if chunk:
+                        pcm_buffer.append(chunk)
+                    elif decoder.poll() is not None:
+                        decoder_eof = True
+
+                if pcm_buffer:
+                    chunk = pcm_buffer.popleft()
+                    icecast_encoder.write(chunk)
+                    # Mantener el flujo en tiempo real evita que el encoder
+                    # empuje datos a Icecast más rápido que el audio real.
+                    time.sleep(PCM_CHUNK_SECONDS)
+                    continue
+
+                if decoder_eof or decoder.poll() is not None:
                     break
 
-                chunk = decoder.stdout.read(16384) if decoder.stdout else b""
-                if chunk:
-                    icecast_encoder.write(chunk)
-                elif decoder.poll() is not None:
-                    break
-                else:
-                    time.sleep(0.01)
+                time.sleep(0.005)
 
             was_skipped = skip_event.is_set()
             elapsed_playback = (
