@@ -217,7 +217,10 @@ PCM_CHUNK_BYTES = 16384
 # Buscamos recuperar el comportamiento estable que teníamos: ~7 s de
 # latencia fija, en lugar de intentar reproducir casi pegados al tiempo real.
 PCM_BUFFER_SECONDS = 8.0
-PCM_INITIAL_BUFFER_SECONDS = 7.0
+# Solo la primera conexión necesita un colchón de arranque. Las pistas
+# siguientes se preparan en paralelo antes de que termine la actual.
+PCM_INITIAL_BUFFER_SECONDS = 1.5
+PCM_NEXT_BUFFER_SECONDS = 2.0
 PCM_BUFFER_CHUNKS = max(
     1,
     int(PCM_BUFFER_SECONDS / (PCM_CHUNK_BYTES / (SAMPLE_RATE * CHANNELS * 2))),
@@ -230,11 +233,11 @@ PCM_CHUNK_SECONDS = PCM_CHUNK_BYTES / (SAMPLE_RATE * CHANNELS * 2)
 
 
 class PCMDecoderReader:
-    """Lee PCM en un hilo independiente para mantener un colchón real de audio."""
-
-    def __init__(self, process):
+    """Colchón PCM de una pista. El decoder produce por delante de la reproducción."""
+    def __init__(self, process, max_chunks=None):
         self.process = process
-        self.buffer = queue_module.Queue(maxsize=PCM_BUFFER_CHUNKS)
+        self.max_chunks = max_chunks or PCM_BUFFER_CHUNKS
+        self.buffer = queue_module.Queue(maxsize=self.max_chunks)
         self.eof = threading.Event()
         self.stop_event = threading.Event()
         self.error = None
@@ -265,8 +268,6 @@ class PCMDecoderReader:
                         self.buffer.put(chunk, timeout=0.1)
                         break
                     except queue_module.Full:
-                        # El reproductor ya tiene suficiente audio. Dejamos
-                        # bloqueado al productor hasta que pueda avanzar.
                         continue
         except Exception as error:
             if not self.stop_event.is_set():
@@ -283,13 +284,33 @@ class PCMDecoderReader:
     def buffered_chunks(self):
         return self.buffer.qsize()
 
+    def wait_for_chunks(self, target_chunks, timeout=None):
+        started = time.monotonic()
+        while (
+            self.buffered_chunks() < target_chunks
+            and not self.eof.is_set()
+            and not self.stop_event.is_set()
+        ):
+            if self.error is not None:
+                return False
+            if timeout is not None and time.monotonic() - started >= timeout:
+                return False
+            time.sleep(0.01)
+        return self.buffered_chunks() >= target_chunks
+
     def stop(self):
         self.stop_event.set()
         try:
-            self.process.terminate()
+            if self.process.poll() is None:
+                self.process.terminate()
         except Exception:
             pass
         self.thread.join(timeout=1.5)
+        try:
+            if self.process.poll() is None:
+                self.process.kill()
+        except Exception:
+            pass
         self.clear()
 
     def clear(self):
@@ -303,9 +324,6 @@ class PCMDecoderReader:
 def start_decoder(path: Path):
     command = [
         "ffmpeg", "-hide_banner", "-loglevel", "warning",
-        # El decoder corre ligeramente por delante y el loop de reproducción
-        # entrega PCM a velocidad real. Esto crea un pequeño colchón contra
-        # jitter/pausas del proceso sin introducir varios segundos de latencia.
         "-i", str(path),
         "-t", str(MAX_PLAY_SECONDS),
         "-vn",
@@ -317,8 +335,6 @@ def start_decoder(path: Path):
     return subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
-        # Los avisos/errores del decoder deben quedar visibles en los logs
-        # del contenedor para poder diagnosticar pistas defectuosas.
         stderr=None,
     )
 
@@ -327,9 +343,6 @@ def stop_decoder(process):
     if process is None:
         return
 
-    # Primero detenemos FFmpeg y esperamos su salida. Cerrar stdout antes
-    # puede provocar un SIGPIPE/Broken pipe innecesario mientras el proceso
-    # todavía está intentando escribir audio.
     try:
         if process.poll() is None:
             process.terminate()
@@ -346,6 +359,111 @@ def stop_decoder(process):
                 process.stdout.close()
         except Exception:
             pass
+
+
+class PreparedTrack:
+    """
+    Prepara la siguiente pista fuera del reloj de reproducción.
+
+    La pista siguiente puede estar descargando y decodificando mientras la
+    actual sigue alimentando el encoder persistente. Al llegar al final,
+    el writer cambia al buffer ya preparado sin volver a esperar 7 segundos.
+    """
+
+    def __init__(self, item: dict, initial=False):
+        self.item = dict(item)
+        self.initial = initial
+        self.decoder = None
+        self.reader = None
+        self.error = None
+        self.ready = threading.Event()
+        self.cancel_event = threading.Event()
+        self.lock = threading.RLock()
+        self.thread = threading.Thread(
+            target=self._prepare,
+            daemon=True,
+            name="autodj-track-preparer",
+        )
+
+    def start(self):
+        self.thread.start()
+        return self
+
+    def _prepare(self):
+        try:
+            if self.cancel_event.is_set():
+                return
+
+            path = ensure_file(self.item)
+            if self.cancel_event.is_set():
+                return
+
+            self.item["file_path"] = str(path)
+            self.item["metadata"] = metadata(self.item)
+
+            decoder = start_decoder(path)
+            reader = PCMDecoderReader(decoder)
+            with self.lock:
+                self.decoder = decoder
+                self.reader = reader
+
+            reader.start()
+
+            target_seconds = (
+                PCM_INITIAL_BUFFER_SECONDS
+                if self.initial
+                else PCM_NEXT_BUFFER_SECONDS
+            )
+            target_chunks = max(1, int(target_seconds / PCM_CHUNK_SECONDS))
+
+            if not reader.wait_for_chunks(target_chunks, timeout=20):
+                if reader.error is not None:
+                    raise RuntimeError(f"Error preparando PCM: {reader.error}")
+                if not reader.eof.is_set():
+                    raise RuntimeError(
+                        f"No se pudo preparar {target_seconds:.1f}s de PCM antes del timeout."
+                    )
+
+            if self.cancel_event.is_set():
+                return
+
+            print(
+                f"[AUTODJ] TRACK READY: "
+                f"{self.item.get('metadata', {}).get('title', self.item.get('title', 'Pista'))} "
+                f"(buffer={reader.buffered_chunks()}/{PCM_BUFFER_CHUNKS})",
+                flush=True,
+            )
+            self.ready.set()
+
+        except Exception as error:
+            self.error = error
+            print(f"[AUTODJ] Error preparando pista: {error}", flush=True)
+        finally:
+            if self.error is not None:
+                self.ready.set()
+
+    def wait_ready(self, timeout=None):
+        self.ready.wait(timeout)
+        return self.error is None and self.reader is not None
+
+    def stop(self):
+        self.cancel_event.set()
+        with self.lock:
+            reader = self.reader
+            decoder = self.decoder
+        if reader is not None:
+            reader.stop()
+        elif decoder is not None:
+            stop_decoder(decoder)
+        self.thread.join(timeout=0.5)
+
+    def take_reader(self):
+        with self.lock:
+            reader = self.reader
+            decoder = self.decoder
+            self.reader = None
+            self.decoder = None
+        return decoder, reader
 
 
 def choose_default():
@@ -496,8 +614,33 @@ def prefetch_next(current_item: dict) -> None:
         prefetch_item(candidate)
 
 
+def candidate_for_current(current_item: dict):
+    """Selecciona la siguiente pista sin bloquear el hilo de audio."""
+    with lock:
+        if current_item.get("default_track"):
+            return queue[0] if queue else None
+        if queue and queue[0] is active_request:
+            return queue[1] if len(queue) > 1 else None
+        return queue[0] if queue else None
+
+
+def fallback_next_candidate():
+    candidate = choose_default()
+    if candidate:
+        candidate["default_track"] = True
+    return candidate
+
+
+def should_interrupt_default():
+    with lock:
+        current = state.get("current") or {}
+        return bool(current.get("default_track")) and bool(queue)
+
+
 def player_loop():
     global active_request
+
+    next_prepared = None
 
     try:
         icecast_encoder.start()
@@ -505,40 +648,57 @@ def player_loop():
         print(f"[AUTODJ] No se pudo iniciar el encoder de Icecast: {error}", flush=True)
 
     while True:
-        item = None
+        current_source = None
         decoder = None
         pcm_reader = None
         request_ref = None
         request_item = False
+        item = None
         playback_started_at = None
 
         try:
             if not icecast_encoder.alive():
                 icecast_encoder.start()
 
-            item = next_item()
-            if not item:
-                with lock:
-                    state["status"] = "idle"
-                time.sleep(1)
-                continue
+            if next_prepared is None:
+                item = next_item()
+                if not item:
+                    with lock:
+                        state["status"] = "idle"
+                    time.sleep(1)
+                    continue
 
-            item = dict(item)
-            request_item = not item.get("default_track")
+                item = dict(item)
+                request_item = not item.get("default_track")
 
-            if request_item:
-                with lock:
-                    request_ref = queue[0] if queue else None
-                    active_request = request_ref
+                if request_item:
+                    with lock:
+                        request_ref = queue[0] if queue else None
+                        active_request = request_ref
 
-            item["file_path"] = str(ensure_file(item))
+                current_source = PreparedTrack(item, initial=True).start()
+            else:
+                current_source = next_prepared
+                next_prepared = None
+                item = dict(current_source.item)
+                request_item = not item.get("default_track")
+
+                if request_item:
+                    with lock:
+                        request_ref = queue[0] if queue else None
+                        active_request = request_ref
 
             if item.get("default_track") and queue_snapshot():
-                print("[AUTODJ] Solicitud pendiente; descartando DEFAULT antes de reproducir.", flush=True)
+                current_source.stop()
+                current_source = None
                 with lock:
                     active_request = None
                 continue
 
+            if not current_source.wait_ready(timeout=30):
+                raise RuntimeError(current_source.error or "La pista actual no pudo prepararse.")
+
+            item = dict(current_source.item)
             item["metadata"] = metadata(item)
 
             with lock:
@@ -554,41 +714,43 @@ def player_loop():
                 flush=True,
             )
 
-            decoder = start_decoder(Path(item["file_path"]))
+            decoder, pcm_reader = current_source.take_reader()
+            if pcm_reader is None:
+                raise RuntimeError("La pista preparada no tiene lector PCM.")
+
             playback_started_at = time.monotonic()
 
-            # Descargar la siguiente pista mientras la actual suena. Así, un
-            # cambio de canción no deja al encoder sin audio durante los
-            # segundos que yt-dlp necesita para resolver/descargar YouTube.
-            prefetch_next(item)
+            # Preparar la siguiente pista desde el principio de la actual.
+            next_item = candidate_for_current(item)
+            if next_item is None:
+                next_item = fallback_next_candidate()
 
-            # El lector corre por delante y llena hasta ~8 s de PCM.
-            # Esperamos ~7 s antes de empezar el primer envío de la pista.
-            # Así recuperamos un colchón fijo frente a jitter del decoder,
-            # en lugar de arrancar prácticamente pegados al tiempo real.
-            pcm_reader = PCMDecoderReader(decoder)
-            pcm_reader.start()
+            if next_item is not None:
+                next_prepared = PreparedTrack(next_item, initial=False).start()
 
-            target_initial_chunks = PCM_INITIAL_BUFFER_CHUNKS
-            while (
-                pcm_reader.buffered_chunks() < target_initial_chunks
-                and not pcm_reader.eof.is_set()
-                and not skip_event.is_set()
+            # Solo la primera conexión necesita el pequeño colchón inicial.
+            # Las siguientes ya están preparadas en paralelo.
+            if not pcm_reader.wait_for_chunks(
+                max(1, int(PCM_INITIAL_BUFFER_SECONDS / PCM_CHUNK_SECONDS)),
+                timeout=5,
             ):
-                time.sleep(0.01)
+                if pcm_reader.error is not None:
+                    raise RuntimeError(f"Error leyendo PCM: {pcm_reader.error}")
 
-            # Usamos un reloj absoluto, no sleep() acumulativo. Si una
-            # escritura tarda un poco más, el siguiente deadline se calcula
-            # desde el reloj original y no se va desplazando cada canción.
             next_write_at = time.monotonic()
 
             while True:
                 if skip_event.is_set():
+                    # Descartamos el buffer de la pista actual. El encoder
+                    # sigue conectado y el siguiente buffer queda disponible.
                     pcm_reader.clear()
                     break
 
-                if item.get("default_track") and has_requests():
-                    print("[AUTODJ] Solicitud prioritaria detectada.", flush=True)
+                if should_interrupt_default():
+                    print(
+                        "[AUTODJ] Solicitud prioritaria detectada; cambiando al siguiente buffer preparado.",
+                        flush=True,
+                    )
                     pcm_reader.clear()
                     break
 
@@ -599,8 +761,10 @@ def player_loop():
                     raise RuntimeError(f"Error leyendo PCM: {pcm_reader.error}")
 
                 chunk = pcm_reader.get(timeout=0.25)
+
                 if chunk:
                     now = time.monotonic()
+
                     if now > next_write_at + (PCM_CHUNK_SECONDS * 2):
                         print(
                             f"[AUTODJ] PCM CLOCK LATE: {now - next_write_at:.3f}s "
@@ -631,8 +795,7 @@ def player_loop():
                     break
 
                 print(
-                    f"[AUTODJ] PCM UNDERRUN: buffer vacío "
-                    f"(eof={pcm_reader.eof.is_set()})",
+                    f"[AUTODJ] PCM UNDERRUN: buffer vacío (eof={pcm_reader.eof.is_set()})",
                     flush=True,
                 )
 
@@ -644,9 +807,10 @@ def player_loop():
             )
             return_code = decoder.poll() if decoder is not None else None
 
-            stop_decoder(decoder)
-            decoder = None
+            if pcm_reader is not None:
+                pcm_reader.stop()
             pcm_reader = None
+            decoder = None
             skip_event.clear()
 
             if request_item and request_ref and item.get("request_id"):
@@ -655,7 +819,11 @@ def player_loop():
                 elif return_code == 0 or elapsed_playback >= 2:
                     set_request_result(item, "played")
                 else:
-                    set_request_result(item, "failed", "FFmpeg terminó antes de reproducir la solicitud.")
+                    set_request_result(
+                        item,
+                        "failed",
+                        "FFmpeg terminó antes de reproducir la solicitud.",
+                    )
 
             with lock:
                 state["current"] = None
@@ -667,12 +835,38 @@ def player_loop():
             if request_item:
                 acknowledge_request(request_ref)
 
+            # Si durante la reproducción apareció una solicitud, un DEFAULT
+            # preparado ya no debe entrar después de ella.
+            if (
+                next_prepared is not None
+                and next_prepared.item.get("default_track")
+                and queue_snapshot()
+            ):
+                next_prepared.stop()
+                next_prepared = None
+
+            continue
+
         except Exception as error:
             print(f"[AUTODJ] error: {error}", flush=True)
+
             if pcm_reader is not None:
                 pcm_reader.stop()
-            if decoder is not None:
+            elif decoder is not None:
                 stop_decoder(decoder)
+
+            if current_source is not None:
+                try:
+                    current_source.stop()
+                except Exception:
+                    pass
+
+            if next_prepared is not None:
+                try:
+                    next_prepared.stop()
+                except Exception:
+                    pass
+                next_prepared = None
 
             if request_item and request_ref and item and item.get("request_id"):
                 set_request_result(item, "failed", str(error))
