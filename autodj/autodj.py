@@ -211,8 +211,80 @@ icecast_encoder = PersistentIcecastEncoder()
 
 
 PCM_CHUNK_BYTES = 16384
-PCM_BUFFER_CHUNKS = 8  # ~0.74 s de audio a 44.1 kHz estéreo s16le
+PCM_BUFFER_SECONDS = 1.5
+PCM_BUFFER_CHUNKS = max(1, int(PCM_BUFFER_SECONDS / (PCM_CHUNK_BYTES / (SAMPLE_RATE * CHANNELS * 2))))
 PCM_CHUNK_SECONDS = PCM_CHUNK_BYTES / (SAMPLE_RATE * CHANNELS * 2)
+
+
+class PCMDecoderReader:
+    """Lee PCM en un hilo independiente para mantener un colchón real de audio."""
+
+    def __init__(self, process):
+        self.process = process
+        self.buffer = __import__("queue").Queue(maxsize=PCM_BUFFER_CHUNKS)
+        self.eof = threading.Event()
+        self.stop_event = threading.Event()
+        self.error = None
+        self.thread = threading.Thread(
+            target=self._run,
+            daemon=True,
+            name="autodj-pcm-reader",
+        )
+
+    def start(self):
+        self.thread.start()
+
+    def _run(self):
+        try:
+            stdout = self.process.stdout
+            if stdout is None:
+                self.error = RuntimeError("El decoder FFmpeg no tiene stdout.")
+                return
+
+            while not self.stop_event.is_set():
+                chunk = stdout.read(PCM_CHUNK_BYTES)
+                if not chunk:
+                    self.eof.set()
+                    return
+
+                while not self.stop_event.is_set():
+                    try:
+                        self.buffer.put(chunk, timeout=0.1)
+                        break
+                    except __import__("queue").Full:
+                        # El reproductor ya tiene suficiente audio. Dejamos
+                        # bloqueado al productor hasta que pueda avanzar.
+                        continue
+        except Exception as error:
+            if not self.stop_event.is_set():
+                self.error = error
+        finally:
+            self.eof.set()
+
+    def get(self, timeout=0.25):
+        try:
+            return self.buffer.get(timeout=timeout)
+        except __import__("queue").Empty:
+            return None
+
+    def buffered_chunks(self):
+        return self.buffer.qsize()
+
+    def stop(self):
+        self.stop_event.set()
+        try:
+            self.process.terminate()
+        except Exception:
+            pass
+        self.thread.join(timeout=1.5)
+        self.clear()
+
+    def clear(self):
+        try:
+            while True:
+                self.buffer.get_nowait()
+        except __import__("queue").Empty:
+            pass
 
 
 def start_decoder(path: Path):
@@ -422,6 +494,7 @@ def player_loop():
     while True:
         item = None
         decoder = None
+        pcm_reader = None
         request_ref = None
         request_item = False
         playback_started_at = None
@@ -476,47 +549,53 @@ def player_loop():
             # segundos que yt-dlp necesita para resolver/descargar YouTube.
             prefetch_next(item)
 
-            # El decoder puede adelantarse hasta ~0.74 s. El reproductor
-            # mantiene ese PCM en un buffer pequeño y lo entrega a FFmpeg a
-            # velocidad real. Así una pausa breve del decoder/Python no llega
-            # al stream, pero !skip no queda atrapado detrás de varios segundos.
-            pcm_buffer = deque(maxlen=PCM_BUFFER_CHUNKS)
-            decoder_eof = False
+            # El lector del decoder corre en un hilo separado y puede
+            # adelantarse hasta ~1.5 s. El hilo de reproducción solo consume
+            # el buffer a velocidad real. A diferencia del buffer anterior,
+            # aquí una pausa breve de decoder/yt-dlp/Python no vacía el stream.
+            pcm_reader = PCMDecoderReader(decoder)
+            pcm_reader.start()
+
+            # Arrancamos con ~0.5 s de colchón. Es suficiente para absorber
+            # jitter sin recuperar la latencia de varios segundos que tenía
+            # la implementación anterior.
+            target_initial_chunks = max(1, int(0.5 / PCM_CHUNK_SECONDS))
+            while (
+                pcm_reader.buffered_chunks() < target_initial_chunks
+                and not pcm_reader.eof.is_set()
+                and not skip_event.is_set()
+            ):
+                time.sleep(0.01)
 
             while True:
                 if skip_event.is_set():
-                    pcm_buffer.clear()
+                    pcm_reader.clear()
                     break
 
                 if item.get("default_track") and has_requests():
                     print("[AUTODJ] Solicitud prioritaria detectada.", flush=True)
-                    pcm_buffer.clear()
+                    pcm_reader.clear()
                     break
 
                 if not icecast_encoder.alive():
                     raise RuntimeError("El encoder persistente de Icecast se detuvo.")
 
-                if not decoder_eof and len(pcm_buffer) < PCM_BUFFER_CHUNKS:
-                    chunk = decoder.stdout.read(PCM_CHUNK_BYTES) if decoder.stdout else b""
-                    if chunk:
-                        pcm_buffer.append(chunk)
-                    elif decoder.poll() is not None:
-                        decoder_eof = True
+                if pcm_reader.error is not None:
+                    raise RuntimeError(f"Error leyendo PCM: {pcm_reader.error}")
 
-                if pcm_buffer:
-                    chunk = pcm_buffer.popleft()
+                chunk = pcm_reader.get(timeout=0.25)
+                if chunk:
                     icecast_encoder.write(chunk)
-                    # Mantener el flujo en tiempo real evita que el encoder
-                    # empuje datos a Icecast más rápido que el audio real.
+                    # El encoder recibe audio a velocidad real; el reader
+                    # independiente mantiene el colchón por delante.
                     time.sleep(PCM_CHUNK_SECONDS)
                     continue
 
-                if decoder_eof or decoder.poll() is not None:
+                if pcm_reader.eof.is_set() and pcm_reader.buffered_chunks() == 0:
                     break
 
-                time.sleep(0.005)
-
             was_skipped = skip_event.is_set()
+            pcm_reader.stop()
             elapsed_playback = (
                 time.monotonic() - playback_started_at
                 if playback_started_at is not None
@@ -524,8 +603,11 @@ def player_loop():
             )
             return_code = decoder.poll() if decoder is not None else None
 
+            if pcm_reader is not None:
+                pcm_reader.stop()
             stop_decoder(decoder)
             decoder = None
+            pcm_reader = None
             skip_event.clear()
 
             if request_item and request_ref and item.get("request_id"):
@@ -548,6 +630,8 @@ def player_loop():
 
         except Exception as error:
             print(f"[AUTODJ] error: {error}", flush=True)
+            if pcm_reader is not None:
+                pcm_reader.stop()
             if decoder is not None:
                 stop_decoder(decoder)
 
