@@ -92,16 +92,38 @@ def ensure_file(item: dict) -> Path:
     if matches:
         return matches[0]
 
-    command = [
+    # No forzamos ios/android/web_embedded. YouTube puede rechazar
+    # web_embedded cuando el propietario desactiva la reproducción externa,
+    # aunque el video siga siendo visible normalmente.
+    #
+    # Primera opción: sesión pública sin cookies, usando los clientes por
+    # defecto de yt-dlp. Esto evita que una cookie de sesión vieja rompa
+    # videos públicos.
+    profiles = [
+        ("public-default", [
+            "yt-dlp",
+            "--no-playlist",
+            "--no-part",
+            "-f", "bestaudio/best",
+            "--extractor-args", "youtube:player_client=default",
+            "-o", str(CACHE / "%(id)s.%(ext)s"),
+        ]),
+    ]
+
+    # Segunda opción: si el video necesita autenticación/cookies, permitir
+    # clientes que aceptan cookies. No usamos web_embedded aquí porque solo
+    # sirve para videos que permiten reproducción embebida.
+    cookie_command = [
         "yt-dlp",
         "--no-playlist",
         "--no-part",
         "-f", "bestaudio/best",
-        "--extractor-args", "youtube:player_client=ios,android,web_embedded",
+        "--extractor-args", "youtube:player_client=default,web_safari",
         "-o", str(CACHE / "%(id)s.%(ext)s"),
     ]
     if Path(COOKIES).exists():
-        command += ["--cookies", COOKIES]
+        cookie_command += ["--cookies", COOKIES]
+        profiles.append(("cookies-default", cookie_command))
 
     with download_lock:
         # Re comprobar después de adquirir el lock: otra tarea puede haber
@@ -110,10 +132,33 @@ def ensure_file(item: dict) -> Path:
         if matches:
             return matches[0]
 
-        subprocess.run(
-            command + [f"https://www.youtube.com/watch?v={video_id}"],
-            check=True,
-            timeout=180,
+        last_error = None
+        for profile_name, command in profiles:
+            try:
+                print(
+                    f"[AUTODJ] YT-DLP: intentando {profile_name} para {video_id}",
+                    flush=True,
+                )
+                subprocess.run(
+                    command + [f"https://www.youtube.com/watch?v={video_id}"],
+                    check=True,
+                    timeout=180,
+                )
+                matches = list(CACHE.glob(video_id + ".*"))
+                if matches:
+                    print(
+                        f"[AUTODJ] YT-DLP: descarga OK con {profile_name} para {video_id}",
+                        flush=True,
+                    )
+                    return matches[0]
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+                last_error = error
+                # El primer perfil puede fallar por restricciones del cliente;
+                # probamos el segundo antes de marcar la pista como fallida.
+                continue
+
+        raise RuntimeError(
+            f"yt-dlp no pudo descargar {video_id} con los perfiles disponibles: {last_error}"
         )
 
     matches = list(CACHE.glob(video_id + ".*"))
@@ -868,8 +913,12 @@ def player_loop():
                     pass
                 next_prepared = None
 
-            if request_item and request_ref and item and item.get("request_id"):
-                set_request_result(item, "failed", str(error))
+            # Una solicitud fallida debe salir de la cola aunque no tenga
+            # request_id. El request_id solo es necesario para guardar el
+            # resultado; no debe bloquear el avance del reproductor.
+            if request_item and request_ref:
+                if item and item.get("request_id"):
+                    set_request_result(item, "failed", str(error))
                 acknowledge_request(request_ref)
 
             skip_event.clear()
