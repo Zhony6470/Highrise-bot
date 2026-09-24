@@ -353,6 +353,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         # Solo estos comandos compartidos pertenecen también al bot de música.
         # El resto son exclusivos de Zeta y no deben generar respuestas duplicadas.
         shared_commands = {
+            "!set",
             "!equip", "/equip",
             "!remove", "/remove",
             "!getoutfit", "/getoutfit",
