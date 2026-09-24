@@ -1,5 +1,6 @@
 import json
 import os
+import queue as queue_module
 import random
 import subprocess
 import threading
@@ -221,7 +222,7 @@ class PCMDecoderReader:
 
     def __init__(self, process):
         self.process = process
-        self.buffer = __import__("queue").Queue(maxsize=PCM_BUFFER_CHUNKS)
+        self.buffer = queue_module.Queue(maxsize=PCM_BUFFER_CHUNKS)
         self.eof = threading.Event()
         self.stop_event = threading.Event()
         self.error = None
@@ -251,7 +252,7 @@ class PCMDecoderReader:
                     try:
                         self.buffer.put(chunk, timeout=0.1)
                         break
-                    except __import__("queue").Full:
+                    except queue_module.Full:
                         # El reproductor ya tiene suficiente audio. Dejamos
                         # bloqueado al productor hasta que pueda avanzar.
                         continue
@@ -264,7 +265,7 @@ class PCMDecoderReader:
     def get(self, timeout=0.25):
         try:
             return self.buffer.get(timeout=timeout)
-        except __import__("queue").Empty:
+        except queue_module.Empty:
             return None
 
     def buffered_chunks(self):
