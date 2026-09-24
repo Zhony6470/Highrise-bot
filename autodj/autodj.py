@@ -284,7 +284,7 @@ class PCMDecoderReader:
         try:
             while True:
                 self.buffer.get_nowait()
-        except __import__("queue").Empty:
+        except queue_module.Empty:
             pass
 
 
@@ -568,6 +568,11 @@ def player_loop():
             ):
                 time.sleep(0.01)
 
+            # Usamos un reloj absoluto, no sleep() acumulativo. Si una
+            # escritura tarda un poco más, el siguiente deadline se calcula
+            # desde el reloj original y no se va desplazando cada canción.
+            next_write_at = time.monotonic()
+
             while True:
                 if skip_event.is_set():
                     pcm_reader.clear()
@@ -586,17 +591,43 @@ def player_loop():
 
                 chunk = pcm_reader.get(timeout=0.25)
                 if chunk:
+                    now = time.monotonic()
+                    if now > next_write_at + (PCM_CHUNK_SECONDS * 2):
+                        print(
+                            f"[AUTODJ] PCM CLOCK LATE: {now - next_write_at:.3f}s "
+                            f"(buffer={pcm_reader.buffered_chunks()}/{PCM_BUFFER_CHUNKS})",
+                            flush=True,
+                        )
+                        next_write_at = now
+
+                    wait = next_write_at - now
+                    if wait > 0:
+                        time.sleep(wait)
+
+                    write_started = time.monotonic()
                     icecast_encoder.write(chunk)
-                    # El encoder recibe audio a velocidad real; el reader
-                    # independiente mantiene el colchón por delante.
-                    time.sleep(PCM_CHUNK_SECONDS)
+                    write_time = time.monotonic() - write_started
+
+                    if write_time > PCM_CHUNK_SECONDS * 0.75:
+                        print(
+                            f"[AUTODJ] Encoder write lento: {write_time:.3f}s "
+                            f"(buffer={pcm_reader.buffered_chunks()}/{PCM_BUFFER_CHUNKS})",
+                            flush=True,
+                        )
+
+                    next_write_at += PCM_CHUNK_SECONDS
                     continue
 
                 if pcm_reader.eof.is_set() and pcm_reader.buffered_chunks() == 0:
                     break
 
+                print(
+                    f"[AUTODJ] PCM UNDERRUN: buffer vacío "
+                    f"(eof={pcm_reader.eof.is_set()})",
+                    flush=True,
+                )
+
             was_skipped = skip_event.is_set()
-            pcm_reader.stop()
             elapsed_playback = (
                 time.monotonic() - playback_started_at
                 if playback_started_at is not None
@@ -604,8 +635,6 @@ def player_loop():
             )
             return_code = decoder.poll() if decoder is not None else None
 
-            if pcm_reader is not None:
-                pcm_reader.stop()
             stop_decoder(decoder)
             decoder = None
             pcm_reader = None
