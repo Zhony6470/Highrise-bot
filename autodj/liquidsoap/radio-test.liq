@@ -26,9 +26,22 @@ background = crossfade(
   defaults
 )
 
+def to_requests(old, new) =
+  new
+end
+
+def to_background(old, new) =
+  # A request can interrupt a default track. When the request queue becomes
+  # empty again, discard the interrupted default position and start the next
+  # already-prepared default track instead of replaying a fragment.
+  source.skip(new)
+  new
+end
+
 radio = fallback(
   id="radio",
   track_sensitive=false,
+  transitions=[to_requests, to_background],
   [requests, background]
 )
 
