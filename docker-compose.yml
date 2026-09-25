@@ -50,6 +50,28 @@ services:
       - -c
       - cp /app/cookies-source.txt /app/cookies.txt && python -u autodj.py
 
+
+  liquidsoap:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.liquidsoap
+    container_name: highrise-liquidsoap
+    restart: unless-stopped
+    networks:
+      - highrise
+    depends_on:
+      icecast:
+        condition: service_started
+      autodj:
+        condition: service_started
+    environment:
+      ICECAST_HOST: icecast
+      ICECAST_PORT: 8000
+      ICECAST_PASSWORD: ${ICECAST_PASSWORD}
+      ICECAST_MOUNT: liquidsoap-test
+    volumes:
+      - autodj_data:/data:ro
+
   main-bot:
     build:
       context: .
