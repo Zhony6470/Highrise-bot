@@ -503,13 +503,17 @@ def prefetch_item(item: dict) -> None:
 
     def worker():
         try:
-            path = ensure_file(dict(item))
+            path = ensure_file(item)
+            item["file_path"] = str(path)
             request_id = item.get("request_id")
             with lock:
                 if request_id:
                     for queued in queue:
                         if queued.get("request_id") == request_id:
                             queued["file_path"] = str(path)
+                            # Reutilizamos el mismo objeto para que el controller
+                            # pueda enviarlo a Liquidsoap con file_path ya resuelto.
+                            item = queued
                             break
                     save(QUEUE_FILE, list(queue))
             print(
