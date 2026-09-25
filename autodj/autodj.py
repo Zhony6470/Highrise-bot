@@ -46,11 +46,20 @@ def save(path: Path, value) -> None:
 
 
 def metadata(item: dict) -> dict:
-    return item.get("metadata") or {
-        "title": item.get("title", "Pista desconocida"),
-        "channel": item.get("channel", "Highrise Radio"),
-        "duration": item.get("duration"),
-    }
+    source = item.get("metadata") or {}
+    result = dict(source)
+
+    # Playlist/default items historically stored duration at the top level
+    # while requested tracks store it inside metadata. Keep both forms
+    # compatible so Liquidsoap always receives the duration.
+    if not result.get("title"):
+        result["title"] = item.get("title", "Pista desconocida")
+    if not result.get("channel"):
+        result["channel"] = item.get("channel", "Highrise Radio")
+    if result.get("duration") is None:
+        result["duration"] = item.get("duration")
+
+    return result
 
 
 def authorized(handler) -> bool:
@@ -221,7 +230,6 @@ def set_request_result(item: dict, status: str, error: str | None = None) -> Non
         results.append(result)
         state["last_request_results"] = results[-200:]
         save(RESULT_FILE, state["last_request_results"])
-
 
 
 def prefetch_item(item: dict) -> None:
