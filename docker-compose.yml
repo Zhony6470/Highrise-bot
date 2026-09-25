@@ -41,6 +41,7 @@ services:
       ICECAST_PASSWORD: ${ICECAST_PASSWORD}
       ICECAST_MOUNT: ${ICECAST_MOUNT:-stream}
       YOUTUBE_COOKIES_PATH: /app/cookies.txt
+      AUTODJ_USE_LIQUIDSOAP: "1"
     volumes:
       - autodj_data:/data
       - ./default_music:/data/default_music:ro
@@ -68,9 +69,11 @@ services:
       ICECAST_HOST: icecast
       ICECAST_PORT: 8000
       ICECAST_PASSWORD: ${ICECAST_PASSWORD}
-      ICECAST_MOUNT: liquidsoap-test
+      ICECAST_MOUNT: ${ICECAST_MOUNT:-stream}
+      LIQUIDSOAP_HOST: liquidsoap
+      LIQUIDSOAP_PORT: 1234
     volumes:
-      - autodj_data:/data:ro
+      - autodj_data:/data
 
   main-bot:
     build:
