@@ -31,6 +31,7 @@ class LiquidsoapController:
         self.sent_defaults = {}
         self.last_marker = None
         self.last_on_air_rid = None
+        self.reconciled_requests = False
         self.thread = None
 
     @staticmethod
@@ -58,6 +59,51 @@ class LiquidsoapController:
         if "END" not in response:
             raise RuntimeError(f"Liquidsoap no confirmó push: {response.strip()}")
         print(f"[AUTODJ] LIQUIDSOAP: encolada {self.metadata(item).get('title', 'Pista')} -> {source_id}", flush=True)
+
+    def _reconcile_requests(self):
+        """Mark persisted AutoDJ requests already present in Liquidsoap.
+
+        This prevents a controller restart from pushing the same request a
+        second time into Liquidsoap's real queue.
+        """
+        try:
+            rids = [
+                line.strip()
+                for line in self._command(f"{self.request_source}.queue").splitlines()
+                if line.strip() and line.strip() != "END"
+            ]
+            on_air = self._on_air_rid()
+            if on_air:
+                rids.insert(0, on_air)
+
+            liquidsoap_items = []
+            for rid in dict.fromkeys(rids):
+                liquidsoap_items.append(self._request_metadata(rid))
+
+            with self.lock:
+                pending = list(self.queue)
+
+            for item in pending:
+                token = item.get("play_token")
+                video_id = item.get("video_id")
+                request_id = item.get("request_id")
+                for meta in liquidsoap_items:
+                    if (token and meta.get("autodj_token") == token) or (
+                        video_id and meta.get("video_id") == video_id
+                    ) or (request_id and meta.get("request_id") == request_id):
+                        if token:
+                            self.sent_requests.add(token)
+                        break
+
+            self.reconciled_requests = True
+            print(
+                f"[AUTODJ] LIQUIDSOAP: reconciliadas {len(liquidsoap_items)} requests existentes",
+                flush=True,
+            )
+            return True
+        except Exception as error:
+            print(f"[AUTODJ] LIQUIDSOAP: no se pudo reconciliar requests: {error}", flush=True)
+            return False
 
     def enqueue_request(self, item):
         token = item.setdefault("play_token", uuid.uuid4().hex)
@@ -315,6 +361,9 @@ class LiquidsoapController:
         print(f"[AUTODJ] Liquidsoap controller: {self.host}:{self.port}", flush=True)
         while True:
             try:
+                if not self.reconciled_requests and not self._reconcile_requests():
+                    time.sleep(1.0)
+                    continue
                 self._sync_on_air()
                 self.ensure_defaults(3)
                 with self.lock:
