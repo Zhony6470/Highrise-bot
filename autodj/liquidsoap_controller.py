@@ -32,7 +32,7 @@ class LiquidsoapController:
 
     @staticmethod
     def _escape(value):
-        return str(value or "").replace("\\", "\\\\").replace('"', '\"').replace("\n", " ")
+        return str(value or "").replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
 
     def _command(self, command):
         with socket.create_connection((self.host, self.port), timeout=2.0) as sock:
