@@ -138,125 +138,7 @@ class LiquidsoapController:
             line = raw_line.strip()
             if not line or line == "END":
                 continue
-            match = re.match(r'^([A-Za-z0-9_]+)="(.*)"        try:
-            raw = self.marker_file.read_text(encoding="utf-8").strip()
-            return json.loads(raw) if raw else None
-        except (FileNotFoundError, OSError, ValueError):
-            return None
-
-    def _handle_marker(self, marker):
-        if not marker:
-            return
-
-        token = marker.get("autodj_token")
-        video_id = marker.get("video_id")
-        title = marker.get("title") or marker.get("filename") or "Pista desconocida"
-
-        # Liquidsoap puede conservar solo metadata estándar en el callback
-        # (por ejemplo, title). Por eso usamos token/video_id/título para
-        # identificar una solicitud, en ese orden, y no dependemos únicamente
-        # de autodj_token.
-        marker_key = token or video_id or title
-        if not marker_key or marker_key == self.last_marker:
-            return
-        self.last_marker = marker_key
-
-        request_item = None
-        with self.lock:
-            for queued in self.queue:
-                queued_title = self.metadata(queued).get("title")
-                if token and queued.get("play_token") == token:
-                    request_item = queued
-                    break
-                if video_id and queued.get("video_id") == video_id:
-                    request_item = queued
-                    break
-                if title and queued_title == title:
-                    request_item = queued
-                    break
-            self.state["current"] = {
-                "video_id": marker.get("video_id"),
-                "metadata": {
-                    "video_id": marker.get("video_id"),
-                    "title": title,
-                    "requested_by": (
-                        (request_item.get("metadata") or {}).get("requested_by")
-                        if request_item else None
-                    ),
-                    "request_id": marker.get("request_id") or None,
-                },
-                "default_track": str(marker.get("default_track", "")).lower() == "true",
-                "file_path": request_item.get("file_path") if request_item else marker.get("filename"),
-                "play_token": token,
-            }
-            self.state["started_at"] = time.time()
-            self.state["status"] = "playing"
-
-        if request_item is not None:
-            # Liquidsoap owns playback order, so remove the exact item that
-            # started instead of requiring it to be queue[0].
-            with self.lock:
-                try:
-                    self.queue.remove(request_item)
-                    self.save(self.queue_file, list(self.queue))
-                except ValueError:
-                    pass
-            self.set_request_result(request_item, "played")
-            print(f"[AUTODJ] REQUEST: {title}", flush=True)
-        else:
-            for key, item in list(self.sent_defaults.items()):
-                if item.get("play_token") == token:
-                    self.sent_defaults.pop(key, None)
-                    break
-            with self.lock:
-                self.state["last_default_id"] = marker.get("video_id") or marker.get("filename")
-            print(f"[AUTODJ] DEFAULT: {title}", flush=True)
-            self.ensure_defaults(3)
-
-    def skip(self):
-        # Liquidsoap is the source of truth for the track currently on air.
-        response = self._command(f"{self.radio_source}.skip")
-        if "END" not in response:
-            raise RuntimeError(f"Liquidsoap no confirmó skip: {response.strip()}")
-
-    def run(self):
-        print(f"[AUTODJ] Liquidsoap controller: {self.host}:{self.port}", flush=True)
-        while True:
-            try:
-                self._sync_on_air()
-                self.ensure_defaults(3)
-                with self.lock:
-                    pending = list(self.queue)
-                for item in pending:
-                    if item.get("file_path"):
-                        self.enqueue_request(item)
-            except Exception as error:
-                print(f"[AUTODJ] Liquidsoap controller error: {error}", flush=True)
-            time.sleep(0.25)
-
-    def start(self):
-        if self.thread and self.thread.is_alive():
-            return
-        self.thread = threading.Thread(target=self.run, daemon=True, name="autodj-liquidsoap-controller")
-        self.thread.start()
-
-    def _command(self, command):
-        with socket.create_connection((self.host, self.port), timeout=2.0) as sock:
-            sock.settimeout(2.0)
-            sock.sendall((command.rstrip("\n") + "\n").encode("utf-8"))
-            chunks = []
-            while True:
-                try:
-                    chunk = sock.recv(4096)
-                except socket.timeout:
-                    break
-                if not chunk:
-                    break
-                chunks.append(chunk)
-                if b"\nEND\n" in b"".join(chunks):
-                    break
-        return b"".join(chunks).decode("utf-8", errors="replace")
-, line)
+            match = re.match(r'^([A-Za-z0-9_]+)="(.*)"$', line)
             if not match:
                 continue
             key, value = match.groups()
@@ -275,11 +157,7 @@ class LiquidsoapController:
         return self._parse_metadata_response(self._command(f"request.metadata {rid}"))
 
     def _sync_on_air(self):
-        """Synchronize AutoDJ state from Liquidsoap's actual on-air request.
-
-        Liquidsoap owns playback, so the Python queue must be reconciled from
-        the RID currently on air rather than from the marker JSON file.
-        """
+        """Synchronize AutoDJ state from Liquidsoap's actual on-air RID."""
         rid = self._on_air_rid()
         if not rid:
             return
@@ -298,16 +176,13 @@ class LiquidsoapController:
         request_item = None
         with self.lock:
             for queued in self.queue:
-                queued_token = queued.get("play_token")
-                queued_video_id = queued.get("video_id")
-                queued_request_id = queued.get("request_id")
-                if token and queued_token == token:
+                if token and queued.get("play_token") == token:
                     request_item = queued
                     break
-                if video_id and queued_video_id == video_id:
+                if video_id and queued.get("video_id") == video_id:
                     request_item = queued
                     break
-                if request_id and queued_request_id == request_id:
+                if request_id and queued.get("request_id") == request_id:
                     request_item = queued
                     break
 
@@ -325,10 +200,7 @@ class LiquidsoapController:
                     "autodj_token": token,
                 },
                 "default_track": default_track,
-                "file_path": (
-                    request_item.get("file_path")
-                    if request_item else metadata.get("filename")
-                ),
+                "file_path": request_item.get("file_path") if request_item else metadata.get("filename"),
                 "play_token": token,
                 "liquidsoap_rid": rid,
             }
