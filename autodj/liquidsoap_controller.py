@@ -315,7 +315,7 @@ class LiquidsoapController:
         print(f"[AUTODJ] Liquidsoap controller: {self.host}:{self.port}", flush=True)
         while True:
             try:
-                self._handle_marker(self._read_marker())
+                self._sync_on_air()
                 self.ensure_defaults(3)
                 with self.lock:
                     pending = list(self.queue)
