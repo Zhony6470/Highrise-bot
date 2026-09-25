@@ -78,8 +78,6 @@ class Bot(BotRuntimeMixin, BaseBot):
         except ValueError as e:
             raise RuntimeError("Respuesta inválida de AutoDJ.") from e
     async def restore_position(self):
-        # Esperamos a que la sesión termine de entrar a la sala y luego
-        # reintentamos cargar la última posición guardada.
         await asyncio.sleep(5)
         for attempt in range(8):
             try:
@@ -104,14 +102,16 @@ class Bot(BotRuntimeMixin, BaseBot):
                 if video_id and video_id != self.last_announced_track_id:
                     metadata = current.get("metadata") or {}
                     title = metadata.get("title", "Pista desconocida")
+                    channel = metadata.get("channel")
+                    display_title = f"{title} — {channel}" if channel else title
                     requester = metadata.get("requested_by")
                     if requester:
                         await self.highrise.chat(
-                            f"<#66CCFF>🎵 Ahora sonando: <#FFFFFF>{title} <#66FF99>• petición de @{requester}"
+                            f"<#66CCFF>🎵 Ahora sonando: <#FFFFFF>{display_title} <#66FF99>• petición de @{requester}"
                         )
                     else:
                         await self.highrise.chat(
-                            f"<#66CCFF>🎵 Ahora sonando: <#FFFFFF>{title}"
+                            f"<#66CCFF>🎵 Ahora sonando: <#FFFFFF>{display_title}"
                         )
                     self.last_announced_track_id = video_id
 
@@ -144,14 +144,12 @@ class Bot(BotRuntimeMixin, BaseBot):
     async def _requires_ticket(self, user:User) -> bool:
         if user.id == self.owner_id or await self.is_mod(user.id):
             return False
-
         try:
             privileges = await self.highrise.get_room_privilege(user.id)
             if getattr(privileges, "designer", False):
                 return False
         except Exception as error:
             print(f"[TICKETS] Error comprobando privilegios de @{user.username}: {error}")
-
         try:
             data = load_json(os.path.join(ROOT_DIR, "roles.json"), default={})
             users = data.get("users", {}) if isinstance(data, dict) else {}
@@ -160,7 +158,6 @@ class Bot(BotRuntimeMixin, BaseBot):
                 return True
             if saved_role in {"mod", "designer", "owner"}:
                 return False
-
             legacy_vips = {
                 str(value).casefold()
                 for value in (data.get("vip_users", []) if isinstance(data, dict) else [])
@@ -169,24 +166,19 @@ class Bot(BotRuntimeMixin, BaseBot):
                 return True
         except Exception as error:
             print(f"[TICKETS] Error leyendo roles de @{user.username}: {error}")
-
         return True
 
     async def on_tip(self, sender:User, receiver:User, tip:CurrencyItem|object) -> None:
         if receiver.id != self.bot_id or not isinstance(tip, CurrencyItem):
             return
-
         try:
-            result = self.ticket_manager.register_tip(
-                sender.id,
-                sender.username,
-                int(tip.amount),
-            )
+            result = self.ticket_manager.register_tip(sender.id, sender.username, int(tip.amount))
             await self.highrise.send_whisper(
                 sender.id,
                 f"<#66FF99>💰 ¡Gracias por tu {tip.amount}g!\n"
                 f"<#66CCFF>🎟️ Tickets recibidos: <#FFFFFF>{result['tickets_added']}\n"
-                f"<#66CCFF>🎟️ Tickets disponibles: <#FFFFFF>{result['tickets']}\n"            )
+                f"<#66CCFF>🎟️ Tickets disponibles: <#FFFFFF>{result['tickets']}\n"
+            )
         except Exception as error:
             print(f"[TICKETS] Error procesando oro de @{sender.username}: {error}")
 
@@ -213,6 +205,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             pass
         except Exception as error:
             print(f"[MUSIC] Error en anuncios periódicos: {error}")
+
     async def on_start(self,s:SessionMetadata):
         self.bot_id=s.user_id;self.owner_id=s.room_info.owner_id
         if self.playback_monitor_task:
@@ -242,7 +235,6 @@ class Bot(BotRuntimeMixin, BaseBot):
     async def on_chat(self,user:User,message:str):
         parts=message.strip().split(maxsplit=1);cmd=parts[0].lower() if parts else ""
 
-        # !home / !reset admiten uso sin @ para controlar ambos bots.
         if cmd == "!reset":
             if message.strip() != "!reset" and (len(message.strip().split()) != 2 or not message.strip().split()[1].startswith("@")):
                 await self.highrise.send_whisper(user.id, "Uso: !reset o !reset @Dj.Z")
@@ -261,16 +253,13 @@ class Bot(BotRuntimeMixin, BaseBot):
             if len(parts_full) > 2 or (len(parts_full) == 2 and not parts_full[1].startswith("@")):
                 await self.highrise.send_whisper(user.id, "Uso: !home o !home @Dj.Z")
                 return
-
             if user.id != self.owner_id and not await self.is_mod(user.id):
                 await self.highrise.send_whisper(user.id, "🔒 Solo el dueño o moderadores pueden usar este comando.")
                 return
-
             if len(parts_full) == 2:
                 target=parts_full[1][1:].casefold()
                 if target != self.bot_username.casefold():
                     return
-
             await self.restore_position()
             await self.highrise.send_whisper(
                 user.id, f"<#66FF99>📍 @{self.bot_username} volvió a su posición guardada."
@@ -281,7 +270,6 @@ class Bot(BotRuntimeMixin, BaseBot):
         if cmd in protected and not await self._is_targeted_for_me(message):
             return
 
-        # 💰 Comandos de billetera y propinas de Dj.Z.
         if cmd == "!wallet":
             if user.id != self.owner_id and not await self.is_mod(user.id):
                 await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden usar !wallet.")
@@ -293,10 +281,7 @@ class Bot(BotRuntimeMixin, BaseBot):
 
         if cmd in ("!mtip", "!mtipme", "!mtipall"):
             if user.id != self.owner_id and not await self.is_mod(user.id):
-                await self.highrise.send_whisper(
-                    user.id,
-                    "<#FF6666>🔒 Solo el dueño o moderadores pueden usar estos comandos."
-                )
+                await self.highrise.send_whisper(user.id, "🔒 Solo el dueño o moderadores pueden usar estos comandos.")
                 return
             response = await self.tip_manager.handle_command(self, message.strip().lower(), user.id)
             if response:
@@ -316,15 +301,14 @@ class Bot(BotRuntimeMixin, BaseBot):
                         role = "designer"
                 except Exception as error:
                     print(f"[MUSIC HELP] Error comprobando privilegios de @{user.username}: {error}")
-
                 try:
                     data = load_json(os.path.join(ROOT_DIR, "roles.json"), default={})
                     users = data.get("users", {}) if isinstance(data, dict) else {}
                     saved_role = str(users.get(user.id, "")).lower()
-                    if saved_role in {"vip", "mod", "designer"}:                        role = saved_role
+                    if saved_role in {"vip", "mod", "designer"}:
+                        role = saved_role
                 except Exception as error:
                     print(f"[MUSIC HELP] Error leyendo roles de @{user.username}: {error}")
-
             sections = [
                 "<#66CCFF>🎵 COMANDOS DE MÚSICA",
                 "<#FFFFFF>• !play canción - Solicitar una canción (usa 1 ticket).",
@@ -333,7 +317,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                 "<#FFFFFF>• !ticket - Ver cuántos tickets entrega el bot por 10g.",
                 "<#FFFFFF>• !wallet - Ver el oro de Dj.Z.",
             ]
-            if role in {"owner", "mod"}:
+            if role in {"owner","mod"}:
                 sections.extend([
                     "<#FFFFFF>• !skip - Saltar la canción actual.",
                     "<#FFFFFF>• !ap canción - Agregar una canción a la playlist.",
@@ -350,8 +334,6 @@ class Bot(BotRuntimeMixin, BaseBot):
             await self.highrise.send_whisper(user.id, "\n".join(sections))
             return
 
-        # Solo estos comandos compartidos pertenecen también al bot de música.
-        # El resto son exclusivos de Zeta y no deben generar respuestas duplicadas.
         shared_commands = {
             "!set",
             "!equip", "/equip",
@@ -371,8 +353,10 @@ class Bot(BotRuntimeMixin, BaseBot):
             target = emote_parts[1][1:]
             if target.lower() != self.bot_username.lower():
                 return
-            if user.id != self.owner_id and not await self.is_mod(user.id):                return await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden controlar el emote del bot.")
-            if " ".join(emote_parts[2:]).strip().lower() == "stop":                response = await self.dance_manager.stop_bot_emote()
+            if user.id != self.owner_id and not await self.is_mod(user.id):
+                return await self.highrise.send_whisper(user.id, "<#FF6666>🔒 Solo el dueño o moderadores pueden controlar el emote del bot.")
+            if " ".join(emote_parts[2:]).strip().lower() == "stop":
+                response = await self.dance_manager.stop_bot_emote()
             else:
                 emote_name = " ".join(emote_parts[2:]).strip().lower()
                 if emote_name.isdigit():
@@ -380,17 +364,13 @@ class Bot(BotRuntimeMixin, BaseBot):
                 else:
                     matched = self.emotes_manager.get_by_name(emote_name)
                 if not matched:
-                    return await self.highrise.send_whisper(
-                        user.id,
-                        f"<#FFCC66>🎭 Emote no encontrado: {emote_name}."
-                    )
+                    return await self.highrise.send_whisper(user.id, f"<#FFCC66>🎭 Emote no encontrado: {emote_name}.")
                 response = await self.dance_manager.start_bot_emote(matched["emote"])
             return await self.highrise.send_whisper(user.id, response)
         if cmd=="!play":
             q=parts[1] if len(parts)==2 else ""
             if not q:
                 return await self.highrise.send_whisper(user.id,"<#FFCC66>🎵 Uso: !play canción")
-
             try:
                 role_requires_ticket = await self._requires_ticket(user)
                 v=await asyncio.to_thread(search_youtube,q)
@@ -400,16 +380,11 @@ class Bot(BotRuntimeMixin, BaseBot):
                         user.id, user.username, v["video_id"], v["title"]
                     )
                     if ticket_error:
-                        return await self.highrise.send_whisper(
-                            user.id,
-                            f"<#FF6666>🎟️ {ticket_error}"
-                        )
-
+                        return await self.highrise.send_whisper(user.id, f"<#FF6666>🎟️ {ticket_error}")
                 metadata=dict(v)
                 metadata["requested_by"]=user.username
                 if request_id:
                     metadata["request_id"]=request_id
-
                 try:
                     await self.api(
                         "/play",
@@ -420,7 +395,6 @@ class Bot(BotRuntimeMixin, BaseBot):
                     if request_id:
                         self.ticket_manager.refund_request(request_id)
                     raise
-
                 if request_id:
                     balance=self.ticket_manager.get_balance(user.id,user.username)
                     await self.highrise.send_whisper(
@@ -481,12 +455,10 @@ class Bot(BotRuntimeMixin, BaseBot):
                     raise ValueError("La cantidad de tickets debe ser mayor que 0.")
             except ValueError as error:
                 return await self.highrise.send_whisper(user.id,f"<#FFCC66>🎟️ {error}")
-
             target_username=parts_full[2][1:]
             target_id=await self.get_user_id(target_username)
             if not target_id:
                 return await self.highrise.send_whisper(user.id,"<#FFCC66>🔎 Usuario no encontrado en la sala.")
-
             try:
                 balance=self.ticket_manager.add_tickets(target_id,target_username,amount)
                 await self.highrise.send_whisper(
@@ -508,25 +480,27 @@ class Bot(BotRuntimeMixin, BaseBot):
             try:
                 s=await self.api("/status");cur=s.get("current") or {};m=cur.get("metadata",{})
                 requester=m.get("requested_by")
-                now_line=f"<#66CCFF>🎵 Ahora: <#FFFFFF>{m.get('title','Nada')}"
+                title=m.get("title","Nada")
+                channel=m.get("channel")
+                display_title=f"{title} — {channel}" if channel else title
+                now_line=f"<#66CCFF>🎵 Ahora: <#FFFFFF>{display_title}"
                 if requester:
                     now_line += f" <#66FF99>• solicitada por @{requester}"
                 if cmd in ("!q","!queue"):
                     pending=await self.api("/queue")
                     items=pending if isinstance(pending,list) else []
                     count=len(items)
-                    lines=[
-                        now_line,
-                        f"<#66FF99>📋 Cola: <#FFFFFF>{count}",
-                    ]
+                    lines=[now_line,f"<#66FF99>📋 Cola: <#FFFFFF>{count}"]
                     if not items:
                         lines.append("<#FFFFFF>Sin canciones pendientes.")
                     else:
                         for i,x in enumerate(items,1):
                             metadata=x.get("metadata") or {}
-                            title=metadata.get("title","Pista")
+                            item_title=metadata.get("title","Pista")
+                            item_channel=metadata.get("channel")
+                            item_display=f"{item_title} — {item_channel}" if item_channel else item_title
                             requested_by=metadata.get("requested_by")
-                            line=f"<#FFFFFF>{i}. {title}"
+                            line=f"<#FFFFFF>{i}. {item_display}"
                             if requested_by:
                                 line += f" <#66FF99>• @{requested_by}"
                             lines.append(line)
