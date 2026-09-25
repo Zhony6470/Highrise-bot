@@ -502,10 +502,12 @@ def prefetch_item(item: dict) -> None:
         prefetching.add(key)
 
     def worker():
+        original_item = item
+        resolved_item = original_item
         try:
-            path = ensure_file(item)
-            item["file_path"] = str(path)
-            request_id = item.get("request_id")
+            path = ensure_file(original_item)
+            original_item["file_path"] = str(path)
+            request_id = original_item.get("request_id")
             with lock:
                 if request_id:
                     for queued in queue:
@@ -513,15 +515,15 @@ def prefetch_item(item: dict) -> None:
                             queued["file_path"] = str(path)
                             # Reutilizamos el mismo objeto para que el controller
                             # pueda enviarlo a Liquidsoap con file_path ya resuelto.
-                            item = queued
+                            resolved_item = queued
                             break
-                    save(QUEUE_FILE, list(queue))
+                save(QUEUE_FILE, list(queue))
             print(
-                f"[AUTODJ] PRELOAD: {item.get('metadata', {}).get('title', item.get('title', 'Pista'))}",
+                f"[AUTODJ] PRELOAD: {resolved_item.get('metadata', {}).get('title', resolved_item.get('title', 'Pista'))}",
                 flush=True,
             )
-            if liquidsoap_controller is not None and not item.get("default_track"):
-                liquidsoap_controller.enqueue_request(item)
+            if liquidsoap_controller is not None and not resolved_item.get("default_track"):
+                liquidsoap_controller.enqueue_request(resolved_item)
         except Exception as error:
             print(f"[AUTODJ] Error precargando pista: {error}", flush=True)
         finally:
