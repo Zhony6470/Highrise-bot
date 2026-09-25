@@ -70,8 +70,37 @@ class LiquidsoapController:
     def _default_key(self, item):
         return str(item.get("video_id") or item.get("file_path") or "")
 
+    def _queue_count(self, source_id):
+        """Return the number of requests currently waiting in a Liquidsoap queue."""
+        try:
+            response = self._command(f"{source_id}.queue")
+        except Exception as error:
+            print(
+                f"[AUTODJ] LIQUIDSOAP: no se pudo consultar {source_id}.queue: {error}",
+                flush=True,
+            )
+            return None
+
+        count = 0
+        for line in response.splitlines():
+            line = line.strip()
+            if not line or line == "END":
+                continue
+            count += 1
+        return count
+
     def ensure_defaults(self, target=3):
-        while len(self.sent_defaults) < target:
+        """Keep the real Liquidsoap default queue populated.
+
+        sent_defaults is only bookkeeping. The source of truth is
+        defaults.queue, because a track can be consumed by Liquidsoap
+        without the metadata callback preserving our custom annotate fields.
+        """
+        queued = self._queue_count(self.default_source)
+        if queued is None:
+            return
+
+        while queued < target:
             item = None
             for _ in range(12):
                 candidate = self.choose_default()
@@ -80,16 +109,24 @@ class LiquidsoapController:
                 if self._default_key(candidate) not in self.sent_defaults:
                     item = candidate
                     break
+
             if item is None:
-                return
+                item = self.choose_default()
+                if item is None:
+                    return
+
             try:
                 item["default_track"] = True
                 item["file_path"] = str(self.ensure_file(item))
                 item["play_token"] = uuid.uuid4().hex
                 self.push(self.default_source, item)
                 self.sent_defaults[self._default_key(item)] = item
+                queued += 1
             except Exception as error:
-                print(f"[AUTODJ] LIQUIDSOAP: error preparando DEFAULT: {error}", flush=True)
+                print(
+                    f"[AUTODJ] LIQUIDSOAP: error preparando DEFAULT: {error}",
+                    flush=True,
+                )
                 return
 
     def _read_marker(self):
@@ -148,10 +185,14 @@ class LiquidsoapController:
             self.state["status"] = "playing"
 
         if request_item is not None:
+            # Liquidsoap owns playback order, so remove the exact item that
+            # started instead of requiring it to be queue[0].
             with self.lock:
-                if self.queue and self.queue[0] is request_item:
-                    self.queue.popleft()
+                try:
+                    self.queue.remove(request_item)
                     self.save(self.queue_file, list(self.queue))
+                except ValueError:
+                    pass
             self.set_request_result(request_item, "played")
             print(f"[AUTODJ] REQUEST: {title}", flush=True)
         else:
