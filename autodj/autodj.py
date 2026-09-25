@@ -516,6 +516,8 @@ def prefetch_item(item: dict) -> None:
                 f"[AUTODJ] PRELOAD: {item.get('metadata', {}).get('title', item.get('title', 'Pista'))}",
                 flush=True,
             )
+            if liquidsoap_controller is not None and not item.get("default_track"):
+                liquidsoap_controller.enqueue_request(item)
         except Exception as error:
             print(f"[AUTODJ] Error precargando pista: {error}", flush=True)
         finally:
@@ -540,6 +542,20 @@ def prefetch_next(current_item: dict) -> None:
     if candidate:
         prefetch_item(candidate)
 
+
+
+def _make_liquidsoap_controller():
+    if os.getenv("AUTODJ_USE_LIQUIDSOAP", "0") != "1":
+        return None
+    from liquidsoap_controller import LiquidsoapController
+    return LiquidsoapController(
+        queue=queue, lock=lock, state=state, queue_file=QUEUE_FILE,
+        result_writer=set_request_result, metadata_fn=metadata,
+        choose_default=choose_default, ensure_file=ensure_file, save_fn=save,
+    )
+
+
+liquidsoap_controller = _make_liquidsoap_controller()
 
 def player_loop():
     global active_request
@@ -812,7 +828,10 @@ class API(BaseHTTPRequestHandler):
                 if not active:
                     return self.reply(200, {"ok": True, "active": False})
 
-                skip_event.set()
+                if liquidsoap_controller is not None:
+                    liquidsoap_controller.skip()
+                else:
+                    skip_event.set()
                 return self.reply(200, {"ok": True, "active": True})
 
             if self.path in ("/default-add", "/default-remove"):
@@ -874,9 +893,9 @@ if __name__ == "__main__":
             if isinstance(item, dict) and item.get("video_id")
         )
 
-    threading.Thread(target=player_loop, daemon=True).start()
+    if liquidsoap_controller is not None:
+        liquidsoap_controller.start()
+    else:
+        threading.Thread(target=player_loop, daemon=True).start()
     print(f"[AUTODJ] API escuchando en {HOST}:{PORT}", flush=True)
-    try:
-        ThreadingHTTPServer((HOST, PORT), API).serve_forever()
-    finally:
-        icecast_encoder.stop()
+    ThreadingHTTPServer((HOST, PORT), API).serve_forever()
