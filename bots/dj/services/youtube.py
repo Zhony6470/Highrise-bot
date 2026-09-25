@@ -66,6 +66,9 @@ def search_youtube(query: str) -> Dict[str, str]:
     video_id = entry.get("id")
     title = entry.get("title") or "Pista desconocida"
     channel = entry.get("channel") or entry.get("uploader") or "Canal desconocido"
+    # yt-dlp puede exponer el artista/creador por separado del canal.
+    # Preferimos ese dato y dejamos el canal como fallback.
+    artist = entry.get("artist") or entry.get("creator") or channel
     duration = entry.get("duration")
 
     if not video_id:
@@ -75,6 +78,7 @@ def search_youtube(query: str) -> Dict[str, str]:
         "video_id": video_id,
         "title": title,
         "channel": channel,
+        "artist": artist,
         "url": f"https://www.youtube.com/watch?v={video_id}",
         "duration": duration,
     }
