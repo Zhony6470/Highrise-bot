@@ -27,14 +27,14 @@ background = crossfade(
 )
 
 def to_requests(old, new) =
+  # A request interrupts the current default. Skip the old background source
+  # so that, after the request finishes, fallback starts a fresh default
+  # instead of resuming the interrupted default fragment.
+  source.skip(old)
   new
 end
 
 def to_background(old, new) =
-  # A request can interrupt a default track. When the request queue becomes
-  # empty again, discard the interrupted default position and start the next
-  # already-prepared default track instead of replaying a fragment.
-  source.skip(new)
   new
 end
 
