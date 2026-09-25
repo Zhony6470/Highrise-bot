@@ -45,9 +45,13 @@ class LiquidsoapController:
             f'request_id="{self._escape(item.get("request_id", ""))}"',
             f'default_track="{"true" if item.get("default_track") else "false"}"',
         ]
-        title = self.metadata(item).get("title")
+        item_metadata = self.metadata(item)
+        title = item_metadata.get("title")
         if title:
             meta.append(f'title="{self._escape(title)}"')
+        duration = item_metadata.get("duration")
+        if duration:
+            meta.append(f'duration="{self._escape(duration)}"')
         return f'annotate:{",".join(meta)}:{path}'
 
     def push(self, source_id, item):
@@ -122,7 +126,7 @@ class LiquidsoapController:
         ]
 
     def _queue_count(self, source_id):
-        """Return the number of RIDs currently waiting in a Liquidsoap queue."""
+        """Return the number of RIDs currently waiting in a Liquidsoap request queue."""
         try:
             return len(self._queue_rids(source_id))
         except Exception as error:
@@ -183,7 +187,7 @@ class LiquidsoapController:
             if not match:
                 continue
             key, value = match.groups()
-            metadata[key] = value.replace('\\\\"', '"').replace('\\\\\\\\', '\\\\')
+            metadata[key] = value.replace('\\\"', '"').replace('\\\\', '\\')
         return metadata
 
     def _on_air_rid(self):
@@ -208,6 +212,7 @@ class LiquidsoapController:
         video_id = metadata.get("video_id") or None
         request_id = metadata.get("request_id") or None
         title = metadata.get("title") or metadata.get("filename") or "Pista desconocida"
+        duration = metadata.get("duration")
         default_track = metadata.get("default_track", "").lower() == "true"
 
         if rid == self.last_on_air_rid:
@@ -239,6 +244,7 @@ class LiquidsoapController:
                     "requested_by": requested_by,
                     "request_id": request_id,
                     "autodj_token": token,
+                    "duration": int(float(duration)) if duration else None,
                 },
                 "default_track": default_track,
                 "file_path": request_item.get("file_path") if request_item else metadata.get("filename"),
