@@ -106,6 +106,8 @@ class LiquidsoapController:
             return False
 
     def enqueue_request(self, item):
+        if not self.reconciled_requests:
+            return
         token = item.setdefault("play_token", uuid.uuid4().hex)
         if token in self.sent_requests:
             return
