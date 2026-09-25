@@ -828,12 +828,6 @@ class API(BaseHTTPRequestHandler):
                 return self.reply(200, {"ok": True, "queued": item})
 
             if self.path == "/skip":
-                with lock:
-                    active = state.get("current") is not None
-
-                if not active:
-                    return self.reply(200, {"ok": True, "active": False})
-
                 if liquidsoap_controller is not None:
                     liquidsoap_controller.skip()
                 else:
