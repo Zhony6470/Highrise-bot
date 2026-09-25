@@ -15,8 +15,18 @@ icecast_port = int_of_string(environment.get(default="8000", "ICECAST_PORT"))
 icecast_password = environment.get(default="", "ICECAST_PASSWORD")
 icecast_mount = environment.get(default="stream", "ICECAST_MOUNT")
 
+def write_now_playing(m) =
+  file.write(
+    data=metadata.json.stringify(compact=true, m),
+    "/data/liquidsoap_now.json"
+  )
+end
+
 requests = request.queue(id="requests", interactive=true, prefetch=2)
+requests = source.on_track(id="request_track_marker", requests, write_now_playing)
+
 defaults = request.queue(id="defaults", interactive=true, prefetch=2)
+defaults = source.on_track(id="default_track_marker", defaults, write_now_playing)
 
 background = crossfade(
   duration=2.,
@@ -46,15 +56,6 @@ radio = fallback(
 )
 
 radio = mksafe(radio)
-
-def write_now_playing(m) =
-  file.write(
-    data=metadata.json.stringify(compact=true, m),
-    "/data/liquidsoap_now.json"
-  )
-end
-
-radio = source.on_track(id="radio_track_marker", radio, write_now_playing)
 
 output.icecast(
   %mp3(bitrate=128),
