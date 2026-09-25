@@ -24,7 +24,8 @@ class LiquidsoapController:
         self.marker_file = Path(os.getenv("LIQUIDSOAP_MARKER_FILE", "/data/liquidsoap_now.json"))
         self.request_source = "requests"
         self.default_source = "defaults"
-        self.radio_source = "radio"
+        # Liquidsoap exposes the fallback radio under this command namespace.
+        self.radio_source = "Highrise_Radio"
         self.sent_requests = set()
         self.sent_defaults = {}
         self.last_marker = None
@@ -32,12 +33,15 @@ class LiquidsoapController:
 
     @staticmethod
     def _escape(value):
-        return str(value or "").replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
+        return str(value or "").replace("\", "\\").replace('"', '\"').replace("
+", " ")
 
     def _command(self, command):
         with socket.create_connection((self.host, self.port), timeout=2.0) as sock:
             sock.settimeout(2.0)
-            sock.sendall((command.rstrip("\n") + "\n").encode("utf-8"))
+            sock.sendall((command.rstrip("
+") + "
+").encode("utf-8"))
             chunks = []
             while True:
                 try:
@@ -47,7 +51,9 @@ class LiquidsoapController:
                 if not chunk:
                     break
                 chunks.append(chunk)
-                if b"\nEND\n" in b"".join(chunks):
+                if b"
+END
+" in b"".join(chunks):
                     break
         return b"".join(chunks).decode("utf-8", errors="replace")
 
@@ -181,9 +187,7 @@ class LiquidsoapController:
             self.ensure_defaults(3)
 
     def skip(self):
-        # El estado local puede ir un instante por detrás del audio real.
-        # El comando de Liquidsoap es la fuente de verdad para saltar la
-        # pista que está sonando.
+        # Liquidsoap is the source of truth for the track currently on air.
         response = self._command(f"{self.radio_source}.skip")
         if "END" not in response:
             raise RuntimeError(f"Liquidsoap no confirmó skip: {response.strip()}")
