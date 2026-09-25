@@ -116,19 +116,35 @@ class LiquidsoapController:
             return None
 
     def _handle_marker(self, marker):
-        token = marker.get("autodj_token") if marker else None
-        if not token or token == self.last_marker:
+        if not marker:
             return
-        self.last_marker = token
+
+        token = marker.get("autodj_token")
+        video_id = marker.get("video_id")
+        title = marker.get("title") or marker.get("filename") or "Pista desconocida"
+
+        # Liquidsoap puede conservar solo metadata estándar en el callback
+        # (por ejemplo, title). Por eso usamos token/video_id/título para
+        # identificar una solicitud, en ese orden, y no dependemos únicamente
+        # de autodj_token.
+        marker_key = token or video_id or title
+        if not marker_key or marker_key == self.last_marker:
+            return
+        self.last_marker = marker_key
 
         request_item = None
         with self.lock:
             for queued in self.queue:
-                if queued.get("play_token") == token:
+                queued_title = self.metadata(queued).get("title")
+                if token and queued.get("play_token") == token:
                     request_item = queued
                     break
-
-            title = marker.get("title") or marker.get("filename") or "Pista desconocida"
+                if video_id and queued.get("video_id") == video_id:
+                    request_item = queued
+                    break
+                if title and queued_title == title:
+                    request_item = queued
+                    break
             self.state["current"] = {
                 "video_id": marker.get("video_id"),
                 "metadata": {
@@ -165,26 +181,12 @@ class LiquidsoapController:
             self.ensure_defaults(3)
 
     def skip(self):
-        marker = self._read_marker() or {}
-        token = marker.get("autodj_token")
-        current_item = None
-        if token:
-            with self.lock:
-                for item in self.queue:
-                    if item.get("play_token") == token:
-                        current_item = item
-                        break
-
+        # El estado local puede ir un instante por detrás del audio real.
+        # El comando de Liquidsoap es la fuente de verdad para saltar la
+        # pista que está sonando.
         response = self._command(f"{self.radio_source}.skip")
         if "END" not in response:
             raise RuntimeError(f"Liquidsoap no confirmó skip: {response.strip()}")
-
-        if current_item is not None:
-            with self.lock:
-                if self.queue and self.queue[0] is current_item:
-                    self.queue.popleft()
-                    self.save(self.queue_file, list(self.queue))
-            self.set_request_result(current_item, "skipped")
 
     def run(self):
         print(f"[AUTODJ] Liquidsoap controller: {self.host}:{self.port}", flush=True)
