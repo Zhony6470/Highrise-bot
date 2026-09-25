@@ -67,11 +67,7 @@ class LiquidsoapController:
         second time into Liquidsoap's real queue.
         """
         try:
-            rids = [
-                line.strip()
-                for line in self._command(f"{self.request_source}.queue").splitlines()
-                if line.strip() and line.strip() != "END"
-            ]
+            rids = self._queue_rids(self.request_source)
             on_air = self._on_air_rid()
             if on_air:
                 rids.insert(0, on_air)
@@ -120,24 +116,25 @@ class LiquidsoapController:
     def _default_key(self, item):
         return str(item.get("video_id") or item.get("file_path") or "")
 
+    def _queue_rids(self, source_id):
+        """Return every RID reported by a Liquidsoap request queue."""
+        response = self._command(f"{source_id}.queue")
+        return [
+            token
+            for token in response.split()
+            if token and token != "END"
+        ]
+
     def _queue_count(self, source_id):
-        """Return the number of requests currently waiting in a Liquidsoap queue."""
+        """Return the number of RIDs currently waiting in a Liquidsoap queue."""
         try:
-            response = self._command(f"{source_id}.queue")
+            return len(self._queue_rids(source_id))
         except Exception as error:
             print(
                 f"[AUTODJ] LIQUIDSOAP: no se pudo consultar {source_id}.queue: {error}",
                 flush=True,
             )
             return None
-
-        count = 0
-        for line in response.splitlines():
-            line = line.strip()
-            if not line or line == "END":
-                continue
-            count += 1
-        return count
 
     def ensure_defaults(self, target=3):
         """Keep the real Liquidsoap default queue populated.
