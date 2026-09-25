@@ -102,8 +102,8 @@ class Bot(BotRuntimeMixin, BaseBot):
                 if video_id and video_id != self.last_announced_track_id:
                     metadata = current.get("metadata") or {}
                     title = metadata.get("title", "Pista desconocida")
-                    channel = metadata.get("channel")
-                    display_title = f"{title} — {channel}" if channel else title
+                    artist = metadata.get("artist") or metadata.get("channel")
+                    display_title = f"{title} — {artist}" if artist else title
                     requester = metadata.get("requested_by")
                     if requester:
                         await self.highrise.chat(
@@ -481,8 +481,8 @@ class Bot(BotRuntimeMixin, BaseBot):
                 s=await self.api("/status");cur=s.get("current") or {};m=cur.get("metadata",{})
                 requester=m.get("requested_by")
                 title=m.get("title","Nada")
-                channel=m.get("channel")
-                display_title=f"{title} — {channel}" if channel else title
+                artist=m.get("artist") or m.get("channel")
+                display_title=f"{title} — {artist}" if artist else title
                 now_line=f"<#66CCFF>🎵 Ahora: <#FFFFFF>{display_title}"
                 if requester:
                     now_line += f" <#66FF99>• solicitada por @{requester}"
@@ -497,8 +497,8 @@ class Bot(BotRuntimeMixin, BaseBot):
                         for i,x in enumerate(items,1):
                             metadata=x.get("metadata") or {}
                             item_title=metadata.get("title","Pista")
-                            item_channel=metadata.get("channel")
-                            item_display=f"{item_title} — {item_channel}" if item_channel else item_title
+                            item_artist=metadata.get("artist") or metadata.get("channel")
+                            item_display=f"{item_title} — {item_artist}" if item_artist else item_title
                             requested_by=metadata.get("requested_by")
                             line=f"<#FFFFFF>{i}. {item_display}"
                             if requested_by:
