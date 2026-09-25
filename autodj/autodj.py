@@ -894,6 +894,9 @@ if __name__ == "__main__":
         )
 
     if liquidsoap_controller is not None:
+        # Recover persisted !play requests after a container restart.
+        for queued_item in list(queue):
+            prefetch_item(queued_item)
         liquidsoap_controller.start()
     else:
         threading.Thread(target=player_loop, daemon=True).start()
