@@ -49,6 +49,9 @@ class LiquidsoapController:
         title = item_metadata.get("title")
         if title:
             meta.append(f'title="{self._escape(title)}"')
+        artist = item_metadata.get("artist")
+        if artist:
+            meta.append(f'artist="{self._escape(artist)}"')
         duration = item_metadata.get("duration")
         if duration:
             meta.append(f'duration="{self._escape(duration)}"')
@@ -212,6 +215,7 @@ class LiquidsoapController:
         video_id = metadata.get("video_id") or None
         request_id = metadata.get("request_id") or None
         title = metadata.get("title") or metadata.get("filename") or "Pista desconocida"
+        artist = metadata.get("artist") or metadata.get("channel")
         duration = metadata.get("duration")
         default_track = metadata.get("default_track", "").lower() == "true"
 
@@ -241,6 +245,8 @@ class LiquidsoapController:
                 "metadata": {
                     "video_id": video_id,
                     "title": title,
+                    "artist": artist,
+                    "channel": metadata.get("channel"),
                     "requested_by": requested_by,
                     "request_id": request_id,
                     "autodj_token": token,
