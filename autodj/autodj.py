@@ -56,6 +56,8 @@ def metadata(item: dict) -> dict:
         result["title"] = item.get("title", "Pista desconocida")
     if not result.get("channel"):
         result["channel"] = item.get("channel", "Highrise Radio")
+    if not result.get("artist"):
+        result["artist"] = item.get("artist") or result.get("channel")
     if result.get("duration") is None:
         result["duration"] = item.get("duration")
 
