@@ -227,6 +227,7 @@ class RoleManager:
         data = data if isinstance(data, dict) else {}
         data["users"] = self.roles
         data["usernames"] = self.usernames
+        data["permissions"] = self.permissions
         save_json(self.roles_file, data)
 
 
