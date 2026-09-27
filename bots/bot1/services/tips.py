@@ -37,6 +37,7 @@ class TipManager:
             f"<#FFCC66>💛 ¡Muchas gracias @{sender.username} por tu propina de {tip.amount}g! 🪙"
         )
 
+
     async def handle_command(self, bot, command: str, user_id: str) -> str | None:
         highrise = bot.highrise
         if command.startswith("!top"):
@@ -149,7 +150,7 @@ class TipManager:
 
                 if recipient_ok:
                     successful_recipients += 1
-                    if parts[0] == "!tipall":
+                    if parts[0] in ("!tipall", " !mtipall"):
                         await highrise.chat(
                             f"<#FFCC66>💝 @{recipient_username} recibió {amount}g de propina."
                         )
@@ -208,7 +209,7 @@ class TipManager:
             key=lambda item: int(item[1].get("total_tips", 0)),
             reverse=True,
         )
-        return sorted_tippers[:10]
+        return sorted_tippers[:5]
 
     def get_user_tip_amount(self, username: str) -> int | None:
         for user_data in self.tip_data.values():
