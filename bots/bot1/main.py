@@ -952,6 +952,12 @@ class Bot(BotRuntimeMixin, BaseBot):
 
         if role in {"owner", "mod", "designer", "vip"}:
             try:
+                # El evento de entrada puede llegar antes de que el cliente
+                # termine de establecer al usuario en la sala. Esperamos un
+                # instante antes del teleport para evitar que Highrise ignore
+                # el movimiento inicial del usuario recién conectado.
+                await asyncio.sleep(0.5)
+
                 staff_data = self.position_manager.get_named_position_data("staff")
                 if staff_data:
                     staff_position = self.position_manager.position_from_data(staff_data)
