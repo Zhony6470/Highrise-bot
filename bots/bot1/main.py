@@ -952,19 +952,24 @@ class Bot(BotRuntimeMixin, BaseBot):
         role = role_labels.get(str(role).lower(), "user")
 
         # Entrada automática por rol:
-        # owner, mod, designer y vip comparten la ubicación "staff".
-        # Los usuarios normales permanecen en la ubicación de entrada de Highrise.
+        # owner, mod, designer y vip comparten la ubicación especial "staff".
+        # Esperamos a que Highrise termine de colocar al usuario en la sala
+        # antes de ejecutar el teletransporte.
         if role in {"owner", "mod", "designer", "vip"}:
-            try:
-                staff_position_data = self.position_manager.get_named_position_data("staff")
-                if staff_position_data:
+            async def teleport_to_staff():
+                try:
+                    await asyncio.sleep(2)
+                    staff_position_data = self.position_manager.get_named_position_data("staff")
+                    if not staff_position_data:
+                        print("[JOIN POSITION] No existe la ubicación 'staff'; se conserva la entrada normal.")
+                        return
                     staff_position = self.position_manager.position_from_data(staff_position_data)
                     await self.highrise.teleport(user.id, staff_position)
-                    print(f"[JOIN POSITION] @{user.username} ({role}) enviado a la ubicación 'staff'.")
-                else:
-                    print("[JOIN POSITION] No existe la ubicación 'staff'; se conserva la entrada normal.")
-            except Exception as error:
-                print(f"[JOIN POSITION] Error teletransportando a @{user.username} ({role}): {error}")
+                    print(f"[JOIN POSITION] @{user.username} ({role}) enviado a la ubicación especial 'staff'.")
+                except Exception as error:
+                    print(f"[JOIN POSITION] Error teletransportando a @{user.username} ({role}): {error}")
+
+            asyncio.create_task(teleport_to_staff())
 
         try:
             welcome = (
