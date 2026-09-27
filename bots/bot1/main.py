@@ -435,7 +435,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             return
 
         # !ubi: lista pública de las ubicaciones guardadas de Zeta.
-        if command_name == "!ubi":
+        if command_name == "!ubi" and len(msg.split()) == 1:
             try:
                 positions_data = load_json(self.position_manager.positions_file, default={})
                 positions = positions_data.get("posiciones", {}) if isinstance(positions_data, dict) else {}
