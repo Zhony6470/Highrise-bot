@@ -28,14 +28,16 @@ background = crossfade(
 )
 
 def to_requests(old, new) =
-  # A request interrupts the current default. Skip the old background source
-  # so that, after the request finishes, fallback starts a fresh default
-  # instead of resuming the interrupted default fragment.
-  source.skip(old)
+  # A request interrupts the current default immediately.
+  # The interrupted default is discarded when the radio returns
+  # to the background source; it must never resume from its old position.
   new
 end
 
 def to_background(old, new) =
+  # The background source may still hold the default track that was
+  # interrupted by !play. Discard it before selecting the next default.
+  source.skip(defaults)
   new
 end
 
