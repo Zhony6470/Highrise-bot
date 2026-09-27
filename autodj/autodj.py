@@ -413,70 +413,61 @@ def prepare_next_item():
 
 def play_loop():
     global active_request
-
     output = None
     current_decoder = None
+    current_item = None
+    current_request_ref = None
+    current_started = None
+    tail = bytearray()
 
     while True:
-        item = None
-        request_ref = None
-        request_item = False
-        started = None
-
         try:
-            item = next_item()
+            if current_decoder is None:
+                item = next_item()
+                if not item:
+                    with lock:
+                        state["status"] = "idle"
+                    time.sleep(1)
+                    continue
 
-            if not item:
+                item = dict(item)
+                request_item = not item.get("default_track")
+                if request_item:
+                    with lock:
+                        current_request_ref = queue[0] if queue else None
+                        active_request = current_request_ref
+                else:
+                    current_request_ref = None
+                    with lock:
+                        active_request = None
+
+                item["file_path"] = str(ensure_file(item))
+                item["metadata"] = metadata(item)
                 with lock:
-                    state["status"] = "idle"
-                time.sleep(1)
-                continue
+                    state["current"] = item
+                    state["started_at"] = time.time()
+                    state["status"] = "playing"
+                    if item.get("default_track"):
+                        state["last_default_id"] = item.get("video_id") or item.get("file_path")
 
-            item = dict(item)
-            request_item = not item.get("default_track")
+                print(f"[AUTODJ] {'REQUEST' if request_item else 'DEFAULT'}: {item['metadata'].get('title', 'Pista')}", flush=True)
+                output = ensure_output_process(output)
+                current_decoder = decode_file(Path(item["file_path"]))
+                initial = current_decoder.stdout.read(64 * 1024)
+                if not initial:
+                    raise RuntimeError("El decodificador no entregó audio.")
 
-            if request_item:
-                with lock:
-                    request_ref = queue[0] if queue else None
-                    active_request = request_ref
+                current_item = item
+                current_started = time.monotonic()
+                tail = bytearray()
 
-            item["file_path"] = str(ensure_file(item))
-            item["metadata"] = metadata(item)
-
-            with lock:
-                state["current"] = item
-                state["started_at"] = time.time()
-                state["status"] = "playing"
-
-                if item.get("default_track"):
-                    state["last_default_id"] = (
-                        item.get("video_id")
-                        or item.get("file_path")
-                    )
-
-            print(
-                f"[AUTODJ] {'REQUEST' if request_item else 'DEFAULT'}: "
-                f"{item['metadata'].get('title', 'Pista')}",
-                flush=True,
-            )
-
-            output = ensure_output_process(output)
-            current_decoder = decode_file(Path(item["file_path"]))
-
-            initial = current_decoder.stdout.read(64 * 1024)
-            if not initial:
-                raise RuntimeError("El decodificador no entregó audio.")
-
-            started = time.monotonic()
-            tail = bytearray()
-
-            if CROSSFADE_BYTES:
-                tail.extend(initial)
-                if len(tail) > CROSSFADE_BYTES:
-                    output.stdin.write(tail[:-CROSSFADE_BYTES])
-                    del tail[:-CROSSFADE_BYTES]
-            else:
-                output.stdin.write(initial)
+                if CROSSFADE_BYTES:
+                    tail.extend(initial)
+                    if len(tail) > CROSSFADE_BYTES:
+                        output.stdin.write(tail[:-CROSSFADE_BYTES])
+                        del tail[:-CROSSFADE_BYTES]
+                else:
+                    output.stdin.write(initial)
 
             reason = stream_decoder(current_decoder, output, tail)
 
@@ -484,110 +475,106 @@ def play_loop():
                 skip_event.clear()
                 stop_decoder(current_decoder)
                 current_decoder = None
-
+                if current_request_ref and current_item and current_item.get("request_id"):
+                    set_request_result(current_item, "played")
+                    acknowledge_request(current_request_ref)
+                current_item = None
+                current_request_ref = None
+                current_started = None
+                tail = bytearray()
                 with lock:
+                    active_request = None
                     state["current"] = None
                     state["started_at"] = None
                     state["status"] = "idle"
-
-                if request_item and request_ref and item.get("request_id"):
-                    set_request_result(item, "played")
-                    acknowledge_request(request_ref)
-
-                with lock:
-                    active_request = None
-
                 continue
 
             next_item_value = prepare_next_item()
-
             if not next_item_value:
                 if tail:
                     output.stdin.write(tail)
                     output.stdin.flush()
                 stop_decoder(current_decoder)
                 current_decoder = None
+                if current_request_ref and current_item and current_item.get("request_id"):
+                    set_request_result(current_item, "played")
+                    acknowledge_request(current_request_ref)
+                current_item = None
+                current_request_ref = None
+                current_started = None
+                tail = bytearray()
+                with lock:
+                    active_request = None
+                    state["current"] = None
+                    state["started_at"] = None
+                    state["status"] = "idle"
                 continue
 
             next_item_value = dict(next_item_value)
-            next_is_request = not next_item_value.get("default_track")
+            next_request = not next_item_value.get("default_track")
+            next_request_ref = None
+            if next_request:
+                with lock:
+                    next_request_ref = queue[0] if queue else None
 
-            if (
-                next_is_request
-                and next_item_value.get("request_id")
-                and request_ref is next_item_value
-            ):
-                pass
-
-            next_item_value["file_path"] = str(
-                ensure_file(next_item_value)
-            )
+            next_item_value["file_path"] = str(ensure_file(next_item_value))
             next_item_value["metadata"] = metadata(next_item_value)
-
-            next_decoder = decode_file(
-                Path(next_item_value["file_path"])
-            )
-
-            prefix = (
-                next_decoder.stdout.read(CROSSFADE_BYTES)
-                if CROSSFADE_BYTES
-                else b""
-            )
-
+            next_decoder = decode_file(Path(next_item_value["file_path"]))
+            prefix = next_decoder.stdout.read(CROSSFADE_BYTES if CROSSFADE_BYTES else 64 * 1024)
             if not prefix:
-                raise RuntimeError(
-                    "La siguiente pista no entregó audio."
-                )
+                stop_decoder(next_decoder)
+                raise RuntimeError("La siguiente pista no entregó audio.")
 
+            output = ensure_output_process(output)
             if CROSSFADE_BYTES and tail:
                 output.stdin.write(mix_pcm(bytes(tail), prefix))
-
                 if len(prefix) > len(tail):
                     output.stdin.write(prefix[len(tail):])
             else:
                 output.stdin.write(prefix)
-
             output.stdin.flush()
 
             stop_decoder(current_decoder)
             current_decoder = next_decoder
-            current_decoder = None
 
-            if request_item and request_ref and item.get("request_id"):
-                elapsed = (
-                    time.monotonic() - started
-                    if started is not None
-                    else 0
-                )
+            if current_request_ref and current_item and current_item.get("request_id"):
+                elapsed = time.monotonic() - current_started if current_started else 0
                 if elapsed >= 2:
-                    set_request_result(item, "played")
-                acknowledge_request(request_ref)
+                    set_request_result(current_item, "played")
+                acknowledge_request(current_request_ref)
+
+            current_item = next_item_value
+            current_request_ref = next_request_ref if next_request else None
+            current_started = time.monotonic()
+            tail = bytearray()
 
             with lock:
-                active_request = None
-                state["current"] = None
-                state["started_at"] = None
-                state["status"] = "transition"
+                active_request = current_request_ref if next_request else None
+                state["current"] = current_item
+                state["started_at"] = time.time()
+                state["status"] = "playing"
+                if current_item.get("default_track"):
+                    state["last_default_id"] = current_item.get("video_id") or current_item.get("file_path")
+
+            print(f"[AUTODJ] {'REQUEST' if next_request else 'DEFAULT'}: {current_item['metadata'].get('title', 'Pista')}", flush=True)
 
         except Exception as error:
             print(f"[AUTODJ] error: {error}", flush=True)
-
             stop_decoder(current_decoder)
             current_decoder = None
-
-            if request_item and request_ref and item:
-                if item.get("request_id"):
-                    set_request_result(item, "failed", str(error))
-                acknowledge_request(request_ref)
-
+            if current_request_ref and current_item and current_item.get("request_id"):
+                set_request_result(current_item, "failed", str(error))
+                acknowledge_request(current_request_ref)
             skip_event.clear()
-
+            current_item = None
+            current_request_ref = None
+            current_started = None
+            tail = bytearray()
             with lock:
                 active_request = None
                 state["current"] = None
                 state["started_at"] = None
                 state["status"] = "recovering"
-
             time.sleep(1)
 
 
