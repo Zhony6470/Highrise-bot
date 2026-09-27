@@ -11,7 +11,6 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from random import choice, randint
-from time import monotonic
 from threading import Thread
 from config import (
     API_KEY,
@@ -922,14 +921,15 @@ class Bot(BotRuntimeMixin, BaseBot):
             return owner_response
         return await self.tip_manager.handle_command(self, command, user_id)
 
-    async def _handle_join_entry(self, user: User, initial_position: Position | AnchorPosition) -> str:
-        """Resuelve la entrada privilegiada con el mínimo trabajo antes del teleport.
+    async def _handle_join_entry(self, user: User) -> str:
+        """Resuelve y ejecuta la entrada privilegiada lo antes posible.
 
-        El evento on_user_join llega después del spawn de Highrise. Por eso
-        cualquier solución basada en Bot API solo puede reducir el intervalo
-        entre ese spawn y el teleport; no puede eliminar el spawn inicial.
+        Highrise ya asignó el spawn cuando recibimos on_user_join; el SDK no
+        ofrece un hook para cambiarlo antes. Por eso evitamos primero llamadas
+        de sincronización que retrasen el teleport. Los roles guardados se
+        resuelven localmente; solo un usuario sin rol guardado requiere una
+        consulta de privilegios a Highrise.
         """
-        started = monotonic()
         role = "user"
         roles = set(self.role_manager.get_saved_roles(user.id, user.username))
 
@@ -948,89 +948,16 @@ class Bot(BotRuntimeMixin, BaseBot):
             except Exception as error:
                 print(f"[JOIN ROLE] No pude obtener el rol de @{user.username}: {error}")
 
-        role_ms = (monotonic() - started) * 1000
-
         if role in {"owner", "mod", "designer", "vip"}:
             try:
-                # El evento de entrada puede llegar antes de que el cliente
-                # termine de establecer al usuario en la sala. Esperamos un
-                # instante antes del teleport para evitar que Highrise ignore
-                # el movimiento inicial del usuario recién conectado.
-                await asyncio.sleep(0.5)
-
                 staff_data = self.position_manager.get_named_position_data("staff")
                 if staff_data:
                     staff_position = self.position_manager.position_from_data(staff_data)
-
-                    # Si Highrise ya nos entregó exactamente la posición staff,
-                    # no hacemos un segundo teleport innecesario.
-                    already_at_staff = (
-                        isinstance(initial_position, Position)
-                        and initial_position.x == staff_position.x
-                        and initial_position.y == staff_position.y
-                        and initial_position.z == staff_position.z
+                    await self.highrise.teleport(user.id, staff_position)
+                    print(
+                        f"[JOIN POSITION] @{user.username} ({role}) enviado a 'staff' "
+                        "como primera operación de entrada."
                     )
-
-                    if already_at_staff:
-                        print(
-                            f"[JOIN POSITION] @{user.username} ({role}) ya estaba "
-                            f"en 'staff' | role={role_ms:.1f}ms"
-                        )
-                    else:
-                        teleport_ms = 0.0
-                        total_ms = 0.0
-                        teleported = False
-
-                        # Highrise puede aceptar el request antes de terminar
-                        # de sincronizar al usuario recién conectado.
-                        # Reintentamos y verificamos la posición real reportada
-                        # por la sala después de cada teleport.
-                        for attempt, delay in enumerate((0.0, 0.75, 1.5), start=1):
-                            if delay:
-                                await asyncio.sleep(delay)
-
-                            try:
-                                teleport_started = monotonic()
-                                await self.highrise.teleport(user.id, staff_position)
-                                teleport_ms = (monotonic() - teleport_started) * 1000
-
-                                room_users = await self.highrise.get_room_users()
-                                current_position = next(
-                                    (
-                                        room_position
-                                        for room_user, room_position in room_users.content
-                                        if room_user.id == user.id
-                                    ),
-                                    None,
-                                )
-
-                                if (
-                                    isinstance(current_position, Position)
-                                    and current_position.x == staff_position.x
-                                    and current_position.y == staff_position.y
-                                    and current_position.z == staff_position.z
-                                ):
-                                    teleported = True
-                                    break
-                            except Exception as error:
-                                print(
-                                    f"[JOIN POSITION] Intento {attempt} para "
-                                    f"@{user.username} falló: {error}"
-                                )
-
-                        total_ms = (monotonic() - started) * 1000
-                        if teleported:
-                            print(
-                                f"[JOIN POSITION] @{user.username} ({role}) -> staff | "
-                                f"attempts={attempt} tp_ack={teleport_ms:.1f}ms "
-                                f"join_to_tp={total_ms:.1f}ms"
-                            )
-                        else:
-                            print(
-                                f"[JOIN POSITION] @{user.username} ({role}) teleport "
-                                f"no confirmado tras {attempt} intentos | "
-                                f"join_to_tp={total_ms:.1f}ms"
-                            )
                 else:
                     print("[JOIN POSITION] No existe la posición 'staff'.")
             except Exception as error:
@@ -1039,7 +966,8 @@ class Bot(BotRuntimeMixin, BaseBot):
                     f"({role}): {error}"
                 )
 
-        # La sincronización de privilegios ocurre después del teleport.
+        # La sincronización de privilegios ocurre después del teleport para no
+        # introducir una llamada de red antes de la entrada privilegiada.
         if roles:
             try:
                 await self.role_manager.apply_saved_role(self, user)
@@ -1057,9 +985,10 @@ class Bot(BotRuntimeMixin, BaseBot):
         if user.id == self.bot_id:
             return
 
-        # Primera operación: resolver rol local y enviar a staff. No hacemos
-        # consultas ni sincronizaciones adicionales antes del teleport.
-        role = await self._handle_join_entry(user, position)
+        # El primer trabajo es resolver la entrada privilegiada y, cuando
+        # corresponde, enviar al usuario a 'staff'. Highrise ya hizo el spawn
+        # inicial antes de este evento; el objetivo es minimizar ese intervalo.
+        role = await self._handle_join_entry(user)
 
         role_labels = {
             "owner": "owner",
