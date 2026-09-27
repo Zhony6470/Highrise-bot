@@ -154,7 +154,6 @@ class Bot(BotRuntimeMixin, BaseBot):
             "\n".join([
                 "<#FFCC66>💰 PROPINAS",
                 "<#FFFFFF>• !top - Ranking de propinas",
-                "<#FFFFFF>• !wallet - Ver la billetera del bot",
                 "<#FFFFFF>• !get @usuario - Ver sus propinas",
             ]),
             "\n".join([                "<#CC99FF>👤 INFORMACIÓN",
@@ -191,7 +190,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                 "<#FFFFFF>• !equip / !remove / !color / !getoutfit - Gestionar vestuario",
             ]))
 
-        if role == "designer":
+        if role == "designer" and has_advanced_permission:
             sections.append(
                 "\n".join([
                     "<#CC99FF>🎨 DISEÑADOR",
@@ -211,6 +210,8 @@ class Bot(BotRuntimeMixin, BaseBot):
                     "<#FFFFFF>• !reset [@Bot] - Reiniciar el bot",
                     "<#FFFFFF>• !role @usuario mod|vip|designer - Agregar un rol",
                     "<#FFFFFF>• !role @usuario delete [rol] - Quitar uno o todos los roles",
+                    "<#FFFFFF>• !perm @usuario - Otorgar permiso avanzado",
+                    "<#FFFFFF>• !rperm @usuario - Retirar permiso avanzado",
                 ]),
                 "\n".join([
                     "<#FFFFFF>👕 VESTUARIO",
