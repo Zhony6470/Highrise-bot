@@ -6,8 +6,8 @@ ROLES = {"mod", "vip", "designer", "user"}
 
 
 async def handle_role(bot: BaseBot, user: User, message: str) -> Optional[str]:
-    if user.id != bot.owner_id and not await bot.is_mod(user.id):
-        return "<#FF6666>🛡️ Solo el dueño o los moderadores pueden asignar roles."
+    if user.id != bot.owner_id and not bot.role_manager.has_permission(user.id):
+        return "<#FF6666>🔒 Necesitas el permiso avanzado para gestionar roles."
 
     parts = message.split()
     if len(parts) == 1:
