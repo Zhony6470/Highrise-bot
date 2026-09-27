@@ -581,7 +581,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                         )
             else:
                 await self.highrise.send_whisper(
-                    user.id, "<#FF6666>🔒 Necesitas el permiso avanzado para expulsar usuarios."
+                    user.id, "<#FF6666>🔒 No tienes permisos suficientes para invocar usuarios."
                 )
             return
 
@@ -871,7 +871,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                         )
             else:
                 await self.highrise.send_whisper(
-                    user.id, "<#FF6666>🔒 Solo VIP pueden usar este comando."
+                    user.id, "<#FF6666>🔒 Necesitas el permiso avanzado para expulsar usuarios."
                 )
             return
         elif msg_lower.startswith("!tp "):
