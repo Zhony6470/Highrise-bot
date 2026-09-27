@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg liquidsoap ca-certificates curl unzip && curl -fsSL https://deno.land/install.sh | sh -s v2.3.0 && ln -s /root/.deno/bin/deno /usr/local/bin/deno && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl unzip && curl -fsSL https://deno.land/install.sh | sh -s v2.3.0 && ln -s /root/.deno/bin/deno /usr/local/bin/deno && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir "yt-dlp[default]" yt-dlp-ejs
 COPY autodj/autodj.py .
-COPY radio.liq .
-CMD ["sh","-c","python -u autodj.py & AUTODJ_PID=$!; liquidsoap /app/radio.liq & LIQUIDSOAP_PID=$!; trap 'kill $AUTODJ_PID $LIQUIDSOAP_PID 2>/dev/null || true' TERM INT EXIT; wait $AUTODJ_PID"]
+COPY autodj/liquidsoap_controller.py .
+CMD ["python","-u","autodj.py"]
