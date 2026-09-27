@@ -151,8 +151,8 @@ async def _search_item(bot: BaseBot, query: str, result_index: int):
 
 
 async def handle_equip(bot: BaseBot, user: User, message: str) -> str:
-    if user.id != bot.owner_id and not await bot.is_mod(user.id):
-        return "<#FF6666>👗 Solo el dueño o los moderadores pueden equipar prendas."
+    if user.id != bot.owner_id and not bot.role_manager.has_permission(user.id):
+        return "<#FF6666>🔒 Necesitas el permiso avanzado para modificar el vestuario del bot."
 
     parts = message.split()
     if len(parts) >= 2 and parts[1].startswith("@"):
