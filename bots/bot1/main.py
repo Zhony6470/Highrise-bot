@@ -921,26 +921,74 @@ class Bot(BotRuntimeMixin, BaseBot):
             return owner_response
         return await self.tip_manager.handle_command(self, command, user_id)
 
+    async def _handle_join_entry(self, user: User) -> str:
+        """Resuelve y ejecuta la entrada privilegiada lo antes posible.
+
+        Highrise ya asignó el spawn cuando recibimos on_user_join; el SDK no
+        ofrece un hook para cambiarlo antes. Por eso evitamos primero llamadas
+        de sincronización que retrasen el teleport. Los roles guardados se
+        resuelven localmente; solo un usuario sin rol guardado requiere una
+        consulta de privilegios a Highrise.
+        """
+        role = "user"
+        roles = set(self.role_manager.get_saved_roles(user.id, user.username))
+
+        if user.id == self.owner_id:
+            role = "owner"
+        elif roles:
+            if "mod" in roles:
+                role = "mod"
+            elif "designer" in roles:
+                role = "designer"
+            elif "vip" in roles:
+                role = "vip"
+        else:
+            try:
+                role = await self.role_manager.get_user_role(self, user) or "user"
+            except Exception as error:
+                print(f"[JOIN ROLE] No pude obtener el rol de @{user.username}: {error}")
+
+        if role in {"owner", "mod", "designer", "vip"}:
+            try:
+                staff_data = self.position_manager.get_named_position_data("staff")
+                if staff_data:
+                    staff_position = self.position_manager.position_from_data(staff_data)
+                    await self.highrise.teleport(user.id, staff_position)
+                    print(
+                        f"[JOIN POSITION] @{user.username} ({role}) enviado a 'staff' "
+                        "como primera operación de entrada."
+                    )
+                else:
+                    print("[JOIN POSITION] No existe la posición 'staff'.")
+            except Exception as error:
+                print(
+                    f"[JOIN POSITION] Error teletransportando a @{user.username} "
+                    f"({role}): {error}"
+                )
+
+        # La sincronización de privilegios ocurre después del teleport para no
+        # introducir una llamada de red antes de la entrada privilegiada.
+        if roles:
+            try:
+                await self.role_manager.apply_saved_role(self, user)
+            except Exception as error:
+                print(
+                    f"[JOIN ROLE] No pude aplicar el rol guardado de "
+                    f"@{user.username}: {error}"
+                )
+
+        return role
+
     async def on_user_join(
         self, user: User, position: Position | AnchorPosition
     ) -> None:
         if user.id == self.bot_id:
             return
 
-        # La bienvenida debe enviarse a TODOS los usuarios que entren.
-        # El rol solo cambia el texto mostrado, no determina si recibe el mensaje.
-        # Si tiene un rol guardado, aplicamos también el privilegio real
-        # de Highrise al momento de entrar a la sala.
-        try:
-            await self.role_manager.apply_saved_role(self, user)
-        except Exception as error:
-            print(f"[JOIN ROLE] No pude aplicar el rol guardado de @{user.username}: {error}")
-
-        role = "user"
-        try:
-            role = await self.role_manager.get_user_role(self, user) or "user"
-        except Exception as error:
-            print(f"[JOIN ROLE] No pude obtener el rol de @{user.username}: {error}")
+        # El primer trabajo es resolver la entrada privilegiada y, cuando
+        # corresponde, enviar al usuario a 'staff'. Highrise ya hizo el spawn
+        # inicial antes de este evento; el objetivo es minimizar ese intervalo.
+        role = await self._handle_join_entry(user)
 
         role_labels = {
             "owner": "owner",
