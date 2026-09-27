@@ -48,7 +48,7 @@ services:
     command:
       - sh
       - -c
-      - cp /app/cookies-source.txt /app/cookies.txt && python -u autodj.py
+      - cp /app/cookies-source.txt /app/cookies.txt && python -u autodj.py & AUTODJ_PID=$!; liquidsoap /app/radio.liq & LIQUIDSOAP_PID=$!; trap 'kill $AUTODJ_PID $LIQUIDSOAP_PID 2>/dev/null || true' TERM INT EXIT; wait $AUTODJ_PID
 
   main-bot:
     build:
