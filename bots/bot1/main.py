@@ -571,7 +571,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                         )
             else:
                 await self.highrise.send_whisper(
-                    user.id, "<#FF6666>🔒 Solo VIP pueden usar este comando."
+                    user.id, "<#FF6666>🔒 Necesitas el permiso avanzado para expulsar usuarios."
                 )
             return
 
@@ -845,7 +845,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         # 12. MODERACIÓN (KICK Y TP)
         # ==========================================
         elif msg_lower.startswith("!kick "):
-            if await self.is_mod(user.id):
+            if user.id == self.owner_id or self.role_manager.has_permission(user.id):
                 parts = msg.split(" ")
                 if len(parts) >= 2:
                     target_username = parts[1].replace("@", "")
@@ -915,6 +915,12 @@ class Bot(BotRuntimeMixin, BaseBot):
 
         if command.startswith("!tip all "):
             command = "!tipall " + command[len("!tip all "):]
+
+        # Comandos económicos sensibles: solo owner o usuarios con !perm.
+        sensitive_commands = ("!tipme", "!tipall", "!tip", "!wallet")
+        if command.split()[0].lower() in sensitive_commands:
+            if user_id != self.owner_id and not self.role_manager.has_permission(user_id):
+                return "<#FF6666>🔒 Necesitas el permiso avanzado para usar este comando."
 
         owner_response = await handle_owner_command(self, command, user_id)
         if owner_response:
