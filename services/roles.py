@@ -19,6 +19,7 @@ class RoleManager:
         self.usernames = {}
         self.roles = {}
         self._legacy_vip_users = set()
+        self.permissions = {}
         self._load_roles()
 
     @staticmethod
@@ -36,6 +37,21 @@ class RoleManager:
             if role in STORED_ROLES and role not in result:
                 result.append(role)
         return result
+
+    def has_permission(self, user_id: str) -> bool:
+        return bool(user_id and user_id in self.permissions)
+
+    def grant_permission(self, user_id: str, username: str = "") -> None:
+        if not user_id:
+            return
+        self.permissions[user_id] = {"username": username}
+        self._save_roles()
+
+    def revoke_permission(self, user_id: str, username: str = "") -> None:
+        if not user_id:
+            return
+        self.permissions.pop(user_id, None)
+        self._save_roles()
 
     def get_saved_roles(self, user_id: str = "", username: str = "") -> list[str]:
         username_key = username.strip().lstrip("@").casefold()
