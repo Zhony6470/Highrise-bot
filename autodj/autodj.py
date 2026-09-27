@@ -1,9 +1,12 @@
 import json
 import os
 import random
+import re
+import shutil
 import subprocess
 import threading
 import time
+from array import array
 from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -15,12 +18,6 @@ TOKEN = os.getenv("AUTODJ_TOKEN", "")
 if not TOKEN:
     raise RuntimeError("AUTODJ_TOKEN es obligatorio.")
 
-ICECAST_HOST = os.getenv("ICECAST_HOST", "icecast")
-ICECAST_PORT = int(os.getenv("ICECAST_PORT", "8000"))
-ICECAST_SOURCE = os.getenv("ICECAST_SOURCE", "source")
-ICECAST_PASSWORD = os.getenv("ICECAST_PASSWORD", "")
-ICECAST_MOUNT = os.getenv("ICECAST_MOUNT", "stream").strip("/")
-
 CACHE = Path(os.getenv("AUTODJ_CACHE_DIR", "/data/cache"))
 DEFAULT = Path(os.getenv("AUTODJ_DEFAULT_DIR", "/data/default_music"))
 QUEUE_FILE = Path(os.getenv("AUTODJ_QUEUE_FILE", "/data/request_queue.json"))
@@ -30,12 +27,59 @@ COOKIES = os.getenv("YOUTUBE_COOKIES_PATH", "/app/cookies.txt")
 
 SAMPLE_RATE = 44100
 CHANNELS = 2
+SAMPLE_WIDTH = 2
+CROSSFADE_SECONDS = max(float(os.getenv("RADIO_CROSSFADE_SECONDS", "3")), 0)
+CROSSFADE_BYTES = int(SAMPLE_RATE * CHANNELS * SAMPLE_WIDTH * CROSSFADE_SECONDS)
+STREAM_PATH = "/stream"
+STREAM_QUEUE_SIZE = 16
 MAX_PLAY_SECONDS = 360
+
 queue = deque()
 lock = threading.RLock()
 skip_event = threading.Event()
-state = {"current": None, "started_at": None, "status": "idle", "last_default_id": None, "last_request_results": []}
+state = {
+    "current": None,
+    "started_at": None,
+    "status": "idle",
+    "last_default_id": None,
+    "last_request_results": [],
+}
 active_request = None
+
+
+class LocalAudioPublisher:
+    """Mantiene /stream vivo para Liquidsoap mientras cambian las pistas."""
+
+    def __init__(self):
+        self.clients = set()
+        self.clients_lock = threading.Lock()
+
+    def subscribe(self):
+        client = __import__("queue").Queue(maxsize=STREAM_QUEUE_SIZE)
+        with self.clients_lock:
+            self.clients.add(client)
+        return client
+
+    def unsubscribe(self, client):
+        with self.clients_lock:
+            self.clients.discard(client)
+
+    def publish(self, chunk: bytes):
+        with self.clients_lock:
+            clients = tuple(self.clients)
+
+        for client in clients:
+            try:
+                client.put_nowait(chunk)
+            except Exception:
+                try:
+                    client.get_nowait()
+                    client.put_nowait(chunk)
+                except Exception:
+                    pass
+
+
+audio_publisher = LocalAudioPublisher()
 
 
 def load(path: Path, default):
@@ -48,7 +92,10 @@ def load(path: Path, default):
 def save(path: Path, value) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.write_text(
+        json.dumps(value, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     tmp.replace(path)
 
 
@@ -61,7 +108,7 @@ def metadata(item: dict) -> dict:
 
 
 def authorized(handler) -> bool:
-    return not TOKEN or handler.headers.get("Authorization", "") == f"Bearer {TOKEN}"
+    return handler.headers.get("Authorization", "") == f"Bearer {TOKEN}"
 
 
 def queue_snapshot():
@@ -94,6 +141,7 @@ def ensure_file(item: dict) -> Path:
         "--extractor-args", "youtube:player_client=ios,android,web_embedded",
         "-o", str(CACHE / "%(id)s.%(ext)s"),
     ]
+
     if Path(COOKIES).exists():
         command += ["--cookies", COOKIES]
 
@@ -106,35 +154,26 @@ def ensure_file(item: dict) -> Path:
     matches = list(CACHE.glob(video_id + ".*"))
     if not matches:
         raise RuntimeError("yt-dlp no generó el archivo de audio.")
+
     return matches[0]
 
 
-def icecast_url():
-    return (
-        f"icecast://{quote(ICECAST_SOURCE, safe='')}:"
-        f"{quote(ICECAST_PASSWORD, safe='')}@"
-        f"{ICECAST_HOST}:{ICECAST_PORT}/"
-        f"{quote(ICECAST_MOUNT, safe='/')}"
+def decode_file(path: Path) -> subprocess.Popen:
+    return subprocess.Popen(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel", "warning",
+            "-i", str(path),
+            "-t", str(MAX_PLAY_SECONDS),
+            "-vn",
+            "-f", "s16le",
+            "-ar", str(SAMPLE_RATE),
+            "-ac", str(CHANNELS),
+            "pipe:1",
+        ],
+        stdout=subprocess.PIPE,
     )
-
-
-def play_file(path: Path):
-    command = [
-        "ffmpeg", "-hide_banner", "-loglevel", "warning",
-        "-re",
-        "-i", str(path),
-        "-t", str(MAX_PLAY_SECONDS),
-        "-vn",
-        "-c:a", "libmp3lame",
-        "-b:a", "128k",
-        "-ar", str(SAMPLE_RATE),
-        "-ac", str(CHANNELS),
-        "-content_type", "audio/mpeg",
-        "-f", "mp3",
-        icecast_url(),
-    ]
-
-    return subprocess.Popen(command)
 
 
 def stop_decoder(process):
@@ -142,23 +181,110 @@ def stop_decoder(process):
         return
 
     try:
-        process.terminate()
-        process.wait(timeout=2)
+        if process.stdout:
+            process.stdout.close()
+    except Exception:
+        pass
+
+    try:
+        if process.poll() is None:
+            process.terminate()
+            process.wait(timeout=2)
     except Exception:
         try:
-            process.kill()
-            process.wait(timeout=1)
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=1)
         except Exception:
             pass
 
 
+def create_output_process() -> subprocess.Popen:
+    print("[AUTODJ] Iniciando encoder persistente para Liquidsoap.", flush=True)
+
+    output = subprocess.Popen(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel", "warning",
+            "-re",
+            "-f", "s16le",
+            "-ar", str(SAMPLE_RATE),
+            "-ac", str(CHANNELS),
+            "-i", "pipe:0",
+            "-c:a", "libmp3lame",
+            "-b:a", "128k",
+            "-f", "mp3",
+            "pipe:1",
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+    )
+
+    threading.Thread(
+        target=publish_output,
+        args=(output,),
+        daemon=True,
+    ).start()
+
+    return output
+
+
+def publish_output(output: subprocess.Popen) -> None:
+    while output.stdout:
+        chunk = output.stdout.read(64 * 1024)
+        if not chunk:
+            break
+        audio_publisher.publish(chunk)
+
+
+def ensure_output_process(output):
+    if output is not None and output.poll() is None:
+        return output
+
+    if output is not None:
+        try:
+            output.terminate()
+            output.wait(timeout=2)
+        except Exception:
+            pass
+
+    return create_output_process()
+
+
+def mix_pcm(left: bytes, right: bytes) -> bytes:
+    usable_left = left[:len(left) - (len(left) % SAMPLE_WIDTH)]
+    usable_right = right[:len(right) - (len(right) % SAMPLE_WIDTH)]
+
+    left_samples = array("h")
+    right_samples = array("h")
+    left_samples.frombytes(usable_left)
+    right_samples.frombytes(usable_right)
+
+    count = min(len(left_samples), len(right_samples))
+    mixed = array("h")
+
+    for index in range(count):
+        fade_in = index / max(count - 1, 1)
+        value = int(
+            left_samples[index] * (1 - fade_in)
+            + right_samples[index] * fade_in
+        )
+        mixed.append(max(-32768, min(32767, value)))
+
+    return mixed.tobytes()
+
+
 def choose_default():
     playlist = load(PLAYLIST, [])
+
     if playlist:
         candidates = [
             item for item in playlist
-            if item.get("video_id") or item.get("file_path")
+            if isinstance(item, dict)
+            and (item.get("video_id") or item.get("file_path"))
         ]
+
         if candidates:
             with lock:
                 last_id = state.get("last_default_id")
@@ -175,10 +301,15 @@ def choose_default():
             item["default_track"] = True
             return item
 
+    if not DEFAULT.exists():
+        return None
+
     files = [
         path for path in DEFAULT.iterdir()
-        if path.is_file() and path.suffix.lower() in {
-            ".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac", ".webm", ".opus"
+        if path.is_file()
+        and path.suffix.lower() in {
+            ".mp3", ".wav", ".m4a", ".aac",
+            ".ogg", ".flac", ".webm", ".opus",
         }
     ]
 
@@ -188,10 +319,10 @@ def choose_default():
     with lock:
         last_id = state.get("last_default_id")
 
-    candidates = [path for path in files if str(path) != str(last_id)]
-
-    if not candidates:
-        candidates = files
+    candidates = [
+        path for path in files
+        if str(path) != str(last_id)
+    ] or files
 
     path = random.choice(candidates)
 
@@ -199,6 +330,10 @@ def choose_default():
         "file_path": str(path),
         "title": path.stem,
         "default_track": True,
+        "metadata": {
+            "title": path.stem,
+            "channel": "Highrise Radio",
+        },
     }
 
 
@@ -210,7 +345,12 @@ def next_item():
     return choose_default()
 
 
-def set_request_result(item: dict, status: str, error: str | None = None) -> None:
+def has_requests() -> bool:
+    with lock:
+        return bool(queue)
+
+
+def set_request_result(item: dict, status: str, error=None):
     request_id = item.get("request_id")
     if not request_id:
         return
@@ -221,6 +361,7 @@ def set_request_result(item: dict, status: str, error: str | None = None) -> Non
         "video_id": item.get("video_id"),
         "metadata": metadata(item),
     }
+
     if error:
         result["error"] = error
 
@@ -238,21 +379,53 @@ def acknowledge_request(item):
             save(QUEUE_FILE, list(queue))
 
 
-def has_requests() -> bool:
+def stream_decoder(decoder, output, tail: bytearray):
+    while True:
+        if skip_event.is_set():
+            return tail, "skip"
+
+        if has_requests() and tail and state.get("current", {}).get("default_track"):
+            return tail, "priority"
+
+        chunk = decoder.stdout.read(64 * 1024)
+
+        if not chunk:
+            return tail, "eof"
+
+        if CROSSFADE_BYTES == 0:
+            output.stdin.write(chunk)
+            continue
+
+        tail.extend(chunk)
+
+        if len(tail) > CROSSFADE_BYTES:
+            output.stdin.write(tail[:-CROSSFADE_BYTES])
+            del tail[:-CROSSFADE_BYTES]
+
+
+def prepare_next_item():
     with lock:
-        return len(queue) > (1 if active_request is not None else 0)
+        if queue:
+            return dict(queue[0])
+
+    return choose_default()
 
 
-def player_loop():
+def play_loop():
     global active_request
+
+    output = None
+    current_decoder = None
+
     while True:
         item = None
-        process = None
         request_ref = None
         request_item = False
-        playback_started_at = None
+        started = None
+
         try:
             item = next_item()
+
             if not item:
                 with lock:
                     state["status"] = "idle"
@@ -261,111 +434,170 @@ def player_loop():
 
             item = dict(item)
             request_item = not item.get("default_track")
+
             if request_item:
                 with lock:
                     request_ref = queue[0] if queue else None
                     active_request = request_ref
+
             item["file_path"] = str(ensure_file(item))
-
-            if item.get("default_track") and queue_snapshot():
-                print(
-                    "[AUTODJ] Solicitud pendiente; descartando DEFAULT antes de reproducir.",
-                    flush=True,
-                )
-                continue
-
             item["metadata"] = metadata(item)
 
             with lock:
                 state["current"] = item
                 state["started_at"] = time.time()
                 state["status"] = "playing"
+
                 if item.get("default_track"):
                     state["last_default_id"] = (
-                        item.get("video_id") or item.get("file_path")
+                        item.get("video_id")
+                        or item.get("file_path")
                     )
 
             print(
-                f"[AUTODJ] {'DEFAULT' if item.get('default_track') else 'REQUEST'}: "
+                f"[AUTODJ] {'REQUEST' if request_item else 'DEFAULT'}: "
                 f"{item['metadata'].get('title', 'Pista')}",
                 flush=True,
             )
 
-            process = play_file(Path(item["file_path"]))
-            playback_started_at = time.monotonic()
+            output = ensure_output_process(output)
+            current_decoder = decode_file(Path(item["file_path"]))
 
-            while True:
-                if skip_event.is_set():
-                    break
+            initial = current_decoder.stdout.read(64 * 1024)
+            if not initial:
+                raise RuntimeError("El decodificador no entregó audio.")
 
-                if item.get("default_track") and has_requests():
-                    print(
-                        "[AUTODJ] Solicitud prioritaria detectada.",
-                        flush=True,
-                    )
-                    break
+            started = time.monotonic()
+            tail = bytearray()
 
-                if process.poll() is not None:
-                    break
+            if CROSSFADE_BYTES:
+                tail.extend(initial)
+                if len(tail) > CROSSFADE_BYTES:
+                    output.stdin.write(tail[:-CROSSFADE_BYTES])
+                    del tail[:-CROSSFADE_BYTES]
+            else:
+                output.stdin.write(initial)
 
-                time.sleep(0.25)
+            reason = stream_decoder(current_decoder, output, tail)
 
-            was_skipped = skip_event.is_set()
-            elapsed_playback = (
-                time.monotonic() - playback_started_at
-                if playback_started_at is not None
-                else 0
+            if reason == "skip":
+                skip_event.clear()
+                stop_decoder(current_decoder)
+                current_decoder = None
+
+                with lock:
+                    state["current"] = None
+                    state["started_at"] = None
+                    state["status"] = "idle"
+
+                if request_item and request_ref and item.get("request_id"):
+                    set_request_result(item, "played")
+                    acknowledge_request(request_ref)
+
+                with lock:
+                    active_request = None
+
+                continue
+
+            next_item_value = prepare_next_item()
+
+            if not next_item_value:
+                if tail:
+                    output.stdin.write(tail)
+                    output.stdin.flush()
+                stop_decoder(current_decoder)
+                current_decoder = None
+                continue
+
+            next_item_value = dict(next_item_value)
+            next_is_request = not next_item_value.get("default_track")
+
+            if (
+                next_is_request
+                and next_item_value.get("request_id")
+                and request_ref is next_item_value
+            ):
+                pass
+
+            next_item_value["file_path"] = str(
+                ensure_file(next_item_value)
             )
-            return_code = process.poll() if process is not None else None
+            next_item_value["metadata"] = metadata(next_item_value)
 
-            stop_decoder(process)
-            process = None
+            next_decoder = decode_file(
+                Path(next_item_value["file_path"])
+            )
 
-            skip_event.clear()
+            prefix = (
+                next_decoder.stdout.read(CROSSFADE_BYTES)
+                if CROSSFADE_BYTES
+                else b""
+            )
+
+            if not prefix:
+                raise RuntimeError(
+                    "La siguiente pista no entregó audio."
+                )
+
+            if CROSSFADE_BYTES and tail:
+                output.stdin.write(mix_pcm(bytes(tail), prefix))
+
+                if len(prefix) > len(tail):
+                    output.stdin.write(prefix[len(tail):])
+            else:
+                output.stdin.write(prefix)
+
+            output.stdin.flush()
+
+            stop_decoder(current_decoder)
+            current_decoder = next_decoder
+            current_decoder = None
 
             if request_item and request_ref and item.get("request_id"):
-                if was_skipped or (return_code == 0) or elapsed_playback >= 2:
+                elapsed = (
+                    time.monotonic() - started
+                    if started is not None
+                    else 0
+                )
+                if elapsed >= 2:
                     set_request_result(item, "played")
-                else:
-                    set_request_result(
-                        item,
-                        "failed",
-                        "FFmpeg terminó antes de reproducir la solicitud.",
-                    )
+                acknowledge_request(request_ref)
 
             with lock:
+                active_request = None
                 state["current"] = None
                 state["started_at"] = None
-                state["status"] = "idle"
-                if request_item:
-                    active_request = None
-            if request_item:
-                acknowledge_request(request_ref)
+                state["status"] = "transition"
 
         except Exception as error:
             print(f"[AUTODJ] error: {error}", flush=True)
 
-            if process is not None:
-                stop_decoder(process)
+            stop_decoder(current_decoder)
+            current_decoder = None
 
-            if request_item and request_ref and item and item.get("request_id"):
-                set_request_result(item, "failed", str(error))
+            if request_item and request_ref and item:
+                if item.get("request_id"):
+                    set_request_result(item, "failed", str(error))
                 acknowledge_request(request_ref)
 
             skip_event.clear()
 
             with lock:
+                active_request = None
                 state["current"] = None
                 state["started_at"] = None
                 state["status"] = "recovering"
-                active_request = None
 
             time.sleep(1)
 
 
 class API(BaseHTTPRequestHandler):
     def reply(self, code: int, value) -> None:
-        body = json.dumps(value, ensure_ascii=False).encode("utf-8")
+        body = json.dumps(
+            value,
+            ensure_ascii=False,
+        ).encode("utf-8")
+
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
@@ -382,24 +614,65 @@ class API(BaseHTTPRequestHandler):
             return self.reply(401, {"error": "unauthorized"})
 
         if self.path == "/health":
-            return self.reply(200, {"ok": True, "service": "autodj"})
+            return self.reply(
+                200,
+                {"ok": True, "service": "autodj"},
+            )
 
         if self.path == "/status":
             with lock:
                 snapshot = dict(state)
                 snapshot["current"] = (
-                    dict(state["current"]) if state.get("current") else None
+                    dict(state["current"])
+                    if state.get("current")
+                    else None
                 )
                 started = state.get("started_at")
-                snapshot["elapsed"] = time.time() - started if started else 0
+                snapshot["elapsed"] = (
+                    time.time() - started
+                    if started
+                    else 0
+                )
                 snapshot["queue"] = queue_snapshot()
+
             return self.reply(200, snapshot)
 
         if self.path == "/queue":
             return self.reply(200, queue_snapshot())
 
         if self.path == "/default-playlist":
-            return self.reply(200, load(PLAYLIST, []))
+            return self.reply(
+                200,
+                load(PLAYLIST, []),
+            )
+
+        if self.path == STREAM_PATH:
+            client = audio_publisher.subscribe()
+
+            try:
+                self.send_response(200)
+                self.send_header("Content-Type", "audio/mpeg")
+                self.send_header(
+                    "Cache-Control",
+                    "no-cache, no-store",
+                )
+                self.send_header("Connection", "close")
+                self.end_headers()
+
+                while True:
+                    chunk = client.get()
+                    self.wfile.write(chunk)
+                    self.wfile.flush()
+            except (
+                BrokenPipeError,
+                ConnectionResetError,
+                OSError,
+            ):
+                pass
+            finally:
+                audio_publisher.unsubscribe(client)
+
+            return
 
         return self.reply(404, {"error": "not_found"})
 
@@ -411,9 +684,18 @@ class API(BaseHTTPRequestHandler):
             data = self.body()
 
             if self.path == "/play":
-                video_id = str(data.get("video_id", "")).strip()
-                if not video_id:
-                    return self.reply(400, {"error": "missing_video_id"})
+                video_id = str(
+                    data.get("video_id", "")
+                ).strip()
+
+                if not re.fullmatch(
+                    r"[A-Za-z0-9_-]{11}",
+                    video_id,
+                ):
+                    return self.reply(
+                        400,
+                        {"error": "invalid_video_id"},
+                    )
 
                 item = {
                     "video_id": video_id,
@@ -425,55 +707,106 @@ class API(BaseHTTPRequestHandler):
                 with lock:
                     queue.append(item)
                     save(QUEUE_FILE, list(queue))
-                return self.reply(200, {"ok": True, "queued": item})
+
+                return self.reply(
+                    200,
+                    {"ok": True, "queued": item},
+                )
 
             if self.path == "/skip":
                 with lock:
                     active = state.get("current") is not None
 
                 if not active:
-                    return self.reply(200, {"ok": True, "active": False})
+                    return self.reply(
+                        200,
+                        {"ok": True, "active": False},
+                    )
 
                 skip_event.set()
-                return self.reply(200, {"ok": True, "active": True})
 
-            if self.path in ("/default-add", "/default-remove"):
+                return self.reply(
+                    200,
+                    {"ok": True, "active": True},
+                )
+
+            if self.path in (
+                "/default-add",
+                "/default-remove",
+            ):
                 playlist = load(PLAYLIST, [])
+
                 if not isinstance(playlist, list):
                     playlist = []
 
-                video_id = str(data["video_id"]).strip()
+                video_id = str(
+                    data.get("video_id", "")
+                ).strip()
+
                 if not video_id:
-                    return self.reply(400, {"error": "video_id_required"})
+                    return self.reply(
+                        400,
+                        {"error": "video_id_required"},
+                    )
 
                 if self.path == "/default-add":
                     if any(
-                        isinstance(item, dict) and item.get("video_id") == video_id
+                        isinstance(item, dict)
+                        and item.get("video_id") == video_id
                         for item in playlist
                     ):
-                        return self.reply(409, {"error": "already_exists"})
+                        return self.reply(
+                            409,
+                            {"error": "already_exists"},
+                        )
 
-                    playlist.append({
-                        "video_id": video_id,
-                        "metadata": data.get("metadata", {}),
-                    })
+                    playlist.append(
+                        {
+                            "video_id": video_id,
+                            "metadata": data.get(
+                                "metadata",
+                                {},
+                            ),
+                        }
+                    )
                 else:
                     old_length = len(playlist)
+
                     playlist = [
-                        item for item in playlist
-                        if not isinstance(item, dict)
-                        or item.get("video_id") != video_id
+                        item
+                        for item in playlist
+                        if not (
+                            isinstance(item, dict)
+                            and item.get("video_id") == video_id
+                        )
                     ]
+
                     if len(playlist) == old_length:
-                        return self.reply(404, {"error": "not_found"})
+                        return self.reply(
+                            404,
+                            {"error": "not_found"},
+                        )
 
                 save(PLAYLIST, playlist)
-                return self.reply(200, {"ok": True, "playlist": playlist})
 
-            return self.reply(404, {"error": "not_found"})
+                return self.reply(
+                    200,
+                    {
+                        "ok": True,
+                        "playlist": playlist,
+                    },
+                )
+
+            return self.reply(
+                404,
+                {"error": "not_found"},
+            )
 
         except Exception as error:
-            return self.reply(400, {"error": str(error)})
+            return self.reply(
+                400,
+                {"error": str(error)},
+            )
 
     def log_message(self, *_):
         return
@@ -483,19 +816,40 @@ if __name__ == "__main__":
     CACHE.mkdir(parents=True, exist_ok=True)
     DEFAULT.mkdir(parents=True, exist_ok=True)
 
-    stored_results = load(RESULT_FILE, [])
+    stored_results = load(
+        RESULT_FILE,
+        [],
+    )
+
     if isinstance(stored_results, list):
         state["last_request_results"] = stored_results[-200:]
     elif isinstance(stored_results, dict):
         state["last_request_results"] = [stored_results]
 
-    stored_queue = load(QUEUE_FILE, [])
+    stored_queue = load(
+        QUEUE_FILE,
+        [],
+    )
+
     if isinstance(stored_queue, list):
         queue.extend(
-            item for item in stored_queue
-            if isinstance(item, dict) and item.get("video_id")
+            item
+            for item in stored_queue
+            if isinstance(item, dict)
+            and item.get("video_id")
         )
 
-    threading.Thread(target=player_loop, daemon=True).start()
-    print(f"[AUTODJ] API escuchando en {HOST}:{PORT}", flush=True)
-    ThreadingHTTPServer((HOST, PORT), API).serve_forever()
+    threading.Thread(
+        target=play_loop,
+        daemon=True,
+    ).start()
+
+    print(
+        f"[AUTODJ] API escuchando en {HOST}:{PORT}",
+        flush=True,
+    )
+
+    ThreadingHTTPServer(
+        (HOST, PORT),
+        API,
+    ).serve_forever()
