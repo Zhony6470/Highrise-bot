@@ -27,24 +27,12 @@ background = crossfade(
   defaults
 )
 
-def to_requests(old, new) =
-  # A request interrupts the current default immediately.
-  # The interrupted default is discarded when the radio returns
-  # to the background source; it must never resume from its old position.
-  new
-end
-
-def to_background(old, new) =
-  # The background source may still hold the default track that was
-  # interrupted by !play. Discard it before selecting the next default.
-  source.skip(defaults)
-  new
-end
-
-radio = fallback(
+# Requests must interrupt the current default without allowing its buffered
+# audio to leak back into the stream. fallback.skip() explicitly skips the
+# current child before selecting the new child.
+radio = fallback.skip(
   id="radio",
   track_sensitive=false,
-  transitions=[to_requests, to_background],
   [requests, background]
 )
 
