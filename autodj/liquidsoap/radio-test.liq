@@ -27,10 +27,11 @@ background = crossfade(
   defaults
 )
 
-# Requests must interrupt the current default without allowing its buffered
-# audio to leak back into the stream. fallback.skip() explicitly skips the
-# current child before selecting the new child.
-radio = fallback.skip(
+# Requests interrupt the current default immediately.
+# With track_sensitive=false, Liquidsoap's file-source composition skips the
+# interrupted background request when leaving it, so returning to the
+# background source starts a fresh default instead of resuming the old one.
+radio = fallback(
   id="radio",
   track_sensitive=false,
   [requests, background]
