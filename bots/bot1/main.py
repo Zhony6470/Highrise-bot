@@ -977,15 +977,60 @@ class Bot(BotRuntimeMixin, BaseBot):
                             f"en 'staff' | role={role_ms:.1f}ms"
                         )
                     else:
-                        teleport_started = monotonic()
-                        await self.highrise.teleport(user.id, staff_position)
-                        teleport_ms = (monotonic() - teleport_started) * 1000
+                        teleport_ms = 0.0
+                        total_ms = 0.0
+                        teleported = False
+
+                        # Highrise puede aceptar el request antes de terminar
+                        # de sincronizar al usuario recién conectado.
+                        # Reintentamos y verificamos la posición real reportada
+                        # por la sala después de cada teleport.
+                        for attempt, delay in enumerate((0.0, 0.75, 1.5), start=1):
+                            if delay:
+                                await asyncio.sleep(delay)
+
+                            try:
+                                teleport_started = monotonic()
+                                await self.highrise.teleport(user.id, staff_position)
+                                teleport_ms = (monotonic() - teleport_started) * 1000
+
+                                room_users = await self.highrise.get_room_users()
+                                current_position = next(
+                                    (
+                                        room_position
+                                        for room_user, room_position in room_users.content
+                                        if room_user.id == user.id
+                                    ),
+                                    None,
+                                )
+
+                                if (
+                                    isinstance(current_position, Position)
+                                    and current_position.x == staff_position.x
+                                    and current_position.y == staff_position.y
+                                    and current_position.z == staff_position.z
+                                ):
+                                    teleported = True
+                                    break
+                            except Exception as error:
+                                print(
+                                    f"[JOIN POSITION] Intento {attempt} para "
+                                    f"@{user.username} falló: {error}"
+                                )
+
                         total_ms = (monotonic() - started) * 1000
-                        print(
-                            f"[JOIN POSITION] @{user.username} ({role}) -> staff | "
-                            f"role={role_ms:.1f}ms tp_ack={teleport_ms:.1f}ms "
-                            f"join_to_tp={total_ms:.1f}ms"
-                        )
+                        if teleported:
+                            print(
+                                f"[JOIN POSITION] @{user.username} ({role}) -> staff | "
+                                f"attempts={attempt} tp_ack={teleport_ms:.1f}ms "
+                                f"join_to_tp={total_ms:.1f}ms"
+                            )
+                        else:
+                            print(
+                                f"[JOIN POSITION] @{user.username} ({role}) teleport "
+                                f"no confirmado tras {attempt} intentos | "
+                                f"join_to_tp={total_ms:.1f}ms"
+                            )
                 else:
                     print("[JOIN POSITION] No existe la posición 'staff'.")
             except Exception as error:
