@@ -150,7 +150,7 @@ class TipManager:
 
                 if recipient_ok:
                     successful_recipients += 1
-                    if parts[0] in ("!tipall", " !mtipall"):
+                    if parts[0] in ("!tipall", "!mtipall"):
                         await highrise.chat(
                             f"<#FFCC66>💝 @{recipient_username} recibió {amount}g de propina."
                         )
