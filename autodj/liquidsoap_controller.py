@@ -44,6 +44,7 @@ class LiquidsoapController:
             f'video_id="{self._escape(item.get("video_id", ""))}"',
             f'request_id="{self._escape(item.get("request_id", ""))}"',
             f'default_track="{"true" if item.get("default_track") else "false"}"',
+            f'requested_track="{"true" if item.get("requested_track") else "false"}"',
         ]
         item_metadata = self.metadata(item)
         title = item_metadata.get("title")
@@ -71,9 +72,7 @@ class LiquidsoapController:
         """
         try:
             rids = self._queue_rids(self.request_source)
-            on_air = self._on_air_rid()
-            if on_air:
-                rids.insert(0, on_air)
+            rids.extend(self._on_air_rids())
 
             liquidsoap_items = []
             for rid in dict.fromkeys(rids):
@@ -193,24 +192,59 @@ class LiquidsoapController:
             metadata[key] = value.replace('\\\"', '"').replace('\\\\', '\\')
         return metadata
 
-    def _on_air_rid(self):
+    def _on_air_rids(self):
+        """Return every RID currently reported as on-air.
+
+        During a transition Liquidsoap can have more than one request on
+        air. We must inspect all of them instead of blindly taking the first
+        RID, otherwise AutoDJ can temporarily expose the old default as
+        current while a requested track is already entering the stream.
+        """
         response = self._command("request.on_air")
-        for raw_line in response.splitlines():
-            line = raw_line.strip()
-            if line and line != "END":
-                return line
-        return None
+        return [
+            line.strip()
+            for line in response.splitlines()
+            if line.strip() and line.strip() != "END"
+        ]
+
+    def _on_air_rid(self):
+        rids = self._on_air_rids()
+        return rids[0] if rids else None
 
     def _request_metadata(self, rid):
         return self._parse_metadata_response(self._command(f"request.metadata {rid}"))
 
     def _sync_on_air(self):
         """Synchronize AutoDJ state from Liquidsoap's actual on-air RID."""
-        rid = self._on_air_rid()
-        if not rid:
+        rids = self._on_air_rids()
+        if not rids:
             return
 
-        metadata = self._request_metadata(rid)
+        # During crossfade/transition Liquidsoap can report multiple RIDs.
+        # Prefer the explicitly marked requested track so the API state and
+        # Dj.Z announcement follow !play immediately instead of the old
+        # default track that is still fading out.
+        candidates = []
+        for rid in rids:
+            try:
+                candidates.append((rid, self._request_metadata(rid)))
+            except Exception as error:
+                print(
+                    f"[AUTODJ] LIQUIDSOAP: no se pudo leer metadata RID {rid}: {error}",
+                    flush=True,
+                )
+
+        if not candidates:
+            return
+
+        rid, metadata = next(
+            (
+                pair for pair in candidates
+                if pair[1].get("requested_track", "").lower() == "true"
+            ),
+            candidates[-1],
+        )
+
         token = metadata.get("autodj_token") or None
         video_id = metadata.get("video_id") or None
         request_id = metadata.get("request_id") or None
