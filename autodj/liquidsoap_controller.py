@@ -202,9 +202,9 @@ class LiquidsoapController:
         """
         response = self._command("request.on_air")
         return [
-            line.strip()
-            for line in response.splitlines()
-            if line.strip() and line.strip() != "END"
+            token
+            for token in response.split()
+            if token and token != "END"
         ]
 
     def _on_air_rid(self):
