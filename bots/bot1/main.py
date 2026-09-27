@@ -126,6 +126,9 @@ class Bot(BotRuntimeMixin, BaseBot):
 
     async def get_command_help(self, user: User) -> list[str]:
         role = await self.role_manager.get_user_role(self, user)
+        has_advanced_permission = (
+            user.id == self.owner_id or self.role_manager.has_permission(user.id)
+        )
         sections = [
             "\n".join([
                 "<#66CCFF>🎭 EMOTES",
@@ -162,24 +165,31 @@ class Bot(BotRuntimeMixin, BaseBot):
             ]),
         ]
 
-        if role in ("owner", "mod"):            sections.extend([                "\n".join([                    "<#FF66CC>🛡️ MODERACIÓN",
-                    "<#FFFFFF>• !kick @usuario - Expulsar un usuario",
-                    "<#FFFFFF>• !tp @usuario x y z - Teletransportar un usuario",
-                    "<#FFFFFF>• !dancebot @Zeta_Bot - Activar baile aleatorio",
-                    "<#FFFFFF>• !stopdance @Zeta_Bot - Detener baile aleatorio",
-                    "<#FFFFFF>• !emote @Zeta_Bot rest - Emote persistente del bot",
-                    "<#FFFFFF>• !emote @Zeta_Bot stop - Detener emote del bot",
-                    "<#FFFFFF>• rest @usuario - Emote para un usuario",
-                    "<#FFFFFF>• !randomall - Activar emotes para todos",
-                ]),
-                "\n".join([
-                    "<#FFCC66>🎁 ENVÍO DE PROPINAS",
-                    "<#FFFFFF>• !tipme cantidad - Enviarte oro",
-                    "<#FFFFFF>• !tip @usuario cantidad - Enviar oro",
-                    "<#FFFFFF>• !tipall cantidad - Enviar a todos",
-                    "<#FFFFFF>• !tip all cantidad - Alias de !tipall",
-                ]),
-            ])
+        if role in ("owner", "mod"):
+            sections.append("\n".join([
+                "<#FF66CC>🛡️ MODERACIÓN",
+                "<#FFFFFF>• !home - Volver a la posición guardada",
+                "<#FFFFFF>• !tp @usuario x y z - Teletransportar un usuario",
+                "<#FFFFFF>• !dancebot @Zeta_Bot - Activar baile aleatorio",
+                "<#FFFFFF>• !stopdance @Zeta_Bot - Detener baile aleatorio",
+                "<#FFFFFF>• !emote @Zeta_Bot rest - Emote persistente del bot",
+                "<#FFFFFF>• !emote @Zeta_Bot stop - Detener emote del bot",
+                "<#FFFFFF>• rest @usuario - Emote para un usuario",
+                "<#FFFFFF>• !randomall - Activar emotes para todos",
+            ]))
+
+        if has_advanced_permission:
+            sections.append("\n".join([
+                "<#FFCC66>🔐 PERMISOS AVANZADOS",
+                "<#FFFFFF>• !kick @usuario - Expulsar un usuario",
+                "<#FFFFFF>• !tipme cantidad - Enviarte oro",
+                "<#FFFFFF>• !tip @usuario cantidad - Enviar oro",
+                "<#FFFFFF>• !tipall cantidad - Enviar a todos",
+                "<#FFFFFF>• !wallet - Ver la billetera del bot",
+                "<#FFFFFF>• !role @usuario mod|vip|designer - Gestionar roles",
+                "<#FFFFFF>• !set @Zeta_Bot / @Dj.Z - Ajustar posición del bot",
+                "<#FFFFFF>• !equip / !remove / !color / !getoutfit - Gestionar vestuario",
+            ]))
 
         if role == "designer":
             sections.append(
