@@ -99,7 +99,7 @@ class RpsGame:
                 await self._whisper(user.id, "<#FFCC66>⚠️ Ya tienes una partida de RPS activa.")
                 return
 
-                match = RpsMatch(
+            match = RpsMatch(
                 match_id=self._new_id(),
                 player_one=user,
                 player_two=None,
