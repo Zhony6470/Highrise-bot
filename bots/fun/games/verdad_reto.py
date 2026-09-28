@@ -250,6 +250,7 @@ class GroupPlayer:
 class TruthOrDareGame:
     CHOICE_SECONDS = 20
     ACTION_SECONDS = 60
+    MESSAGE_DELAY_SECONDS = 2
     PUNISHMENT_SECONDS = 60
     PUNISHMENT_RADIUS = 1.5
     PUNISHMENT_EMOTE = "emote-cheer"
@@ -805,6 +806,7 @@ class TruthOrDareGame:
         self.current_mode = mode
 
         await self._send_prompt(user.username, mode, user_id=user.id)
+        await asyncio.sleep(self.MESSAGE_DELAY_SECONDS)
         await self._chat(
             f"<#FFCC66>⏱️ @{user.username}, tienes "
             f"{self.ACTION_SECONDS} segundos. Escribe !listo al terminar."
@@ -844,6 +846,7 @@ class TruthOrDareGame:
             await self._chat(
                 f"<#66FF99>✅ @{user.username} completó su turno."
             )
+            await asyncio.sleep(self.MESSAGE_DELAY_SECONDS)
             await self._advance_turn()
             return True
 
