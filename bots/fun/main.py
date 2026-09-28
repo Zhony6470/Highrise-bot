@@ -196,6 +196,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                     "<#FFFFFF>• !rps - RPS contra BotJuegos",
                     "<#FFFFFF>• !rps @usuario - RPS contra jugador",
                     "<#FFFFFF>• !rps @usuario 10|50|100|500 - RPS con apuesta",
+                    "<#FFFFFF>• Elecciones RPS por mensaje privado",
                 ]),
             )
             return
