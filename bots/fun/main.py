@@ -144,7 +144,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             print(f"[FUN] Error restaurando outfit: {error}")
 
         await self.dance_manager.restore()
-        asyncio.create_task(self.restore_position())
+        await self.restore_position()
 
         await self.highrise.chat(
             f"<#66FF99>🎮 @{self.bot_username} está conectado. "
@@ -176,7 +176,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                 if not await self._is_targeted_for_me(msg):
                     return
 
-        if command == "!help game":
+        if msg.lower() == "!help game":
             await self.highrise.send_whisper(
                 user.id,
                 "\n".join([
@@ -233,7 +233,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             return
 
         # 🎲 Verdad o Reto
-        if await self.truth_or_dare.handle(user, command):
+        if await self.truth_or_dare.handle(user, msg):
             return
 
         if command == "!wallet":
