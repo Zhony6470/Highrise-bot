@@ -59,15 +59,6 @@ DRAW_REFUNDS = {
     500: 450,
 }
 
-TIP_FEES = {
-    1: 1,
-    5: 1,
-    10: 1,
-    50: 5,
-    100: 10,
-    500: 50,
-}
-
 
 @dataclass
 class RpsMatch:
@@ -482,8 +473,9 @@ class RpsGame:
         return await self._send_amount(user_id, amount)
 
     async def _refund_all(self, match: RpsMatch) -> None:
+        refund = DRAW_REFUNDS.get(match.bet)
         for user_id, amount in list(match.paid.items()):
-            await self._refund(user_id, amount)
+            await self._refund(user_id, refund if refund is not None else amount)
 
     async def _bet_timeout(self, match_id: str) -> None:
         try:
@@ -495,7 +487,7 @@ class RpsGame:
             await self._refund_all(match)
             await self._chat(
                 "<#FFCC66>⏳ RPS cancelado: no se recibieron las dos apuestas a tiempo. "
-                "Las apuestas recibidas fueron devueltas."
+                "Las apuestas recibidas fueron reembolsadas ajustando la comisión."
             )
             await self._cleanup(match)
         except asyncio.CancelledError:
