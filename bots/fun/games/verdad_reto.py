@@ -144,6 +144,10 @@ class TruthOrDareGame:
 
         self._cancel_task(task)
         await self._send_prompt(user.username, mode, individual=True)
+        self._cancel_task(self.individual_actions.pop(user.id, None))
+        self.individual_actions[user.id] = asyncio.create_task(
+            self._individual_action_timeout(user.id, user.username)
+        )
         return True
 
     async def individual_direct(self, user: User, mode: str) -> None:
