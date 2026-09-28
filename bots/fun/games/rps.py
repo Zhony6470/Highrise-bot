@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from highrise import CurrencyItem, Item, User
 
 
-CHOICE_SECONDS = 15
+CHOICE_SECONDS = 40
 BET_SECONDS = 60
 ALLOWED_BETS = {10, 50, 100, 500}
 
