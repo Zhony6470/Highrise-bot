@@ -174,7 +174,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                 if not await self._is_targeted_for_me(msg):
                     return
 
-        if command == "!help":
+        if command == "!help game":
             await self.highrise.send_whisper(
                 user.id,
                 "\n".join([
