@@ -76,6 +76,7 @@ class TruthOrDareGame:
         self.individual_choices: dict[str, asyncio.Task] = {}
         self.individual_actions: dict[str, asyncio.Task] = {}
         self.punishments: dict[str, dict] = {}
+        self.punishment_votes: dict[str, set[str]] = {}
         self.punishment_zone: Position | None = None
         self.punishment_radius = self.PUNISHMENT_RADIUS
         self._load_punishment_zone()
@@ -163,6 +164,67 @@ class TruthOrDareGame:
             return
         except Exception as error:
             print(f"[FUN GAME] Error en baile de castigo: {error}")
+
+    async def vote_punishment(self, voter: User, command: str) -> bool:
+        if self.state != "playing":
+            await self._chat("<#FFCC66>⚠️ El castigo por votación solo está disponible durante una partida grupal.")
+            return True
+
+        parts = command.split()
+        if len(parts) != 2 or not parts[1].startswith("@"):
+            await self._chat("<#FFCC66>⚠️ Uso: !castigo @usuario")
+            return True
+
+        if not any(player.user_id == voter.id for player in self.players):
+            await self._chat("<#FF6666>🔒 Solo los jugadores de la partida pueden votar un castigo.")
+            return True
+
+        target_name = parts[1][1:].casefold()
+        target = next(
+            (player for player in self.players if player.username.casefold() == target_name),
+            None,
+        )
+        if target is None:
+            await self._chat(f"<#FFCC66>⚠️ No encuentro a @{parts[1][1:]} en la partida.")
+            return True
+
+        if target.user_id == voter.id:
+            await self._chat("<#FFCC66>⚠️ No puedes votar un castigo para ti mismo.")
+            return True
+
+        if self._punishment_is_active_for(target.user_id):
+            await self._chat(f"<#FFCC66>⚠️ @{target.username} ya está cumpliendo un castigo.")
+            return True
+
+        voters = self.punishment_votes.setdefault(target.user_id, set())
+        if voter.id in voters:
+            await self._chat(f"<#FFCC66>⚠️ @{voter.username}, tu voto para @{target.username} ya está contado.")
+            return True
+
+        voters.add(voter.id)
+        count = len(voters)
+
+        if count < 2:
+            await self._chat(
+                f"<#FFCC66>⚠️ @{voter.username} votó castigo para @{target.username}. "
+                "Falta 1 jugador."
+            )
+            return True
+
+        self.punishment_votes.pop(target.user_id, None)
+        await self._chat(
+            f"<#FF6666>🔥 ¡Castigo aprobado! Dos jugadores votaron contra @{target.username}."
+        )
+        punished = await self._start_punishment(
+            target.user_id,
+            target.username,
+            "Dos jugadores confirmaron que debe cumplir el castigo.",
+        )
+
+        if punished and self._current_player() and self._current_player().user_id == target.user_id:
+            await self._advance_turn()
+
+        return True
 
     async def _start_punishment(self, user_id: str, username: str, reason: str) -> bool:
         if self.punishment_zone is None:
@@ -578,6 +640,7 @@ class TruthOrDareGame:
 
     async def _finish(self, message: str) -> None:
         await self._restore_all_punishments()
+        self.punishment_votes.clear()
 
         self._clear_current_turn()
         for task in list(self.individual_choices.values()):
@@ -641,6 +704,9 @@ class TruthOrDareGame:
                     return True
             await self.set_punishment_zone(user, radius)
             return True
+
+        if command.startswith("!castigo"):
+            return await self.vote_punishment(user, command)
 
         if command == "!vd":
             if self.active:
