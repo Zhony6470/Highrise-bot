@@ -9,6 +9,7 @@ from highrise import CurrencyItem, Item, User
 
 CHOICE_SECONDS = 40
 BET_SECONDS = 60
+MESSAGE_DELAY_SECONDS = 2
 ALLOWED_BETS = {10, 50, 100, 500}
 
 CHOICES = {
@@ -229,6 +230,7 @@ class RpsGame:
                 f"<#66CCFF>⚔️ RPS: @{user.username} 🆚 @{target_user.username}. "
                 "Las elecciones serán privadas."
             )
+            await asyncio.sleep(MESSAGE_DELAY_SECONDS)
             await self._send_choice_prompt(user)
             await self._send_choice_prompt(target_user)
             match.task = asyncio.create_task(self._choice_timeout(match.match_id))
@@ -336,6 +338,7 @@ class RpsGame:
                 f"<#66CCFF>💰 Apuesta confirmada: {match.bet * 2}G en el pozo. "
                 "¡Comienza el RPS!"
             )
+            await asyncio.sleep(MESSAGE_DELAY_SECONDS)
             await self._start_round(match)
 
         return True
@@ -346,6 +349,7 @@ class RpsGame:
         await self._chat(
             f"<#66CCFF>⚔️ RPS — ronda {match.round_number}"
         )
+        await asyncio.sleep(MESSAGE_DELAY_SECONDS)
         await self._send_choice_prompt(match.player_one)
         if match.player_two is not None:
             await self._send_choice_prompt(match.player_two)
@@ -392,6 +396,7 @@ class RpsGame:
                 return
 
             match.round_number += 1
+            await asyncio.sleep(MESSAGE_DELAY_SECONDS)
             await self._start_round(match)
             return
 
@@ -423,6 +428,7 @@ class RpsGame:
                     f"<#66CCFF>🤝 Empate en la ronda {match.round_number}. Se juega otra ronda."
                 )
                 match.round_number += 1
+                await asyncio.sleep(MESSAGE_DELAY_SECONDS)
                 await self._start_round(match)
                 return
 
@@ -439,6 +445,7 @@ class RpsGame:
 
         if max(match.wins.values(), default=0) < 2:
             match.round_number += 1
+            await asyncio.sleep(MESSAGE_DELAY_SECONDS)
             await self._start_round(match)
             return
 
