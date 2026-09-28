@@ -185,18 +185,24 @@ class Bot(BotRuntimeMixin, BaseBot):
                     return
 
         if msg.lower() == "!help game":
+            await self.highrise.send_whisper(user.id, "<#66CCFF>🎮 JUEGOS")
             await self.highrise.send_whisper(
                 user.id,
                 "\\n".join([
-                    "<#66CCFF>🎮 JUEGOS",
                     "<#FFFFFF>🎭 VERDAD O RETO",
-                    "<#FFFFFF>• !jugarvd - Crear partida",
-                    "<#FFFFFF>• !entrarvd - Unirse",
-                    "<#FFFFFF>• !iniciarvd - Iniciar partida",
-                    "<#FFFFFF>• !rps - RPS contra BotJuegos",
-                    "<#FFFFFF>• !rps @usuario - RPS contra jugador",
-                    "<#FFFFFF>• !rps @usuario 10|50|100|500 - RPS con apuesta",
-                    "<#FFFFFF>• Elecciones RPS por mensaje privado",
+                    "<#FFFFFF>• !jugarvd",
+                    "<#FFFFFF>• !entrarvd",
+                    "<#FFFFFF>• !iniciarvd",
+                    "<#FFFFFF>• !verdad / !reto",
+                ]),
+            )
+            await self.highrise.send_whisper(
+                user.id,
+                "\\n".join([
+                    "<#FFFFFF>⚔️ RPS",
+                    "<#FFFFFF>• !rps — Contra BotJuegos",
+                    "<#FFFFFF>• !rps @usuario — Contra jugador",
+                    "<#FFFFFF>• !rps @usuario 10|50|100|500 — Con apuesta",
                 ]),
             )
             return
