@@ -418,13 +418,35 @@ class TruthOrDareGame:
         await self._chat(message)
 
     async def on_user_leave(self, user_id: str) -> None:
-        # El llamador debe pasar el ID del usuario que abandonó la sala.
+        # Se usa directamente el ID para procesar la salida de la sala.
         index = self._player_index(user_id)
         if index < 0:
             return
 
         username = self.players[index].username
-        await self.leave_group(User(id=user_id, username=username))
+        was_current = self.state == "playing" and index == self.turn_index
+        self.players.pop(index)
+
+        if not self.players:
+            await self._finish("🏁 La partida terminó porque no quedan jugadores.")
+            return
+
+        if index < self.turn_index:
+            self.turn_index -= 1
+        elif was_current and self.turn_index >= len(self.players):
+            self.turn_index = 0
+
+        if self.creator_id == user_id:
+            self.creator_id = self.players[0].user_id
+            await self._chat(
+                f"<#FFCC66>🚪 @{username} salió. <#FFFFFF>El control pasa a @{self.players[0].username}."
+            )
+        else:
+            await self._chat(f"<#FFCC66>🚪 @{username} salió de la partida.")
+
+        if was_current:
+            self._clear_current_turn()
+            await self._start_current_turn()
 
     async def handle(self, user: User, command: str) -> bool:
         if command == "!vd":
