@@ -71,6 +71,7 @@ class TruthOrDareGame:
         self.current_action_task: asyncio.Task | None = None
         self.current_mode: str | None = None
         self.individual_choices: dict[str, asyncio.Task] = {}
+        self.individual_actions: dict[str, asyncio.Task] = {}
 
     @property
     def active(self) -> bool:
