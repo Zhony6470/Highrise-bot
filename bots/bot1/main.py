@@ -441,8 +441,12 @@ class Bot(BotRuntimeMixin, BaseBot):
         if command_name in protected_commands and not await self._is_targeted_for_me(msg):
             return
 
-        # !help music es exclusivo del bot de música; Zeta no debe responder.
-        if command_name == "!help" and len(msg.split()) == 2 and msg.split()[1].strip().lower() == "music":
+        # !help music y !help game pertenecen a otros bots; Zeta no debe responder.
+        if (
+            command_name == "!help"
+            and len(msg.split()) == 2
+            and msg.split()[1].strip().lower() in {"music", "game"}
+        ):
             return
 
         # !ubi: lista pública de las ubicaciones guardadas de Zeta.
