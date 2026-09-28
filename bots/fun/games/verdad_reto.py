@@ -56,7 +56,7 @@ class TruthOrDareGame:
     ACTION_SECONDS = 60
     PUNISHMENT_SECONDS = 60
     PUNISHMENT_RADIUS = 1.5
-    PUNISHMENT_EMOTE = "dance-macarena"
+    PUNISHMENT_EMOTE = "emote-cheer"
 
     def __init__(
         self,
