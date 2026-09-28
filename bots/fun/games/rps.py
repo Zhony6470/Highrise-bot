@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import random
 import secrets
 from dataclasses import dataclass, field
 
@@ -34,10 +33,39 @@ WINS = {
 }
 
 BET_BARS = {
+    1: "gold_bar_1",
+    5: "gold_bar_5",
     10: "gold_bar_10",
     50: "gold_bar_50",
     100: "gold_bar_100",
     500: "gold_bar_500",
+}
+
+# El premio deja una pequeña reserva dentro del pozo para cubrir las
+# comisiones de Highrise sin depender de saldo externo del bot.
+PAYOUTS = {
+    10: 16,
+    50: 90,
+    100: 180,
+    500: 900,
+}
+
+# En empate se devuelve el 90% de cada apuesta. La diferencia cubre
+# las comisiones de los reembolsos y evita que BotJuegos necesite saldo externo.
+DRAW_REFUNDS = {
+    10: 9,
+    50: 45,
+    100: 90,
+    500: 450,
+}
+
+TIP_FEES = {
+    1: 1,
+    5: 1,
+    10: 1,
+    50: 5,
+    100: 10,
+    500: 50,
 }
 
 
@@ -370,12 +398,15 @@ class RpsGame:
 
         result = self._result(p1_choice, p2_choice)
         if result == "draw":
-            await self._refund_all(match)
+            refund = DRAW_REFUNDS[match.bet]
+            first_ok = await self._refund(p1.id, refund)
+            second_ok = await self._refund(p2.id, refund)
             await self._chat(
                 f"<#66CCFF>🤝 EMPATE\n"
                 f"@{p1.username} → {DISPLAY[p1_choice]}\n"
                 f"@{p2.username} → {DISPLAY[p2_choice]}\n"
-                f"<#66FF99>💰 Las apuestas fueron devueltas."
+                f"<#66FF99>💰 Reembolso: {refund}G por jugador."
+                + ("" if first_ok and second_ok else "\n<#FF6666>⚠️ Un reembolso no pudo completarse automáticamente.")
             )
             await self._cleanup(match)
             return
@@ -392,7 +423,7 @@ class RpsGame:
         reason: str = "",
     ) -> None:
         if match.bet:
-            prize = match.bet * 2
+            prize = PAYOUTS[match.bet]
             paid = await self._pay(winner.id, prize)
             if not paid:
                 await self._chat(
@@ -412,37 +443,27 @@ class RpsGame:
             f"<#66FF99>🏆 ¡@{winner.username} gana{suffix}!"
         )
         if match.bet:
-            message += f"\n💰 Premio: {match.bet * 2}G"
+            message += f"\n💰 Premio: {prize}G | 🏦 Reserva: {match.bet * 2 - prize}G"
         await self._chat(message)
         await self._cleanup(match)
 
-    async def _pay(self, user_id: str, amount: int) -> bool:
-        if amount not in {20, 100, 200, 1000}:
-            return False
-        base = amount // 2
-        bar = BET_BARS[base]
-        try:
-            first = await self.bot.highrise.tip_user(user_id, bar)
-            first_value = getattr(first, "result", first)
-            second = await self.bot.highrise.tip_user(user_id, bar)
-            second_value = getattr(second, "result", second)
-            return first_value == "success" and second_value == "success"
-        except Exception as error:
-            print(f"[RPS] Error pagando {amount}G a {user_id}: {error}")
-            return False
-
-    async def _refund(self, user_id: str, amount: int) -> bool:
+    def _build_bars(self, amount: int) -> list[str]:
         if amount <= 0:
-            return False
+            return []
 
         bars = []
         remaining = amount
         for value, bar in sorted(BET_BARS.items(), reverse=True):
             count, remaining = divmod(remaining, value)
             bars.extend([bar] * count)
-
         if remaining:
-            return False
+            return []
+        return bars
+
+    async def _send_amount(self, user_id: str, amount: int) -> bool:
+        bars = self._build_bars(amount)
+        if not bars:
+            return amount == 0
 
         try:
             for bar in bars:
@@ -451,8 +472,14 @@ class RpsGame:
                     return False
             return True
         except Exception as error:
-            print(f"[RPS] Error devolviendo {amount}G a {user_id}: {error}")
+            print(f"[RPS] Error enviando {amount}G a {user_id}: {error}")
             return False
+
+    async def _pay(self, user_id: str, amount: int) -> bool:
+        return await self._send_amount(user_id, amount)
+
+    async def _refund(self, user_id: str, amount: int) -> bool:
+        return await self._send_amount(user_id, amount)
 
     async def _refund_all(self, match: RpsMatch) -> None:
         for user_id, amount in list(match.paid.items()):
