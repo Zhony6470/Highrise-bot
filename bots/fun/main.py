@@ -29,6 +29,7 @@ from common.dance import DanceManager
 from services.emotes import EmotesManager
 from services.roles import RoleManager
 from bots.bot1.services.tips import TipManager
+from bots.fun.games.verdad_reto import TruthOrDareGame
 
 
 DATA_FILE = str(ROOT_DIR / "bots" / "fun" / "data" / "data.json")
@@ -56,6 +57,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         self.dance_manager = DanceManager(self)
         self.emotes_list = self.load_emotes_data()
         self.emotes_manager = EmotesManager(self.emotes_list)
+        self.truth_or_dare = TruthOrDareGame(self, self.is_mod)
 
     def load_emotes_data(self):
         try:
@@ -179,9 +181,16 @@ class Bot(BotRuntimeMixin, BaseBot):
                 user.id,
                 "\n".join([
                     "<#66CCFF>🎮 JUEGOS Y DIVERSIÓN",
-                    "<#FFFFFF>• !verdad - Jugar Verdad",
-                    "<#FFFFFF>• !reto - Jugar Reto",
-                    "<#FFFFFF>• !vd - Verdad o Reto",
+                    "<#FFFFFF>• !vd - Modo individual",
+                    "<#FFFFFF>• !verdad - Elegir/ jugar Verdad",
+                    "<#FFFFFF>• !reto - Elegir/ jugar Reto",
+                    "<#FFFFFF>• !jugarvd - Crear partida grupal",
+                    "<#FFFFFF>• !entrarvd - Unirse a la partida",
+                    "<#FFFFFF>• !salirvd - Salir de la partida",
+                    "<#FFFFFF>• !iniciarvd - Iniciar partida",
+                    "<#FFFFFF>• !listo - Completar tu turno",
+                    "<#FFFFFF>• !terminarvd - Finalizar partida",
+                    "<#FFFFFF>• !cancelarvd - Cancelar partida",
                     "<#FFFFFF>• !dado - Lanzar un dado",
                     "<#FFFFFF>• !moneda - Lanzar una moneda",
                     "<#FFFFFF>• !8ball - Preguntar a la bola 8",
@@ -219,6 +228,10 @@ class Bot(BotRuntimeMixin, BaseBot):
                 await self.restart_with_message()
             else:
                 await handle_reset(self, user, msg)
+            return
+
+        # 🎲 Verdad o Reto
+        if await self.truth_or_dare.handle(user, command):
             return
 
         if command == "!wallet":
