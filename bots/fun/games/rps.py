@@ -224,10 +224,10 @@ class RpsGame:
     async def _send_choice_prompt(self, user: User) -> None:
         await self._whisper(
             user.id,
-            "<#66CCFF>🎮 RPS — elige por privado:\n"
-            "✊ !piedra\n"
-            "📄 !papel\n"
-            "✂️ !tijera\n"
+            "<#66CCFF>🎮 RPS — elige por susurro:\n"
+            "✊ piedra\n"
+            "📄 papel\n"
+            "✂️ tijera\n"
             f"⏳ Tienes {CHOICE_SECONDS} segundos.",
         )
 
