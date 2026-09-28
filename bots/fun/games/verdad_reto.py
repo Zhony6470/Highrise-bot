@@ -350,6 +350,12 @@ class TruthOrDareGame:
             return
 
     async def ready(self, user: User) -> bool:
+        individual_task = self.individual_actions.pop(user.id, None)
+        if individual_task is not None:
+            self._cancel_task(individual_task)
+            await self._chat(f"<#66FF99>✅ @{user.username} completó su ronda individual.")
+            return True
+
         if self.state == "playing":
             player = self._current_player()
             if not player or player.user_id != user.id:
