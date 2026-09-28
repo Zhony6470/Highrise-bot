@@ -138,6 +138,8 @@ services:
       BOT3_API_KEY: ${BOT3_API_KEY}
     depends_on:
       - main-bot
+    volumes:
+      - ./bots/fun/data/data.json:/app/bots/fun/data/data.json
     command:
       - sh
       - -c
