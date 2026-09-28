@@ -75,11 +75,7 @@ class TruthOrDareGame:
         self.current_mode: str | None = None
         self.individual_choices: dict[str, asyncio.Task] = {}
         self.individual_actions: dict[str, asyncio.Task] = {}
-        self.punishment_user_id: str | None = None
-        self.punishment_username: str | None = None
-        self.punishment_original_position: Position | None = None
-        self.punishment_task: asyncio.Task | None = None
-        self.punishment_dance_task: asyncio.Task | None = None
+        self.punishments: dict[str, dict] = {}
         self.punishment_zone: Position | None = None
         self.punishment_radius = self.PUNISHMENT_RADIUS
         self._load_punishment_zone()
@@ -137,24 +133,26 @@ class TruthOrDareGame:
         return None
 
     def _punishment_is_active_for(self, user_id: str) -> bool:
-        return self.punishment_user_id == user_id and self.punishment_task is not None
+        return user_id in self.punishments
 
-    async def _stop_punishment_runtime(self) -> None:
-        current = asyncio.current_task()
-        if self.punishment_dance_task and self.punishment_dance_task is not current:
-            self._cancel_task(self.punishment_dance_task)
-        if self.punishment_task and self.punishment_task is not current:
-            self._cancel_task(self.punishment_task)
-        self.punishment_dance_task = None
-        self.punishment_task = None
-
-    async def _restore_punished_user(self) -> None:
-        if not self.punishment_user_id or not self.punishment_original_position:
+    async def _stop_punishment(self, user_id: str, restore: bool = True) -> None:
+        punishment = self.punishments.pop(user_id, None)
+        if not punishment:
             return
-        try:
-            await self.bot.highrise.teleport(self.punishment_user_id, self.punishment_original_position)
-        except Exception as error:
-            print(f"[FUN GAME] Error devolviendo al jugador: {error}")
+        current = asyncio.current_task()
+        for key in ("dance_task", "task"):
+            task = punishment.get(key)
+            if task and task is not current:
+                self._cancel_task(task)
+        if restore and punishment.get("original_position"):
+            try:
+                await self.bot.highrise.teleport(user_id, punishment["original_position"])
+            except Exception as error:
+                print(f"[FUN GAME] Error devolviendo al jugador: {error}")
+
+    async def _restore_all_punishments(self) -> None:
+        for user_id in list(self.punishments):
+            await self._stop_punishment(user_id, restore=True)
 
     async def _punishment_dance_loop(self, user_id: str) -> None:
         try:
@@ -170,26 +168,37 @@ class TruthOrDareGame:
         if self.punishment_zone is None:
             await self._chat("<#FF6666>⚠️ No hay zona de castigo configurada. Usa !setcastigo desde el tubo.")
             return False
+
         original = await self._get_user_position(user_id)
         if original is None:
             await self._chat(f"<#FF6666>⚠️ No pude guardar la posición de @{username}. No puedo aplicar el castigo.")
             return False
-        await self._stop_punishment_runtime()
-        self.punishment_user_id = user_id
-        self.punishment_username = username
-        self.punishment_original_position = original
+
+        await self._stop_punishment(user_id, restore=False)
+        self.punishments[user_id] = {
+            "username": username,
+            "original_position": original,
+            "task": None,
+            "dance_task": None,
+        }
+
         try:
             await self.bot.highrise.teleport(user_id, self.punishment_zone)
             await self._chat(f"<#FF6666>🔥 @{username} no cumplió. {reason}")
-            await self._chat(f"<#FFCC66>💃 CASTIGO: al tubo durante {self.PUNISHMENT_SECONDS} segundos. No puedes salir de la zona.")
-            self.punishment_dance_task = asyncio.create_task(self._punishment_dance_loop(user_id))
-            self.punishment_task = asyncio.create_task(self._punishment_timeout(user_id, username))
+            await self._chat(
+                f"<#FFCC66>💃 CASTIGO: al tubo durante "
+                f"{self.PUNISHMENT_SECONDS} segundos. No puedes salir de la zona."
+            )
+            self.punishments[user_id]["dance_task"] = asyncio.create_task(
+                self._punishment_dance_loop(user_id)
+            )
+            self.punishments[user_id]["task"] = asyncio.create_task(
+                self._punishment_timeout(user_id, username)
+            )
             return True
         except Exception as error:
             print(f"[FUN GAME] Error iniciando castigo: {error}")
-            self.punishment_user_id = None
-            self.punishment_username = None
-            self.punishment_original_position = None
+            self.punishments.pop(user_id, None)
             return False
 
     async def _punishment_timeout(self, user_id: str, username: str) -> None:
@@ -197,14 +206,11 @@ class TruthOrDareGame:
             await asyncio.sleep(self.PUNISHMENT_SECONDS)
             if not self._punishment_is_active_for(user_id):
                 return
-            await self._stop_punishment_runtime()
-            await self._restore_punished_user()
-            await self._chat(f"<#66FF99>✅ @{username} terminó su castigo y vuelve a la partida.")
-            self.punishment_user_id = None
-            self.punishment_username = None
-            self.punishment_original_position = None
-            if self.state == "playing":
-                await self._advance_turn()
+
+            await self._stop_punishment(user_id, restore=True)
+            await self._chat(
+                f"<#66FF99>✅ @{username} terminó su castigo y vuelve a la partida."
+            )
         except asyncio.CancelledError:
             return
 
@@ -214,11 +220,18 @@ class TruthOrDareGame:
         if not isinstance(position, Position):
             await self.bot.highrise.teleport(user.id, self.punishment_zone)
             return
-        distance = ((position.x - self.punishment_zone.x) ** 2 + (position.z - self.punishment_zone.z) ** 2) ** 0.5
+
+        distance = (
+            (position.x - self.punishment_zone.x) ** 2
+            + (position.z - self.punishment_zone.z) ** 2
+        ) ** 0.5
         if distance > self.punishment_radius or abs(position.y - self.punishment_zone.y) > 1.5:
             try:
                 await self.bot.highrise.teleport(user.id, self.punishment_zone)
-                await self._chat(f"<#FFCC66>🚫 @{user.username}, sigues castigado. Debes permanecer en el tubo.")
+                await self._chat(
+                    f"<#FFCC66>🚫 @{user.username}, sigues castigado. "
+                    "Debes permanecer en el tubo."
+                )
             except Exception as error:
                 print(f"[FUN GAME] Error reforzando zona de castigo: {error}")
 
@@ -561,12 +574,7 @@ class TruthOrDareGame:
             )
 
     async def _finish(self, message: str) -> None:
-        await self._stop_punishment_runtime()
-        if self.punishment_user_id:
-            await self._restore_punished_user()
-        self.punishment_user_id = None
-        self.punishment_username = None
-        self.punishment_original_position = None
+        await self._restore_all_punishments()
 
         self._clear_current_turn()
         for task in list(self.individual_choices.values()):
@@ -583,11 +591,8 @@ class TruthOrDareGame:
 
     async def on_user_leave(self, user_id: str) -> None:
         # Se usa directamente el ID para procesar la salida de la sala.
-        if self.punishment_user_id == user_id:
-            await self._stop_punishment_runtime()
-            self.punishment_user_id = None
-            self.punishment_username = None
-            self.punishment_original_position = None
+        if self._punishment_is_active_for(user_id):
+            await self._stop_punishment(user_id, restore=False)
 
         index = self._player_index(user_id)
         if index < 0:
