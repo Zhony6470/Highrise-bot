@@ -185,26 +185,12 @@ class Bot(BotRuntimeMixin, BaseBot):
         if msg.lower() == "!help game":
             await self.highrise.send_whisper(
                 user.id,
-                "\n".join([
-                    "<#66CCFF>🎮 JUEGOS Y DIVERSIÓN",
-                    "<#FFFFFF>• !vd - Modo individual",
-                    "<#FFFFFF>• !verdad - Elegir/ jugar Verdad",
-                    "<#FFFFFF>• !reto - Elegir/ jugar Reto",
-                    "<#FFFFFF>• !jugarvd - Crear partida grupal",
-                    "<#FFFFFF>• !entrarvd - Unirse a la partida",
-                    "<#FFFFFF>• !salirvd - Salir de la partida",
+                "\\n".join([
+                    "<#66CCFF>🎮 JUEGOS",
+                    "<#FFFFFF>🎭 VERDAD O RETO",
+                    "<#FFFFFF>• !jugarvd - Crear partida",
+                    "<#FFFFFF>• !entrarvd - Unirse",
                     "<#FFFFFF>• !iniciarvd - Iniciar partida",
-                    "<#FFFFFF>• !listo - Completar tu turno",
-                    "<#FFFFFF>• !terminarvd - Finalizar partida",
-                    "<#FFFFFF>• !cancelarvd - Cancelar partida",
-                    "<#FFFFFF>• !castigo @usuario - Votar para aplicar castigo (2 votos)",
-                    "<#FFFFFF>• !setcastigo - Configurar el tubo (staff)",
-                    "<#FFFFFF>• !dado - Lanzar un dado",
-                    "<#FFFFFF>• !moneda - Lanzar una moneda",
-                    "<#FFFFFF>• !8ball - Preguntar a la bola 8",
-                    "<#FFFFFF>• !rps - Piedra, papel o tijera",
-                    "<#FFFFFF>• !duelo @usuario - Desafiar a otro usuario",
-                    "<#FFFFFF>• !trivia - Jugar Trivia",
                 ]),
             )
             return
