@@ -107,11 +107,17 @@ class Bot(BotRuntimeMixin, BaseBot):
         )
 
     async def restore_position(self):
+        # Highrise necesita unos segundos después de on_start para que
+        # el bot esté completamente presente en la sala antes del teleport.
+        await asyncio.sleep(5)
         try:
             position = self.position_manager_common.get_saved_position()
-            if position:
-                await self.highrise.teleport(self.bot_id, position)
-                print(f"[FUN POSITION] Bot restaurado en {position}.")
+            if not position:
+                print("[FUN POSITION] No hay una posición guardada para restaurar.")
+                return
+
+            await self.highrise.teleport(self.bot_id, position)
+            print(f"[FUN POSITION] Bot restaurado en {position}.")
         except Exception as error:
             print(f"[FUN POSITION] Error restaurando posición: {error}")
 
@@ -144,7 +150,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             print(f"[FUN] Error restaurando outfit: {error}")
 
         await self.dance_manager.restore()
-        await self.restore_position()
+        asyncio.create_task(self.restore_position())
 
         await self.highrise.chat(
             f"<#66FF99>🎮 @{self.bot_username} está conectado. "
