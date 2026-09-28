@@ -407,7 +407,10 @@ class TruthOrDareGame:
         self._clear_current_turn()
         for task in list(self.individual_choices.values()):
             self._cancel_task(task)
+        for task in list(self.individual_actions.values()):
+            self._cancel_task(task)
         self.individual_choices.clear()
+        self.individual_actions.clear()
         self.creator_id = None
         self.players.clear()
         self.turn_index = 0
