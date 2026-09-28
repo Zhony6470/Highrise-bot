@@ -99,8 +99,7 @@ class RpsGame:
                 await self._whisper(user.id, "<#FFCC66>⚠️ Ya tienes una partida de RPS activa.")
                 return
 
-            bot_user_id = getattr(self.bot, "bot_id", None)
-            match = RpsMatch(
+                match = RpsMatch(
                 match_id=self._new_id(),
                 player_one=user,
                 player_two=None,
@@ -159,7 +158,11 @@ class RpsGame:
 
         target_user = await self._get_room_user(target_id, target_username)
         if target_user is None:
-            target_user = User(target_id, target_username)
+            await self._whisper(
+                user.id,
+                "<#FFCC66>⚠️ Ese jugador debe estar en la sala para jugar RPS.",
+            )
+            return
 
         bet = 0
         if len(parts) == 3:
@@ -277,6 +280,11 @@ class RpsGame:
             return False
 
         if sender.id in match.paid:
+            await self._refund(sender.id, tip.amount)
+            await self._whisper(
+                sender.id,
+                f"<#FFCC66>⚠️ Ya habías confirmado tu apuesta. Te devolví los {tip.amount}G adicionales.",
+            )
             return True
 
         if tip.amount != match.bet:
@@ -419,11 +427,24 @@ class RpsGame:
             return False
 
     async def _refund(self, user_id: str, amount: int) -> bool:
-        if amount not in BET_BARS:
+        if amount <= 0:
             return False
+
+        bars = []
+        remaining = amount
+        for value, bar in sorted(BET_BARS.items(), reverse=True):
+            count, remaining = divmod(remaining, value)
+            bars.extend([bar] * count)
+
+        if remaining:
+            return False
+
         try:
-            result = await self.bot.highrise.tip_user(user_id, BET_BARS[amount])
-            return getattr(result, "result", result) == "success"
+            for bar in bars:
+                result = await self.bot.highrise.tip_user(user_id, bar)
+                if getattr(result, "result", result) != "success":
+                    return False
+            return True
         except Exception as error:
             print(f"[RPS] Error devolviendo {amount}G a {user_id}: {error}")
             return False
