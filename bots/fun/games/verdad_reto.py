@@ -156,6 +156,17 @@ class TruthOrDareGame:
             return
         await self._send_prompt(user.username, mode, individual=True)
 
+    async def _individual_action_timeout(self, user_id: str, username: str) -> None:
+        try:
+            await asyncio.sleep(self.ACTION_SECONDS)
+            task = self.individual_actions.pop(user_id, None)
+            if task is not None:
+                await self._chat(
+                    f"<#FFCC66>⏰ @{username}, se agotó el tiempo. Puedes volver a jugar con !vd."
+                )
+        except asyncio.CancelledError:
+            return
+
     async def _send_prompt(self, username: str, mode: str, individual: bool = False) -> None:
         if mode == "truth":
             prompt = random.choice(TRUTH_QUESTIONS)
