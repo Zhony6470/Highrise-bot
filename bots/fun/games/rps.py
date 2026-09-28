@@ -110,10 +110,8 @@ class RpsGame:
 
             await self._chat(
                 f"<#66CCFF>⚔️ RPS: @{user.username} vs 🤖 @{self.bot.bot_username}. "
-                "La elección de @"
-                f"{user.username} será privada."
+                "Escribe en el chat: !piedra, !papel o !tijera."
             )
-            await self._send_choice_prompt(user)
             match.task = asyncio.create_task(self._choice_timeout(match.match_id))
             return
 
@@ -241,10 +239,10 @@ class RpsGame:
                 await self._whisper(user.id, "<#FFCC66>⚠️ No tienes una elección pendiente.")
             return True
 
-        if not private:
+        if not private and match.player_two is not None:
             await self._whisper(
                 user.id,
-                "<#FFCC66>🔐 Tu elección debe enviarse por privado a BotJuegos.",
+                "<#FFCC66>🔐 En las partidas PvP tu elección debe enviarse por privado a BotJuegos.",
             )
             return True
 
@@ -253,7 +251,10 @@ class RpsGame:
             return True
 
         match.choices[user.id] = CHOICES[command]
-        await self._whisper(user.id, "<#66FF99>🔒 Elección recibida. Esperando al rival...")
+        if match.player_two is None:
+            await self._chat(f"<#66FF99>✅ @{user.username} eligió.")
+        else:
+            await self._whisper(user.id, "<#66FF99>🔒 Elección recibida. Esperando al rival...")
 
         if match.player_two is None:
             await self._finish_match(match)
