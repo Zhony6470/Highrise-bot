@@ -87,6 +87,23 @@ class Bot(BotRuntimeMixin, BaseBot):
         await asyncio.sleep(1)
         os._exit(0)
 
+    async def _load_real_username(self):
+        """Obtiene el username real del bot usando su ID de sesión."""
+        try:
+            room_users = await self.highrise.get_room_users()
+            for room_user, _ in room_users.content:
+                if room_user.id == self.bot_id:
+                    self.bot_username = room_user.username
+                    print(f"[FUN] Username real detectado: @{self.bot_username}")
+                    return
+        except Exception as error:
+            print(f"[FUN] No pude obtener el username real: {error}")
+
+        print(
+            f"[FUN] Usando username configurado como respaldo: "
+            f"@{self.bot_username}"
+        )
+
     async def restore_position(self):
         try:
             position = self.position_manager_common.get_saved_position()
@@ -108,8 +125,14 @@ class Bot(BotRuntimeMixin, BaseBot):
     async def on_start(self, session_metadata: SessionMetadata) -> None:
         self.bot_id = session_metadata.user_id
         self.owner_id = session_metadata.room_info.owner_id
+
+        # El username válido para los comandos se obtiene de la identidad
+        # real del bot en la sala, no de BOT3_USERNAME.
+        await self._load_real_username()
+
         print(
             f"[FUN] Conectado. Bot ID: {self.bot_id} | "
+            f"Username: @{self.bot_username} | "
             f"Owner ID: {self.owner_id}"
         )
 
@@ -151,17 +174,17 @@ class Bot(BotRuntimeMixin, BaseBot):
                 "\n".join([
                     "<#66CCFF>🎮 BOT DE JUEGOS",
                     f"<#FFFFFF>• !help - Ver esta ayuda",
-                    "<#FFFFFF>• !set @BotJuegos - Guardar posición del bot",
-                    "<#FFFFFF>• !home @BotJuegos - Volver a la posición guardada",
-                    "<#FFFFFF>• !reset @BotJuegos - Reiniciar el bot",
-                    "<#FFFFFF>• !dancebot @BotJuegos - Activar baile",
-                    "<#FFFFFF>• !stopdance @BotJuegos - Detener baile",
-                    "<#FFFFFF>• !emote @BotJuegos <emote> - Activar emote",
-                    "<#FFFFFF>• !emote @BotJuegos stop - Detener emote",
-                    "<#FFFFFF>• !equip @BotJuegos <prenda> - Cambiar outfit",
-                    "<#FFFFFF>• !remove @BotJuegos <categoria> - Quitar prenda",
-                    "<#FFFFFF>• !color @BotJuegos <categoria> <numero> - Cambiar color",
-                    "<#FFFFFF>• !getoutfit @BotJuegos - Ver outfit",
+                    "<#FFFFFF>• !set @{self.bot_username} - Guardar posición del bot",
+                    "<#FFFFFF>• !home @{self.bot_username} - Volver a la posición guardada",
+                    "<#FFFFFF>• !reset @{self.bot_username} - Reiniciar el bot",
+                    "<#FFFFFF>• !dancebot @{self.bot_username} - Activar baile",
+                    "<#FFFFFF>• !stopdance @{self.bot_username} - Detener baile",
+                    "<#FFFFFF>• !emote @{self.bot_username} <emote> - Activar emote",
+                    "<#FFFFFF>• !emote @{self.bot_username} stop - Detener emote",
+                    "<#FFFFFF>• !equip @{self.bot_username} <prenda> - Cambiar outfit",
+                    "<#FFFFFF>• !remove @{self.bot_username} <categoria> - Quitar prenda",
+                    "<#FFFFFF>• !color @{self.bot_username} <categoria> <numero> - Cambiar color",
+                    "<#FFFFFF>• !getoutfit @{self.bot_username} - Ver outfit",
                 ]),
             )
             return
