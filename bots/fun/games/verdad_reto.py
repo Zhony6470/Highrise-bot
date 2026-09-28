@@ -155,6 +155,10 @@ class TruthOrDareGame:
             await self.individual_choice(user, mode)
             return
         await self._send_prompt(user.username, mode, individual=True)
+        self._cancel_task(self.individual_actions.pop(user.id, None))
+        self.individual_actions[user.id] = asyncio.create_task(
+            self._individual_action_timeout(user.id, user.username)
+        )
 
     async def _individual_action_timeout(self, user_id: str, username: str) -> None:
         try:
@@ -183,7 +187,8 @@ class TruthOrDareGame:
 
         if individual:
             await self._chat(
-                f"<#FFCC66>Cuando termines, @{username}, escribe !listo."
+                f"<#FFCC66>Cuando termines, @{username}, escribe !listo. "
+                f"Tienes {self.ACTION_SECONDS} segundos."
             )
 
     async def start_group(self, user: User) -> None:
