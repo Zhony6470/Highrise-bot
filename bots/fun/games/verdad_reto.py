@@ -315,7 +315,10 @@ class TruthOrDareGame:
             task = self.individual_actions.pop(user_id, None)
             if task is not None:
                 await self._chat(
-                    f"<#FFCC66>⏰ @{username}, se agotó el tiempo. Puedes volver a jugar con !vd."
+                    f"<#FFCC66>⏰ @{username}, se agotó el tiempo. No cumpliste el reto."
+                )
+                await self._start_punishment(
+                    user_id, username, "Se agotó el tiempo del reto."
                 )
         except asyncio.CancelledError:
             return
