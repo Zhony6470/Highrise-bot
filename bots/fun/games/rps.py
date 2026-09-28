@@ -69,6 +69,8 @@ class RpsMatch:
     choices: dict[str, str] = field(default_factory=dict)
     paid: dict[str, int] = field(default_factory=dict)
     bot_choice: str | None = None
+    wins: dict[str, int] = field(default_factory=dict)
+    round_number: int = 1
     task: asyncio.Task | None = None
     state: str = "playing"
 
@@ -334,11 +336,20 @@ class RpsGame:
                 f"<#66CCFF>💰 Apuesta confirmada: {match.bet * 2}G en el pozo. "
                 "¡Comienza el RPS!"
             )
-            await self._send_choice_prompt(match.player_one)
-            await self._send_choice_prompt(match.player_two)
-            match.task = asyncio.create_task(self._choice_timeout(match.match_id))
+            await self._start_round(match)
 
         return True
+
+    async def _start_round(self, match: RpsMatch) -> None:
+        match.choices.clear()
+        match.bot_choice = secrets.choice(tuple(DISPLAY.keys())) if match.player_two is None else None
+        await self._chat(
+            f"<#66CCFF>⚔️ RPS — ronda {match.round_number}"
+        )
+        await self._send_choice_prompt(match.player_one)
+        if match.player_two is not None:
+            await self._send_choice_prompt(match.player_two)
+        match.task = asyncio.create_task(self._choice_timeout(match.match_id))
 
     async def _finish_match(self, match: RpsMatch) -> None:
         if match.match_id not in self.matches:
@@ -355,19 +366,33 @@ class RpsGame:
             bot_choice = match.bot_choice or secrets.choice(tuple(DISPLAY.keys()))
             result = self._result(player_choice, bot_choice)
             if result == "draw":
-                text = "🤝 ¡Empate!"
-            elif result == "win":
-                text = f"🏆 ¡@{match.player_one.username} gana!"
-            else:
-                text = "🤖 ¡BotJuegos gana!"
+                await self._chat(
+                    "<#66CCFF>🤝 Empate en esta ronda. Se juega otra ronda."
+                )
+                match.round_number += 1
+                await self._start_round(match)
+                return
 
+            winner_id = match.player_one.id if result == "win" else self.bot.bot_id
+            match.wins[winner_id] = match.wins.get(winner_id, 0) + 1
+            winner_text = (
+                f"🏆 ¡@{match.player_one.username} gana esta ronda!"
+                if result == "win"
+                else "🤖 ¡BotJuegos gana esta ronda!"
+            )
             await self._chat(
                 "<#66CCFF>⚔️ RESULTADO RPS\n"
                 f"@{match.player_one.username} → {DISPLAY[player_choice]}\n"
                 f"🤖 @{self.bot.bot_username} → {DISPLAY[bot_choice]}\n"
-                f"<#FFFFFF>{text}"
+                f"<#FFFFFF>{winner_text}\n"
+                f"📊 Marcador: {match.wins.get(match.player_one.id, 0)} - {match.wins.get(self.bot.bot_id, 0)}"
             )
-            await self._cleanup(match)
+            if max(match.wins.values(), default=0) >= 2:
+                await self._cleanup(match)
+                return
+
+            match.round_number += 1
+            await self._start_round(match)
             return
 
         p1 = match.player_one
@@ -377,33 +402,49 @@ class RpsGame:
 
         if not p1_choice and not p2_choice:
             await self._refund_all(match)
-            await self._chat("<#FFCC66>🤝 Ninguno eligió a tiempo. La partida fue cancelada y las apuestas devueltas.")
+            await self._chat(
+                "<#FFCC66>⏳ Ninguno eligió a tiempo. La partida fue cancelada y las apuestas fueron reembolsadas ajustando la comisión."
+            )
             await self._cleanup(match)
             return
 
         if not p1_choice or not p2_choice:
             winner = p2 if p1_choice is None else p1
             loser = p1 if winner.id == p2.id else p2
-            await self._resolve_winner(match, winner, loser, reason="no eligió a tiempo")
-            return
-
-        result = self._result(p1_choice, p2_choice)
-        if result == "draw":
-            refund = DRAW_REFUNDS[match.bet]
-            first_ok = await self._refund(p1.id, refund)
-            second_ok = await self._refund(p2.id, refund)
+            match.wins[winner.id] = match.wins.get(winner.id, 0) + 1
             await self._chat(
-                f"<#66CCFF>🤝 EMPATE\n"
-                f"@{p1.username} → {DISPLAY[p1_choice]}\n"
-                f"@{p2.username} → {DISPLAY[p2_choice]}\n"
-                f"<#66FF99>💰 Reembolso: {refund}G por jugador."
-                + ("" if first_ok and second_ok else "\n<#FF6666>⚠️ Un reembolso no pudo completarse automáticamente.")
+                f"<#FFCC66>⏳ @{loser.username} no eligió a tiempo. "
+                f"@{winner.username} gana esta ronda."
             )
-            await self._cleanup(match)
+        else:
+            result = self._result(p1_choice, p2_choice)
+            if result == "draw":
+                await self._chat(
+                    f"<#66CCFF>🤝 Empate en la ronda {match.round_number}. Se juega otra ronda."
+                )
+                match.round_number += 1
+                await self._start_round(match)
+                return
+
+            winner = p1 if result == "win" else p2
+            loser = p2 if result == "win" else p1
+            match.wins[winner.id] = match.wins.get(winner.id, 0) + 1
+            await self._chat(
+                f"<#66CCFF>⚔️ Ronda {match.round_number}: "
+                f"@{p1.username} → {DISPLAY[p1_choice]} | "
+                f"@{p2.username} → {DISPLAY[p2_choice]}\n"
+                f"<#FFFFFF>🏆 @{'%s' % winner.username} gana esta ronda. "
+                f"📊 Marcador: {match.wins.get(p1.id, 0)} - {match.wins.get(p2.id, 0)}"
+            )
+
+        if max(match.wins.values(), default=0) < 2:
+            match.round_number += 1
+            await self._start_round(match)
             return
 
-        winner = p1 if result == "win" else p2
-        loser = p2 if result == "win" else p1
+        winner_id = max(match.wins, key=match.wins.get)
+        winner = p1 if winner_id == p1.id else p2
+        loser = p2 if winner_id == p1.id else p1
         await self._resolve_winner(match, winner, loser)
 
     async def _resolve_winner(
