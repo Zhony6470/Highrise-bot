@@ -191,6 +191,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                     "<#FFFFFF>• !listo - Completar tu turno",
                     "<#FFFFFF>• !terminarvd - Finalizar partida",
                     "<#FFFFFF>• !cancelarvd - Cancelar partida",
+                    "<#FFFFFF>• !setcastigo [radio] - Configurar el tubo (staff)",
                     "<#FFFFFF>• !dado - Lanzar un dado",
                     "<#FFFFFF>• !moneda - Lanzar una moneda",
                     "<#FFFFFF>• !8ball - Preguntar a la bola 8",
@@ -309,6 +310,9 @@ class Bot(BotRuntimeMixin, BaseBot):
             response = await self.dance_manager.start_bot_emote(matched["emote"])
             await self.highrise.send_whisper(user.id, response)
             return
+
+    async def on_user_move(self, user: User, position) -> None:
+        await self.truth_or_dare.on_user_move(user, position)
 
     async def on_user_leave(self, user: User) -> None:
         await self.truth_or_dare.on_user_leave(user.id)
