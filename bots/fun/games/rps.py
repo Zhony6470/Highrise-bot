@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import random
+import secrets
 from dataclasses import dataclass, field
 
 from highrise import CurrencyItem, Item, User
@@ -106,7 +107,7 @@ class RpsGame:
                 match_id=self._new_id(),
                 player_one=user,
                 player_two=None,
-                bot_choice=random.choice(list(DISPLAY)),
+                bot_choice=secrets.choice(tuple(DISPLAY.keys())),
             )
             self.matches[match.match_id] = match
             self.user_matches[user.id] = match.match_id
@@ -332,7 +333,7 @@ class RpsGame:
                 await self._cleanup(match)
                 return
 
-            bot_choice = match.bot_choice or random.choice(list(DISPLAY))
+            bot_choice = match.bot_choice or secrets.choice(tuple(DISPLAY.keys()))
             result = self._result(player_choice, bot_choice)
             if result == "draw":
                 text = "🤝 ¡Empate!"
