@@ -310,6 +310,9 @@ class Bot(BotRuntimeMixin, BaseBot):
             await self.highrise.send_whisper(user.id, response)
             return
 
+    async def on_user_leave(self, user: User) -> None:
+        await self.truth_or_dare.on_user_leave(user.id)
+
     async def on_tip(
         self, sender: User, receiver: User, tip: CurrencyItem | Item
     ) -> None:
