@@ -1,7 +1,7 @@
 ﻿from highrise import BaseBot, __main__, CurrencyItem, GetMessagesRequest, Item, Position, AnchorPosition, SessionMetadata, User
 from highrise.__main__ import BotDefinition
 from asyncio import run as arun
-from json import load
+from json import load, dump
 import asyncio
 import os
 import sys
@@ -112,51 +112,36 @@ class Bot(BotRuntimeMixin, BaseBot):
                     "duration": max(float(emote.get("duration", 1)), 0.1),
                     "auth": emote.get("auth", "public"),
                 })
-            # Candidatos de emotes nuevos pendientes de verificar.
-            # Por ahora usamos el nombre visible como ID para poder probarlo
-            # directamente contra la API de Highrise. Si Highrise devuelve
-            # un ID real mediante on_emote, se puede sustituir aquí.
-            pending_emotes = [
-                "Star Wink",
-                "Heavenly Ascension",
-                "Enchanted Ascension",
-                "Luminous Ascension",
-                "Tea Spiller",
-                "Tea Sipper",
-            ]
-            known_commands = {
-                item["command"].casefold()
-                for item in normalized_emotes
-            }
-            for name in pending_emotes:
-                if name.casefold() not in known_commands:
-                    normalized_emotes.append({
-                        "command": name,
-                        "emote": name,
-                        "duration": 5.0,
-                        "auth": "public",
-                    })
             return normalized_emotes
         except (OSError, TypeError, ValueError) as error:
             print(f"Error al cargar emotes.json: {error}")
-            # Incluso si el catálogo local no existe, mantenemos disponibles
-            # los candidatos nuevos para probar sus nombres como IDs.
-            return [
-                {
-                    "command": name,
-                    "emote": name,
-                    "duration": 5.0,
-                    "auth": "public",
-                }
-                for name in (
-                    "Star Wink",
-                    "Heavenly Ascension",
-                    "Enchanted Ascension",
-                    "Luminous Ascension",
-                    "Tea Spiller",
-                    "Tea Sipper",
-                )
-            ]
+            return []
+
+    def _save_emotes_data(self) -> None:
+        try:
+            with open(EMOTES_FILE, "w", encoding="utf-8") as file:
+                dump(self.emotes_list, file, ensure_ascii=False, indent=2)
+        except (OSError, TypeError, ValueError) as error:
+            print(f"[EMOTE DISCOVERY] No pude guardar emotes.json: {error}")
+
+    def _register_discovered_emote(self, emote_id: str) -> None:
+        emote_id = str(emote_id or "").strip()
+        if not emote_id:
+            return
+
+        if self.emotes_manager.get_by_id(emote_id):
+            return
+
+        discovered = {
+            "command": emote_id,
+            "emote": emote_id,
+            "duration": 5.0,
+            "auth": "public",
+        }
+        self.emotes_list.append(discovered)
+        self._save_emotes_data()
+        self.emotes_manager = EmotesManager(self.emotes_list)
+        print(f"[EMOTE DISCOVERY] Nuevo emote guardado: {emote_id}")
 
     async def _is_targeted_for_me(self, message: str) -> bool:
         return await should_handle_for_bot(self, message)
@@ -419,32 +404,14 @@ class Bot(BotRuntimeMixin, BaseBot):
         except (AttributeError, TypeError, ValueError) as error:
             print(f"No se pudo iniciar el monitor de pista: {error}")
 
-    async def on_emote(self, user: User, emote_id: str, receiver: User | None) -> None:
-        """Registra los IDs reales de los emotes que Zeta recibe."""
-        receiver_name = getattr(receiver, "username", None) if receiver else None
-        print(
-            f"[EMOTE DISCOVERY] @{user.username} -> {emote_id}"
-            f" | receiver=@{receiver_name}" if receiver_name else
-            f"[EMOTE DISCOVERY] @{user.username} -> {emote_id} | receiver=None"
-        )
-
-        # Si el dueño está presente, le mostramos inmediatamente el ID real
-        # para poder actualizar el catálogo sin hacer pública la sala.
-        if user.id == self.owner_id:
-            try:
-                target_text = (
-                    f" | receiver=@{receiver_name}"
-                    if receiver_name
-                    else ""
-                )
-                await self.highrise.send_whisper(
-                    user.id,
-                    f"<#66CCFF>🎭 Emote detectado\n"
-                    f"<#FFFFFF>Nombre: {emote_id}\n"
-                    f"<#FFFFFF>ID: {emote_id}{target_text}",
-                )
-            except Exception as error:
-                print(f"[EMOTE DISCOVERY] No pude enviar el ID por whisper: {error}")
+    async def on_emote(
+        self, user: User, emote_id: str, receiver: User | None
+    ) -> None:
+        """Guarda silenciosamente IDs de emotes que Zeta aún no conoce."""
+        try:
+            self._register_discovered_emote(emote_id)
+        except Exception as error:
+            print(f"[EMOTE DISCOVERY] Error registrando {emote_id}: {error}")
 
     async def on_chat(self, user: User, message: str) -> None:
         msg = message.strip()
