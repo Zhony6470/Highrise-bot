@@ -8,41 +8,217 @@ from typing import Awaitable, Callable
 from highrise import Position, User
 
 
-TRUTH_QUESTIONS = [
-    "¿Cuál ha sido la situación más vergonzosa que has vivido?",
-    "¿Cuál es el secreto más gracioso que puedes contar?",
-    "¿Qué cosa te da vergüenza admitir que te gusta?",
-    "¿Cuál ha sido tu peor primera impresión de alguien?",
-    "¿Alguna vez has mentido para evitar salir de casa?",
-    "¿Qué es lo primero que notas cuando conoces a alguien?",
-    "¿Cuál ha sido la excusa más rara que has usado?",
-    "¿Qué hábito extraño tienes?",
-    "¿Cuál es la cosa más impulsiva que has hecho?",
-    "¿Alguna vez has enviado un mensaje a la persona equivocada?",
-    "¿Qué canción te sabes completa aunque te dé pena admitirlo?",
-    "¿Cuál ha sido tu momento más incómodo en una sala?",
-    "¿Qué personaje de Highrise te representa más y por qué?",
-    "¿Qué cosa cambiarías de tu personalidad?",
-    "¿Cuál ha sido tu mayor metida de pata?",
-]
+TRUTH_CATEGORIES = {
+    "crush": [
+        "¿Te gusta alguien de esta partida?",
+        "¿Quién te parece más bonito/a de la partida?",
+        "¿A quién de aquí besarías si tuvieras que elegir?",
+        "¿Con quién tendrías una cita de esta sala?",
+        "¿Quién te pone más nervioso/a cuando aparece?",
+        "¿Has sentido atracción por alguien de esta sala?",
+        "¿Quién te parece más coqueto/a?",
+        "¿Quién tiene la mirada más atractiva?",
+        "¿Quién crees que podría conquistarte fácilmente?",
+        "¿Quién es tu crush secreto de esta sala?",
+        "¿A quién le aceptarías una cita inmediatamente?",
+        "¿Quién te parece más difícil de conquistar?",
+        "¿Quién crees que está interesado/a en ti?",
+        "¿Con quién pasarías una noche hablando sin aburrirte?",
+        "¿Qué persona de esta partida elegirías para una cita romántica?",
+        "¿Quién tiene la personalidad que más te atrae?",
+        "¿A quién le darías una oportunidad si te invitara a salir?",
+        "¿Quién de aquí podría hacerte cambiar de opinión sobre el amor?",
+        "¿Qué usuario de esta partida te genera más curiosidad?",
+        "¿Alguna vez has coqueteado con alguien de esta sala?",
+        "¿Has tenido un crush que nadie de aquí conoce?",
+        "¿Qué persona de esta partida te parece más interesante?",
+        "¿Quién podría hacerte perder la vergüenza?",
+        "¿Quién tiene más posibilidades de recibir un 'me gustas' tuyo?",
+        "¿Si tuvieras que elegir pareja para una cita ahora, a quién escogerías?",
+    ],
+    "tension": [
+        "¿A quién de la partida le darías un beso si no pudieras negarte?",
+        "¿Quién te parece más atractivo/a cuando se pone serio/a?",
+        "¿Con quién tendrías una cita a solas?",
+        "¿A quién de aquí le mandarías un mensaje a medianoche?",
+        "¿Quién podría hacerte ponerte celoso/a?",
+        "¿Quién te parece más peligroso/a para tu corazón?",
+        "¿A quién de aquí le aceptarías una invitación para salir?",
+        "¿Quién te parece que tiene más química contigo?",
+        "¿A quién mirarías primero si entrara a la sala ahora?",
+        "¿Quién te haría dudar antes de decir que no?",
+        "¿Quién de aquí te parece más difícil de ignorar?",
+        "¿A quién le confesarías algo si supieras que no te juzgará?",
+        "¿Quién podría hacerte cambiar de opinión sobre una relación?",
+        "¿Con quién te atreverías a tener una cita improvisada?",
+        "¿Quién te parece más probable que te robe un beso?",
+    ],
+    "personal": [
+        "¿Cuál es tu mayor debilidad cuando alguien te gusta?",
+        "¿Qué es lo primero que buscas en alguien que te atrae?",
+        "¿Has mentido alguna vez para llamar la atención de alguien?",
+        "¿Alguna vez te has puesto celoso/a por alguien que ni siquiera era tu pareja?",
+        "¿Cuál ha sido tu peor primera impresión de alguien que luego te gustó?",
+        "¿Has fingido que no te gustaba alguien cuando en realidad sí?",
+        "¿Qué detalle pequeño puede hacer que alguien te guste mucho?",
+        "¿Qué tipo de personalidad te atrae más?",
+        "¿Has enviado alguna vez un mensaje coqueto y luego te arrepentiste?",
+        "¿Has tenido un crush que nunca te atreviste a confesar?",
+        "¿Qué es lo más atrevido que has hecho para llamar la atención de alguien?",
+        "¿Alguna vez has sentido química con alguien inesperado?",
+        "¿Qué te hace perder la vergüenza cuando alguien te gusta?",
+        "¿Prefieres que te conquisten o conquistar?",
+        "¿Qué gesto romántico te derrite más?",
+    ],
+    "confesiones": [
+        "¿Cuál es el secreto más gracioso que puedes contar?",
+        "¿Qué cosa te da vergüenza admitir que te gusta?",
+        "¿Cuál es la mentira más pequeña que has dicho para impresionar a alguien?",
+        "¿Alguna vez has revisado el perfil de alguien muchas veces porque te gustaba?",
+        "¿Has borrado un mensaje porque te dio vergüenza enviarlo?",
+        "¿Alguna vez has fingido estar ocupado/a para hacerte desear?",
+        "¿Has tenido dos personas que te gustaban al mismo tiempo?",
+        "¿Alguna vez has sentido celos y no lo has admitido?",
+        "¿Has dado alguna indirecta que nadie entendió?",
+        "¿Alguna vez has esperado que alguien te escribiera y fingiste que no te importaba?",
+        "¿Has confundido amabilidad con coqueteo?",
+        "¿Alguna vez has dado like a algo antiguo por accidente mientras mirabas el perfil de alguien?",
+        "¿Has cambiado tu forma de vestir para llamar la atención de alguien?",
+        "¿Alguna vez has practicado mentalmente qué decirle a alguien que te gusta?",
+        "¿Has tenido un flechazo por alguien que casi nadie esperaba?",
+    ],
+    "divertidas": [
+        "¿Cuál ha sido la situación más vergonzosa que has vivido?",
+        "¿Cuál ha sido tu mayor metida de pata?",
+        "¿Cuál ha sido la excusa más rara que has usado?",
+        "¿Qué hábito extraño tienes?",
+        "¿Cuál es la cosa más impulsiva que has hecho?",
+        "¿Alguna vez has enviado un mensaje a la persona equivocada?",
+        "¿Qué canción te sabes completa aunque te dé pena admitirlo?",
+        "¿Cuál ha sido tu momento más incómodo en una sala?",
+        "¿Qué cosa cambiarías de tu personalidad?",
+        "¿Qué es lo más raro que has hecho por aburrimiento?",
+        "¿Cuál es tu talento más inútil?",
+        "¿Qué apodo absurdo te pondrías si nadie pudiera cambiarlo?",
+        "¿Cuál es la cosa más infantil que todavía disfrutas?",
+        "¿Qué moda jamás usarías aunque todos tus amigos la usaran?",
+        "¿Cuál es tu peor excusa para no contestar un mensaje?",
+        "¿Qué personaje de Highrise te representa más y por qué?",
+    ],
+    "atrevidas": [
+        "¿Te atreverías a confesarle tu crush a alguien de esta partida?",
+        "¿A quién elegirías para una cita de película?",
+        "¿Quién de aquí crees que coquetea mejor?",
+        "¿A quién de la partida le confiarías una cita secreta?",
+        "¿Con quién aceptarías una cita sin preguntar a dónde van?",
+        "¿Quién de aquí te haría romper tus propias reglas?",
+        "¿A quién escogerías para una cita de tres horas sin usar el teléfono?",
+        "¿Quién te parece más probable que te haga sonrojar?",
+        "¿A quién de aquí le darías una oportunidad aunque normalmente no sea tu tipo?",
+        "¿Quién podría convencerte de hacer algo que normalmente no harías?",
+        "¿A quién invitarías a una cita si solo pudieras elegir a una persona?",
+        "¿Qué persona de la partida te parece más peligrosa para enamorarte?",
+        "¿A quién le dirías 'tenemos algo pendiente' si tuvieras que elegir?",
+        "¿Quién de aquí te genera más tensión cuando está cerca?",
+        "¿A quién elegirías para protagonizar una historia romántica contigo?",
+    ],
+}
 
-CHALLENGES = [
-    "Haz un baile durante 30 segundos.",
-    "Haz un emote que elijas durante 20 segundos.",
-    "Ve hasta otra zona de la sala y regresa.",
-    "Quédate junto a otro jugador durante 20 segundos.",
-    "Escribe una frase usando solamente emojis.",
-    "Saluda de una forma completamente exagerada a la sala.",
-    "Haz una pose y mantenla durante 20 segundos.",
-    "Camina alrededor de la sala durante 30 segundos.",
-    "Di en el chat tres cosas positivas sobre la sala.",
-    "Haz tu mejor presentación como si fueras una celebridad.",
-    "Elige a alguien y dile algo amable.",
-    "Durante 20 segundos, responde solo con emojis.",
-    "Haz una entrada dramática al centro de la sala.",
-    "Inventa un apodo divertido para ti mismo.",
-    "Escribe una frase sin usar la letra A.",
-]
+DARE_CATEGORIES = {
+    "romanticos": [
+        "Besa virtualmente a {target}.",
+        "Abraza virtualmente a {target}.",
+        "Dile 'te amo' a {target} mirándolo/a de frente.",
+        "Dile a {target}: 'Me gustas más de lo que debería'.",
+        "Dile a {target}: 'Eres mi crush por los próximos 60 segundos'.",
+        "Dile a {target}: 'Hoy te ves demasiado bien'.",
+        "Dile a {target}: 'Creo que tenemos química'.",
+        "Dile a {target}: 'Me debes una cita'.",
+        "Hazle una declaración de amor exageradamente dramática a {target}.",
+        "Dile a {target} tres cosas que te gustan de esa persona.",
+        "Dedícale a {target} una frase romántica improvisada.",
+        "Dile a {target}: 'No apartes la mirada' y mantén la mirada durante 10 segundos.",
+        "Pregúntale a {target}: '¿Cuándo tenemos nuestra cita?'",
+        "Dile a {target}: 'No sé si me gustas o me estás empezando a gustar'.",
+        "Dile a {target}: 'Si esto fuera una cita, ya estarías en problemas'.",
+        "Dile a {target} algo bonito que normalmente no te atreverías a decir.",
+        "Haz una mini declaración de amor de 15 segundos para {target}.",
+        "Dile a {target}: 'Hoy tienes permiso para hacerme sonrojar'.",
+    ],
+    "tension": [
+        "Elige a {target} y dile: 'Tenemos química, admítelo'.",
+        "Acércate a {target} y dile algo coqueto.",
+        "Ponte frente a {target} durante 20 segundos sin moverte.",
+        "Dile a {target}: 'Creo que eres mi problema favorito'.",
+        "Dile a {target}: 'Si me invitas a salir, probablemente diga que sí'.",
+        "Hazle a {target} una pregunta coqueta que normalmente no harías.",
+        "Dile a {target}: 'No sé si confiar en ti o enamorarme'.",
+        "Mira a {target} durante 15 segundos y después dile algo bonito.",
+        "Dile a {target}: 'Te elegiría para una cita ahora mismo'.",
+        "Dile a {target}: 'Me estás poniendo nervioso/a' y mantén la posición durante 10 segundos.",
+        "Haz una presentación de {target} como si fuera tu cita ideal.",
+        "Dile a {target}: 'No me mires así que me lo voy a creer'.",
+        "Invita públicamente a {target} a una cita ficticia.",
+        "Dile a {target} una frase que podría hacer que alguien se ponga celoso.",
+        "Elige a {target} y dile: 'Hoy eres oficialmente mi crush del juego'.",
+    ],
+    "confesiones": [
+        "Dile a {target} algo que nunca le hayas dicho.",
+        "Dile a {target} cuál fue tu primera impresión de esa persona.",
+        "Confiesa a {target} qué detalle suyo te parece atractivo.",
+        "Dile a {target} qué canción le dedicarías.",
+        "Dile a {target} qué tipo de cita tendrías con esa persona.",
+        "Dile a {target}: 'Te estaba observando desde antes de este reto'.",
+        "Dile a {target} una cualidad que te gustaría encontrar en alguien.",
+        "Dile a {target} qué apodo romántico le pondrías.",
+        "Dile a {target} una frase que usarías para romper el hielo en una cita.",
+        "Dile a {target} qué crees que es lo más atractivo de su personalidad.",
+    ],
+    "sociales": [
+        "Elige a {target} y dile tres cosas positivas sobre esa persona.",
+        "Abraza virtualmente a {target} y luego dile algo divertido.",
+        "Hazle a {target} una pregunta que obligue a responder con sinceridad.",
+        "Dile a {target}: 'Eres oficialmente mi persona favorita durante este turno'.",
+        "Haz una presentación exagerada de {target} ante toda la sala.",
+        "Elige a {target} y dile algo que pueda hacerle reír.",
+        "Dile a {target}: 'Te concedo una cita imaginaria de 10 minutos'.",
+        "Haz que {target} elija una palabra y crea una frase romántica con ella.",
+        "Dile a {target} un cumplido que no tenga nada que ver con su apariencia.",
+        "Elige a {target} y dedícale una frase de película.",
+    ],
+    "atrevidos": [
+        "Elige a {target} y dile: 'Si esto fuera una cita, ¿qué pediríamos primero?'",
+        "Dile a {target}: 'Te toca decidir si somos amigos o algo más por este turno'.",
+        "Hazle a {target} una declaración de amor de 10 segundos.",
+        "Dile a {target}: 'No sé si me caes demasiado bien o me gustas'.",
+        "Elige a {target} y dile quién crees que tendría más celos de ustedes dos.",
+        "Dile a {target}: 'Si tuvieras que invitarme a salir, ¿a dónde me llevarías?'",
+        "Dile a {target} qué fue lo primero que llamó tu atención.",
+        "Elige a {target} y dile: 'Tú y yo necesitamos una revancha en una cita'.",
+        "Dile a {target}: 'Te reto a que me sorprendas con un cumplido'.",
+        "Elige a {target} y dile algo que pueda aumentar la tensión sin insultar.",
+    ],
+    "divertidos": [
+        "Haz un baile durante 30 segundos.",
+        "Haz un emote que elijas durante 20 segundos.",
+        "Ve hasta otra zona de la sala y regresa.",
+        "Quédate junto a otro jugador durante 20 segundos.",
+        "Escribe una frase usando solamente emojis.",
+        "Saluda de una forma completamente exagerada a la sala.",
+        "Haz una pose y mantenla durante 20 segundos.",
+        "Camina alrededor de la sala durante 30 segundos.",
+        "Di en el chat tres cosas positivas sobre la sala.",
+        "Haz tu mejor presentación como si fueras una celebridad.",
+        "Durante 20 segundos, responde solo con emojis.",
+        "Haz una entrada dramática al centro de la sala.",
+        "Inventa un apodo divertido para ti mismo.",
+        "Escribe una frase sin usar la letra A.",
+        "Haz una declaración de amor a una silla, pared u objeto de la sala.",
+        "Baila como si acabaras de ganar un premio.",
+        "Haz durante 20 segundos el emote más absurdo que tengas disponible.",
+        "Inventa un anuncio publicitario sobre ti mismo en 15 segundos.",
+    ],
+}
 
 
 @dataclass
@@ -79,6 +255,8 @@ class TruthOrDareGame:
         self.punishment_votes: dict[str, set[str]] = {}
         self.punishment_zone: Position | None = None
         self.punishment_radius = self.PUNISHMENT_RADIUS
+        self._truth_history: set[str] = set()
+        self._dare_history: set[str] = set()
         self._load_punishment_zone()
 
     def _load_punishment_zone(self) -> None:
@@ -367,7 +545,7 @@ class TruthOrDareGame:
             return False
 
         self._cancel_task(task)
-        await self._send_prompt(user.username, mode, individual=True)
+        await self._send_prompt(user.username, mode, individual=True, user_id=user.id)
         self._cancel_task(self.individual_actions.pop(user.id, None))
         self.individual_actions[user.id] = asyncio.create_task(
             self._individual_action_timeout(user.id, user.username)
@@ -398,15 +576,67 @@ class TruthOrDareGame:
         except asyncio.CancelledError:
             return
 
-    async def _send_prompt(self, username: str, mode: str, individual: bool = False) -> None:
+    async def _pick_random_room_target(self, exclude_user_id: str) -> User | None:
+        """Selecciona una persona aleatoria de la sala para los retos dirigidos."""
+        try:
+            response = await self.bot.highrise.get_room_users()
+            candidates = [
+                room_user
+                for room_user, _ in response.content
+                if room_user.id != exclude_user_id
+                and room_user.id != getattr(self.bot, "bot_id", None)
+            ]
+            if not candidates:
+                return None
+            return random.choice(candidates)
+        except Exception as error:
+            print(f"[FUN GAME] Error seleccionando objetivo aleatorio: {error}")
+            return None
+
+    def _choose_prompt(self, categories: dict[str, list[str]], mode: str) -> str:
+        """Elige una pregunta/reto evitando repetir inmediatamente el mismo texto."""
+        history_name = "_truth_history" if mode == "truth" else "_dare_history"
+        history = getattr(self, history_name, set())
+
+        available = [
+            (category, prompt)
+            for category, prompts in categories.items()
+            for prompt in prompts
+            if prompt not in history
+        ]
+
+        if not available:
+            history.clear()
+            available = [
+                (category, prompt)
+                for category, prompts in categories.items()
+                for prompt in prompts
+            ]
+
+        category, prompt = random.choice(available)
+        history.add(prompt)
+        return prompt
+
+    async def _send_prompt(self, username: str, mode: str, individual: bool = False, user_id: str | None = None) -> None:
+        if not hasattr(self, "_truth_history"):
+            self._truth_history: set[str] = set()
+        if not hasattr(self, "_dare_history"):
+            self._dare_history: set[str] = set()
+
         if mode == "truth":
-            prompt = random.choice(TRUTH_QUESTIONS)
+            prompt = self._choose_prompt(TRUTH_CATEGORIES, "truth")
             await self._chat(
                 f"<#66FF99>🟢 VERDAD para @{username}: "
                 f"<#FFFFFF>{prompt}"
             )
         else:
-            prompt = random.choice(CHALLENGES)
+            prompt = self._choose_prompt(DARE_CATEGORIES, "dare")
+            if "{target}" in prompt:
+                target = await self._pick_random_room_target(user_id or "")
+                if target is not None:
+                    prompt = prompt.replace("{target}", f"@{target.username}")
+                else:
+                    prompt = random.choice(DARE_CATEGORIES["divertidos"])
             await self._chat(
                 f"<#FF6666>🔴 RETO para @{username}: "
                 f"<#FFFFFF>{prompt}"
@@ -567,7 +797,7 @@ class TruthOrDareGame:
         self.current_choice_user_id = None
         self.current_mode = mode
 
-        await self._send_prompt(user.username, mode)
+        await self._send_prompt(user.username, mode, user_id=user.id)
         await self._chat(
             f"<#FFCC66>⏱️ @{user.username}, tienes "
             f"{self.ACTION_SECONDS} segundos. Escribe !listo al terminar."
