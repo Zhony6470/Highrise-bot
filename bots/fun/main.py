@@ -191,6 +191,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                     "<#FFFFFF>• !listo - Completar tu turno",
                     "<#FFFFFF>• !terminarvd - Finalizar partida",
                     "<#FFFFFF>• !cancelarvd - Cancelar partida",
+                    "<#FFFFFF>• !castigo @usuario - Votar para aplicar castigo (2 votos)",
                     "<#FFFFFF>• !setcastigo - Configurar el tubo (staff)",
                     "<#FFFFFF>• !dado - Lanzar un dado",
                     "<#FFFFFF>• !moneda - Lanzar una moneda",
