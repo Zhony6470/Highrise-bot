@@ -122,6 +122,33 @@ services:
           sleep 2
         done
 
+
+  fun-bot:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.bot
+    container_name: highrise-fun-bot
+    restart: unless-stopped
+    networks:
+      - highrise
+    env_file:
+      - .env
+    environment:
+      BOT3_USERNAME: ${BOT3_USERNAME:-BotJuegos}
+      BOT3_API_KEY: ${BOT3_API_KEY}
+    depends_on:
+      - main-bot
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          python -u -m bots.fun.main
+          code=$$?
+          echo "[FUN] Proceso finalizó con código $$code; reiniciando en 2s..."
+          sleep 2
+        done
+
 volumes:
   autodj_data:
     external: true
