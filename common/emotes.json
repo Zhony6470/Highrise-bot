@@ -2226,13 +2226,13 @@
     "auth": "public"
   },
   {
-    "command": "Tea sipper",
+    "command": "emote-solo-tea-right",
     "emote": "emote-solo-tea-right",
     "duration": 5,
     "auth": "public"
   },
   {
-    "command": "Tea spiller",
+    "command": "emote-solo-tea-left",
     "emote": "emote-solo-tea-left",
     "duration": 5,
     "auth": "public"
