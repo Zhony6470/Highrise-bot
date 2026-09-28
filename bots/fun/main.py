@@ -30,6 +30,7 @@ from services.emotes import EmotesManager
 from services.roles import RoleManager
 from bots.bot1.services.tips import TipManager
 from bots.fun.games.verdad_reto import TruthOrDareGame
+from bots.fun.games.rps import RpsGame
 
 
 DATA_FILE = str(ROOT_DIR / "bots" / "fun" / "data" / "data.json")
@@ -58,6 +59,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         self.emotes_list = self.load_emotes_data()
         self.emotes_manager = EmotesManager(self.emotes_list)
         self.truth_or_dare = TruthOrDareGame(self, self.is_mod)
+        self.rps = RpsGame(self)
 
     def load_emotes_data(self):
         try:
@@ -191,6 +193,9 @@ class Bot(BotRuntimeMixin, BaseBot):
                     "<#FFFFFF>• !jugarvd - Crear partida",
                     "<#FFFFFF>• !entrarvd - Unirse",
                     "<#FFFFFF>• !iniciarvd - Iniciar partida",
+                    "<#FFFFFF>• !rps - RPS contra BotJuegos",
+                    "<#FFFFFF>• !rps @usuario - RPS contra jugador",
+                    "<#FFFFFF>• !rps @usuario 10|50|100|500 - RPS con apuesta",
                 ]),
             )
             return
@@ -222,6 +227,10 @@ class Bot(BotRuntimeMixin, BaseBot):
                 await self.restart_with_message()
             else:
                 await handle_reset(self, user, msg)
+            return
+
+        # ⚔️ Piedra, Papel o Tijera
+        if await self.rps.handle(user, msg, private=False):
             return
 
         # 🎲 Verdad o Reto
@@ -304,16 +313,23 @@ class Bot(BotRuntimeMixin, BaseBot):
             await self.highrise.send_whisper(user.id, response)
             return
 
+    async def on_whisper(self, user: User, message: str) -> None:
+        if await self.rps.handle(user, message.strip(), private=True):
+            return
+
     async def on_user_move(self, user: User, position) -> None:
         await self.truth_or_dare.on_user_move(user, position)
 
     async def on_user_leave(self, user: User) -> None:
+        await self.rps.on_user_leave(user.id)
         await self.truth_or_dare.on_user_leave(user.id)
 
     async def on_tip(
         self, sender: User, receiver: User, tip: CurrencyItem | Item
     ) -> None:
         try:
+            if await self.rps.handle_tip(sender, receiver, tip):
+                return
             await self.tip_manager.handle_tip(
                 self.highrise, self.bot_id, sender, receiver, tip
             )
