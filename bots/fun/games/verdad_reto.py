@@ -513,7 +513,10 @@ class TruthOrDareGame:
                 if current and current.user_id == user_id:
                     await self._chat(
                         f"<#FFCC66>⏰ @{username}, se agotó el tiempo. "
-                        "Pierdes el turno."
+                        "No cumpliste el reto."
+                    )
+                    await self._start_punishment(
+                        user_id, username, "Se agotó el tiempo del reto."
                     )
                     await self._advance_turn()
         except asyncio.CancelledError:
