@@ -165,8 +165,14 @@ class Bot(BotRuntimeMixin, BaseBot):
             "/equip", "/remove", "/getoutfit",
         }
 
-        if command in targeted_commands and not await self._is_targeted_for_me(msg):
-            return
+        # !home y !reset sin @bot son comandos generales: cada bot que
+        # esté conectado los ejecuta sobre sí mismo. Con @bot, solo responde
+        # el bot mencionado.
+        general_commands = {"!home", "!reset"}
+        if command in targeted_commands:
+            if command not in general_commands or len(parts) > 1:
+                if not await self._is_targeted_for_me(msg):
+                    return
 
         if command == "!help":
             await self.highrise.send_whisper(
@@ -174,29 +180,60 @@ class Bot(BotRuntimeMixin, BaseBot):
                 "\n".join([
                     "<#66CCFF>🎮 BOT DE JUEGOS",
                     f"<#FFFFFF>• !help - Ver esta ayuda",
-                    "<#FFFFFF>• !set @{self.bot_username} - Guardar posición del bot",
-                    "<#FFFFFF>• !home @{self.bot_username} - Volver a la posición guardada",
-                    "<#FFFFFF>• !reset @{self.bot_username} - Reiniciar el bot",
-                    "<#FFFFFF>• !dancebot @{self.bot_username} - Activar baile",
-                    "<#FFFFFF>• !stopdance @{self.bot_username} - Detener baile",
-                    "<#FFFFFF>• !emote @{self.bot_username} <emote> - Activar emote",
-                    "<#FFFFFF>• !emote @{self.bot_username} stop - Detener emote",
-                    "<#FFFFFF>• !equip @{self.bot_username} <prenda> - Cambiar outfit",
-                    "<#FFFFFF>• !remove @{self.bot_username} <categoria> - Quitar prenda",
-                    "<#FFFFFF>• !color @{self.bot_username} <categoria> <numero> - Cambiar color",
-                    "<#FFFFFF>• !getoutfit @{self.bot_username} - Ver outfit",
+                    f"<#FFFFFF>• !set @{self.bot_username} - Guardar posición del bot",
+                    f"<#FFFFFF>• !home @{self.bot_username} - Volver a la posición guardada",
+                    f"<#FFFFFF>• !reset @{self.bot_username} - Reiniciar el bot",
+                    f"<#FFFFFF>• !dancebot @{self.bot_username} - Activar baile",
+                    f"<#FFFFFF>• !stopdance @{self.bot_username} - Detener baile",
+                    f"<#FFFFFF>• !emote @{self.bot_username} <emote> - Activar emote",
+                    f"<#FFFFFF>• !emote @{self.bot_username} stop - Detener emote",
+                    f"<#FFFFFF>• !equip @{self.bot_username} <prenda> - Cambiar outfit",
+                    f"<#FFFFFF>• !remove @{self.bot_username} <categoria> - Quitar prenda",
+                    f"<#FFFFFF>• !color @{self.bot_username} <categoria> <numero> - Cambiar color",
+                    f"<#FFFFFF>• !getoutfit @{self.bot_username} - Ver outfit",
                 ]),
             )
             return
 
         if command == "!home":
-            response = await handle_home(self, user, msg)
+            if len(parts) == 1:
+                if user.id != self.owner_id and not await self.is_mod(user.id):
+                    await self.highrise.send_whisper(
+                        user.id,
+                        "<#FF6666>🔒 Solo el dueño o los moderadores pueden usar este comando.",
+                    )
+                    return
+                response = await self.position_manager_common.return_home()
+            else:
+                response = await handle_home(self, user, msg)
+
             if response:
                 await self.highrise.send_whisper(user.id, response)
             return
 
         if command == "!reset":
-            await handle_reset(self, user, msg)
+            if len(parts) == 1:
+                if user.id != self.owner_id and not await self.is_mod(user.id):
+                    await self.highrise.send_whisper(
+                        user.id,
+                        "<#FF6666>🔒 Solo el dueño o los moderadores pueden reiniciar el bot.",
+                    )
+                    return
+                await self.restart_with_message()
+            else:
+                await handle_reset(self, user, msg)
+            return
+
+        if command == "!wallet":
+            if user.id != self.owner_id and not self.role_manager.has_permission(user.id):
+                await self.highrise.send_whisper(
+                    user.id,
+                    "<#FF6666>🔒 Necesitas el permiso avanzado para usar este comando.",
+                )
+                return
+            response = await self.tip_manager.handle_command(self, "!wallet", user.id)
+            if response:
+                await self.highrise.send_whisper(user.id, response)
             return
 
         handlers = {
