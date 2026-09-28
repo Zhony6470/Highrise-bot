@@ -12,8 +12,11 @@ BET_SECONDS = 60
 ALLOWED_BETS = {10, 50, 100, 500}
 
 CHOICES = {
+    "piedra": "rock",
     "!piedra": "rock",
+    "papel": "paper",
     "!papel": "paper",
+    "tijera": "scissors",
     "!tijera": "scissors",
 }
 
