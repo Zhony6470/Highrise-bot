@@ -34,7 +34,7 @@ from bots.bot1.services.tips import TipManager
 DATA_FILE = str(ROOT_DIR / "bots" / "fun" / "data" / "data.json")
 EMOTES_FILE = str(ROOT_DIR / "common" / "emotes.json")
 ROLES_FILE = str(ROOT_DIR / "roles.json")
-ROOM_ID = os.environ.get("ROOM_ID", "")
+ROOM_ID = os.environ.get("BOT3_ROOM_ID", "")
 API_KEY = os.environ.get("BOT3_API_KEY", "")
 BOT_USERNAME = os.environ.get("BOT3_USERNAME", "BotJuegos")
 
