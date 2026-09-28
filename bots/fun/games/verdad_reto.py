@@ -497,6 +497,17 @@ class TruthOrDareGame:
 
         self.state = "playing"
         self.turn_index = 0
+
+        await self._chat(
+            "<#66CCFF>🎭 VERDAD O RETO — COMANDOS\\n"
+            "<#FFFFFF>!verdad - Elegir Verdad\\n"
+            "<#FFFFFF>!reto - Elegir Reto\\n"
+            "<#FFFFFF>!listo - Terminar tu turno\\n"
+            "<#FFFFFF>!salirvd - Salir de la partida\\n"
+            "<#FFFFFF>!castigo @usuario - Votar para aplicar un castigo\\n"
+            "<#66FF99>🎮 ¡Comienza la partida!"
+        )
+
         await self._start_current_turn()
 
     async def _start_current_turn(self) -> None:
