@@ -2236,5 +2236,11 @@
     "emote": "emote-solo-tea-left",
     "duration": 5,
     "auth": "public"
+  },
+  {
+    "command": "emote-ascension",
+    "emote": "emote-ascension",
+    "duration": 5,
+    "auth": "public"
   }
 ]
