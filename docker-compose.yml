@@ -80,6 +80,8 @@ services:
       - highrise
     env_file:
       - .env
+    volumes:
+      - ./common/emotes.json:/app/common/emotes.json
     command:
       - sh
       - -c
