@@ -306,17 +306,73 @@ class Bot(BotRuntimeMixin, BaseBot):
         except Exception:
             return False
 
-    async def emote_loop(self, user_id: str, emote_id: str, duration: float):
+    async def _activate_emote(self, requester_id: str, target_id: str, emote: dict) -> bool:
+        """Ejecuta primero el emote para confirmar que Highrise lo acepta."""
+        emote_id = str(emote.get("emote", "")).strip()
+        duration = max(float(emote.get("duration", 1)), 0.1)
+        command = str(emote.get("command", emote_id)).strip()
+
+        if not emote_id:
+            await self.highrise.send_whisper(
+                requester_id,
+                "<#FF6666>❌ Este emote no tiene un ID válido."
+            )
+            return False
+
+        try:
+            await self.highrise.send_emote(emote_id, target_id)
+        except Exception as error:
+            error_text = str(error)
+            print(
+                f"[EMOTE ERROR] @{self.bot_username} no pudo ejecutar "
+                f"{emote_id} sobre {target_id}: {error_text}"
+            )
+            if "not free or owned by target user" in error_text.casefold():
+                await self.highrise.send_whisper(
+                    requester_id,
+                    f"<#FF6666>❌ Highrise rechazó '{command}' sobre ese usuario. "
+                    "El servidor no permitió dirigir este emote al objetivo."
+                )
+            else:
+                await self.highrise.send_whisper(
+                    requester_id,
+                    f"<#FF6666>❌ No pude ejecutar '{command}' sobre ese usuario. "
+                    "Revisa el log de Zeta para ver el rechazo de Highrise."
+                )
+            return False
+
+        previous_task = self.emote_tasks.pop(target_id, None)
+        if previous_task:
+            previous_task.cancel()
+
+        self.emote_tasks[target_id] = asyncio.create_task(
+            self.emote_loop(
+                target_id,
+                emote_id,
+                duration,
+                first_already_sent=True,
+            )
+        )
+        await self.highrise.send_whisper(
+            requester_id,
+            f"<#66FF99>✨ Emote activado: {command}. Escribe !stop para detenerlo."
+        )
+        return True
+
+    async def emote_loop(self, user_id: str, emote_id: str, duration: float, first_already_sent: bool = False):
         """Bucle continuo para ejecutar un emote en un usuario."""
+        first_iteration = True
         while True:
             try:
-                await self.highrise.send_emote(emote_id, user_id)
+                if not (first_iteration and first_already_sent):
+                    await self.highrise.send_emote(emote_id, user_id)
+                first_iteration = False
                 await asyncio.sleep(duration)
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                print(f"Error enviando emote a {user_id}: {e}")
-                await asyncio.sleep(2)
+                print(f"[EMOTE LOOP ERROR] Error enviando {emote_id} a {user_id}: {e}")
+                break
 
     async def random_emote_loop(self, user_id: str):
         """Ejecuta un bucle de emotes aleatorios sobre un usuario."""
@@ -875,20 +931,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                     )
                     return
 
-            previous_task = self.emote_tasks.pop(target_id, None)
-            if previous_task:
-                previous_task.cancel()
-            self.emote_tasks[target_id] = asyncio.create_task(
-                self.emote_loop(
-                    target_id,
-                    matched_emote["emote"],
-                    matched_emote.get("duration", 1),
-                )
-            )
-            await self.highrise.send_whisper(
-                user.id,
-                f"<#66FF99>✨ Emote activado: {matched_emote['command']}. Escribe !stop para detenerlo.",
-            )
+            await self._activate_emote(user.id, target_id, matched_emote)
             return
 
         # ==========================================
