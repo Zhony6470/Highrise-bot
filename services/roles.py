@@ -215,6 +215,13 @@ class RoleManager:
             for key, value in (data.get("usernames", {}) or {}).items()
         }
 
+        raw_permissions = data.get("permissions", {})
+        if isinstance(raw_permissions, dict):
+            self.permissions = {
+                str(key): value if isinstance(value, dict) else {}
+                for key, value in raw_permissions.items()
+            }
+
         raw = data.get("users", {})
         if isinstance(raw, dict):
             for key, value in raw.items():
