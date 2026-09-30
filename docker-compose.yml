@@ -82,6 +82,7 @@ services:
       - .env
     volumes:
       - ./common/emotes.json:/app/common/emotes.json
+      - ./roles.json:/app/roles.json
     command:
       - sh
       - -c
