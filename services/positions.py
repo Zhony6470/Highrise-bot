@@ -44,6 +44,12 @@ class PositionManager:
 
     async def can_use_private_position(self, bot, user: User, access: str = "priv") -> bool:
         access = (access or "priv").lower()
+
+        # Owner y moderadores tienen acceso a todas las ubicaciones,
+        # independientemente de si la ubicación está marcada como vip o mod.
+        if await has_role(bot, user, {"owner", "mod"}):
+            return True
+
         if access == "vip":
             return await has_role(bot, user, {"vip"})
         if access == "mod":
