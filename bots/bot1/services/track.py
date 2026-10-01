@@ -7,22 +7,30 @@ from highrise import Position, User
 from services.storage import load_json, save_json
 
 TRACK_KEY = "pista_emotes"
+MAX_TRACKS = 3
 
 
-def _load_track(bot) -> dict | None:
+def _load_tracks(bot) -> list[dict]:
     try:
         data = load_json(bot.position_manager.positions_file)
-        return data.get(TRACK_KEY)
+        raw = data.get(TRACK_KEY)
+
+        # Compatibilidad con la estructura anterior, que guardaba una sola pista.
+        if isinstance(raw, dict):
+            return [raw]
+        if isinstance(raw, list):
+            return [track for track in raw if isinstance(track, dict)]
     except (AttributeError, TypeError, ValueError):
-        return None
+        pass
+    return []
 
 
-def _save_track(bot, track: dict | None) -> None:
+def _save_tracks(bot, tracks: list[dict]) -> None:
     data = load_json(bot.position_manager.positions_file)
-    if track is None:
-        data.pop(TRACK_KEY, None)
+    if tracks:
+        data[TRACK_KEY] = tracks[:MAX_TRACKS]
     else:
-        data[TRACK_KEY] = track
+        data.pop(TRACK_KEY, None)
     save_json(bot.position_manager.positions_file, data)
 
 
@@ -37,32 +45,40 @@ def _is_inside(position: Position, track: dict) -> bool:
 
 async def handle_track_command(bot, user: User, message: str) -> bool:
     command = message.lower().strip()
+
     if command == "!deletepista":
         if not await _can_manage(bot, user):
             await bot.highrise.send_whisper(
-                user.id, "<#FF6666>🔒 Solo el dueño o los moderadores pueden borrar la pista."
+                user.id, "<#FF6666>🔒 Solo el dueño o los moderadores pueden borrar las pistas."
             )
             return True
-        if _load_track(bot) is None:
+
+        tracks = _load_tracks(bot)
+        if not tracks:
             await bot.highrise.send_whisper(
                 user.id, "<#FFCC66>🔎 No hay ninguna pista de emotes creada."
             )
             return True
-        _save_track(bot, None)
+
+        _save_tracks(bot, [])
         if bot.track_monitor_task:
             bot.track_monitor_task.cancel()
             bot.track_monitor_task = None
+
         for user_id in list(bot.track_emote_tasks):
             task = bot.track_emote_tasks.pop(user_id)
             task.cancel()
             await bot.highrise.send_emote("", user_id)
+
         await bot.highrise.send_whisper(
-            user.id, "<#66FF99>🗑️ La pista de emotes fue eliminada correctamente."
+            user.id,
+            f"<#66FF99>🗑️ Se eliminaron {len(tracks)} pista(s) de emotes correctamente.",
         )
         return True
 
     if not command.startswith("!pista"):
         return False
+
     if not await _can_manage(bot, user):
         await bot.highrise.send_whisper(
             user.id, "<#FF6666>🔒 Solo el dueño o los moderadores pueden crear una pista."
@@ -75,6 +91,7 @@ async def handle_track_command(bot, user: User, message: str) -> bool:
             user.id, "<#FFCC66>📍 Uso: !pista rad <radio>"
         )
         return True
+
     try:
         radius = float(parts[2])
     except ValueError:
@@ -82,33 +99,46 @@ async def handle_track_command(bot, user: User, message: str) -> bool:
             user.id, "<#FFCC66>🔢 El radio debe ser un número positivo."
         )
         return True
+
     if radius <= 0:
         await bot.highrise.send_whisper(
             user.id, "<#FFCC66>🔢 El radio debe ser mayor que 0."
         )
         return True
 
-    position = await bot.get_user_position(user.id)
-    if not position:
+    tracks = _load_tracks(bot)
+    if len(tracks) >= MAX_TRACKS:
         await bot.highrise.send_whisper(
-            user.id, "<#FF6666>📍 No pude obtener tu posición actual."
+            user.id,
+            f"<#FFCC66>📍 Ya existen las {MAX_TRACKS} pistas permitidas. "
+            "Usa !deletepista para eliminarlas y crearlas nuevamente.",
         )
         return True
 
-    _save_track(
-        bot,
+    position = await bot.get_user_position(user.id)
+    if not position:
+        await bot.highrise.send_whisper(
+            user.id,
+            "<#FF6666>📍 No pude obtener tu posición actual.",
+        )
+        return True
+
+    tracks.append(
         {
             "x": position.x,
             "y": position.y,
             "z": position.z,
             "radius": radius,
-        },
+        }
     )
+    _save_tracks(bot, tracks)
+
+    track_number = len(tracks)
     await bot.highrise.send_whisper(
         user.id,
-        f"<#66FF99>🎶 Pista creada: radio de {radius:g} bloques "
+        f"<#66FF99>🎶 Pista {track_number}/{MAX_TRACKS} creada: radio de {radius:g} bloques "
         f"({2 * radius + 1:g}x{2 * radius + 1:g}).\n"
-        "<#66CCFF>💃 Todos los usuarios dentro harán el mismo emote aleatorio de la pista.",
+        "<#66CCFF>💃 Todos los usuarios dentro harán el mismo emote aleatorio de esa pista.",
     )
     await start_track_monitor(bot)
     return True
@@ -126,23 +156,34 @@ async def start_track_monitor(bot) -> None:
 
 async def track_monitor_loop(bot) -> None:
     """
-    Monitor independiente de la pista.
+    Monitor independiente de hasta tres pistas.
 
-    Todos los usuarios dentro del radio reciben exactamente el mismo emote.
-    La selección de emotes es propia de la pista y no depende de Zeta.
+    Cada pista tiene su propio emote actual y sus propios usuarios.
+    Si dos pistas se superponen, un usuario queda asignado a la primera
+    pista que lo contiene para evitar enviarle dos emotes simultáneamente.
     """
+    track_states = []
     active_user_ids = set()
-    current_emote = None
-    next_emote_at = 0.0
 
     try:
         while True:
-            track = _load_track(bot)
-            if track is None:
+            tracks = _load_tracks(bot)
+            if not tracks:
                 break
 
+            while len(track_states) < len(tracks):
+                track_states.append(
+                    {
+                        "current_emote": None,
+                        "next_emote_at": 0.0,
+                        "active_user_ids": set(),
+                    }
+                )
+            if len(track_states) > len(tracks):
+                track_states = track_states[: len(tracks)]
+
             room_users = await bot.highrise.get_room_users()
-            inside_user_ids = set()
+            eligible_users = []
 
             bot_names = {
                 str(getattr(bot, "bot_username", "")).lower(),
@@ -156,86 +197,103 @@ async def track_monitor_loop(bot) -> None:
                     continue
                 if room_user.username.lower() in bot_names:
                     continue
-                if _is_inside(room_position, track):
-                    inside_user_ids.add(room_user.id)
+                eligible_users.append((room_user, room_position))
 
             now = time.monotonic()
-            emote_changed = False
+            assigned_user_ids = set()
+            new_active_user_ids = set()
 
-            if not current_emote or now >= next_emote_at:
-                if not bot.emotes_list:
-                    await asyncio.sleep(1)
-                    continue
+            for index, track in enumerate(tracks):
+                state = track_states[index]
+                inside_user_ids = set()
 
-                selected = choice(bot.emotes_list)
-                current_emote = selected["emote"]
-                duration = float(selected.get("duration", 3))
-                next_emote_at = now + max(duration, 0.1)
-                emote_changed = True
+                for room_user, room_position in eligible_users:
+                    if room_user.id in assigned_user_ids:
+                        continue
+                    if _is_inside(room_position, track):
+                        inside_user_ids.add(room_user.id)
+                        assigned_user_ids.add(room_user.id)
 
-            left = active_user_ids - inside_user_ids
-            for user_id in left:
-                try:
-                    await bot.highrise.send_emote("", user_id)
-                except Exception as error:
-                    print(
-                        f"No se pudo limpiar emote de pista de {user_id}: "
-                        f"{error}"
-                    )
+                if not state["current_emote"] or now >= state["next_emote_at"]:
+                    if not bot.emotes_list:
+                        await asyncio.sleep(1)
+                        continue
 
-            # Cuando cambia el emote, TODOS los usuarios de la pista
-            # reciben exactamente el mismo emote.
-            if emote_changed and inside_user_ids:
-                results = await asyncio.gather(
-                    *(
-                        bot.highrise.send_emote(current_emote, user_id)
-                        for user_id in inside_user_ids
-                    ),
-                    return_exceptions=True,
-                )
-                for user_id, result in zip(inside_user_ids, results):
-                    if isinstance(result, Exception):
+                    selected = choice(bot.emotes_list)
+                    state["current_emote"] = selected["emote"]
+                    duration = float(selected.get("duration", 3))
+                    state["next_emote_at"] = now + max(duration, 0.1)
+                    emote_changed = True
+                else:
+                    emote_changed = False
+
+                left = state["active_user_ids"] - inside_user_ids
+                for user_id in left:
+                    try:
+                        await bot.highrise.send_emote("", user_id)
+                    except Exception as error:
                         print(
-                            f"Emote de pista no disponible para {user_id}: "
-                            f"{current_emote} ({result})"
+                            f"No se pudo limpiar emote de pista de {user_id}: {error}"
                         )
-            else:
-                # Un usuario que acaba de entrar recibe el emote actual.
-                entered = inside_user_ids - active_user_ids
-                if entered:
-                    await asyncio.gather(
+
+                if emote_changed and inside_user_ids:
+                    results = await asyncio.gather(
                         *(
-                            bot.highrise.send_emote(current_emote, user_id)
-                            for user_id in entered
+                            bot.highrise.send_emote(
+                                state["current_emote"], user_id
+                            )
+                            for user_id in inside_user_ids
                         ),
                         return_exceptions=True,
                     )
+                    for user_id, result in zip(inside_user_ids, results):
+                        if isinstance(result, Exception):
+                            print(
+                                f"Emote de pista no disponible para {user_id}: "
+                                f"{state['current_emote']} ({result})"
+                            )
+                else:
+                    entered = inside_user_ids - state["active_user_ids"]
+                    if entered:
+                        await asyncio.gather(
+                            *(
+                                bot.highrise.send_emote(
+                                    state["current_emote"], user_id
+                                )
+                                for user_id in entered
+                            ),
+                            return_exceptions=True,
+                        )
 
-            active_user_ids = inside_user_ids
+                state["active_user_ids"] = inside_user_ids
+                new_active_user_ids.update(inside_user_ids)
+
+            active_user_ids = new_active_user_ids
             await asyncio.sleep(0.5)
 
     except asyncio.CancelledError:
         pass
     except Exception as error:
-        print(f"Error monitorizando la pista de emotes: {error}")
+        print(f"Error monitorizando las pistas de emotes: {error}")
     finally:
-        for user_id in active_user_ids:
-            try:
-                await bot.highrise.send_emote("", user_id)
-            except Exception as error:
-                print(
-                    f"No se pudo limpiar emote de pista de {user_id}: {error}"
-                )
+        for state in track_states:
+            for user_id in state.get("active_user_ids", set()):
+                try:
+                    await bot.highrise.send_emote("", user_id)
+                except Exception as error:
+                    print(
+                        f"No se pudo limpiar emote de pista de {user_id}: {error}"
+                    )
 
         if bot.track_monitor_task is asyncio.current_task():
             bot.track_monitor_task = None
 
 
 async def update_user(bot, user: User, position: Position) -> None:
-    # Compatibilidad con llamadas antiguas. El monitor central controla la pista.
+    # Compatibilidad con llamadas antiguas. El monitor central controla las pistas.
     return
 
 
 async def track_emote_loop(bot, user_id: str) -> None:
-    # Compatibilidad con tareas antiguas. La pista ya no depende de ellas.
+    # Compatibilidad con tareas antiguas. Las pistas ya no dependen de ellas.
     return
