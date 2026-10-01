@@ -1,0 +1,12 @@
+{
+  "capture_region": null,
+  "debug": true,
+  "min_area": 250,
+  "max_area": 30000,
+  "match_threshold": 0.72,
+  "click_enabled": false,
+  "small_clicks": 1,
+  "large_clicks": 12,
+  "click_interval": 0.08,
+  "after_click_delay": 0.12
+}
