@@ -368,7 +368,7 @@
   {
     "command": "Hug Yourself",
     "emote": "emote-hugyourself",
-    "duration": 5.0,
+    "duration": 5,
     "auth": "public"
   },
   {
@@ -380,7 +380,7 @@
   {
     "command": "Hero Entrance",
     "emote": "emote-hero",
-    "duration": 5.0,
+    "duration": 5,
     "auth": "public"
   },
   {
@@ -410,7 +410,7 @@
   {
     "command": "Handstand",
     "emote": "emote-handstand",
-    "duration": 4.0,
+    "duration": 4,
     "auth": "public"
   },
   {
@@ -590,7 +590,7 @@
   {
     "command": "Sneeze",
     "emote": "emoji-sneeze",
-    "duration": 3.0,
+    "duration": 3,
     "auth": "public"
   },
   {
@@ -608,7 +608,7 @@
   {
     "command": "Gasp",
     "emote": "emoji-scared",
-    "duration": 3.0,
+    "duration": 3,
     "auth": "public"
   },
   {
@@ -704,7 +704,7 @@
   {
     "command": "Raise The Roof",
     "emote": "emoji-celebrate",
-    "duration": 3.0,
+    "duration": 3,
     "auth": "public"
   },
   {
@@ -734,7 +734,7 @@
   {
     "command": "Don't Start Now",
     "emote": "dance-tiktok2",
-    "duration": 10.0,
+    "duration": 10,
     "auth": "public"
   },
   {
@@ -842,7 +842,7 @@
   {
     "command": "Hyped",
     "emote": "emote-hyped",
-    "duration": 7.0,
+    "duration": 7,
     "auth": "public"
   },
   {
@@ -890,7 +890,7 @@
   {
     "command": "Heart Eyes",
     "emote": "emote-hearteyes",
-    "duration": 4.0,
+    "duration": 4,
     "auth": "public"
   },
   {
@@ -914,7 +914,7 @@
   {
     "command": "Heart Fingers",
     "emote": "emote-heartfingers",
-    "duration": 4.0,
+    "duration": 4,
     "auth": "public"
   },
   {
@@ -932,7 +932,7 @@
   {
     "command": "Eyeroll",
     "emote": "emoji-eyeroll",
-    "duration": 3.0,
+    "duration": 3,
     "auth": "public"
   },
   {
@@ -1046,7 +1046,7 @@
   {
     "command": "Pose 7",
     "emote": "emote-pose7",
-    "duration": 4.0,
+    "duration": 4,
     "auth": "public"
   },
   {
@@ -1160,19 +1160,19 @@
   {
     "command": "Ice Skating",
     "emote": "emote-iceskating",
-    "duration": 7.0,
+    "duration": 7,
     "auth": "public"
   },
   {
     "command": "SurpriseBig",
     "emote": "emote-pose6",
-    "duration": 5.0,
+    "duration": 5,
     "auth": "public"
   },
   {
     "command": "Celebration Step",
     "emote": "emote-celebrationstep",
-    "duration": 3.0,
+    "duration": 3,
     "auth": "public"
   },
   {
@@ -1196,7 +1196,7 @@
   {
     "command": "Laid Back",
     "emote": "sit-open",
-    "duration": 26.0,
+    "duration": 26,
     "auth": "public"
   },
   {
@@ -1226,7 +1226,7 @@
   {
     "command": "Tiktok7",
     "emote": "idle-dance-tiktok7",
-    "duration": 13.0,
+    "duration": 13,
     "auth": "public"
   },
   {
@@ -1238,7 +1238,7 @@
   {
     "command": "Ditzy Pose",
     "emote": "emote-pose9",
-    "duration": 4.0,
+    "duration": 4,
     "auth": "public"
   },
   {
@@ -1316,19 +1316,19 @@
   {
     "command": "Midnight Poise",
     "emote": "emote-pose-goth1",
-    "duration": 10.0,
+    "duration": 10,
     "auth": "public"
   },
   {
     "command": "Midnight Strut",
     "emote": "emote-pose-goth2",
-    "duration": 10.0,
+    "duration": 10,
     "auth": "public"
   },
   {
     "command": "Midnight Allure",
     "emote": "emote-pose-goth3",
-    "duration": 10.0,
+    "duration": 10,
     "auth": "public"
   },
   {
@@ -1358,13 +1358,13 @@
   {
     "command": "Bloom Radiance",
     "emote": "emote-bloomify-pose3",
-    "duration": 4.0,
+    "duration": 4,
     "auth": "public"
   },
   {
     "command": "Blossom Reach",
     "emote": "emote-pose-stand1",
-    "duration": 4.0,
+    "duration": 4,
     "auth": "public"
   },
   {
@@ -1382,13 +1382,13 @@
   {
     "command": "Cool Guy",
     "emote": "emote-coolguy",
-    "duration": 4.0,
+    "duration": 4,
     "auth": "public"
   },
   {
     "command": "Crouch",
     "emote": "idle-crouched",
-    "duration": 15.0,
+    "duration": 15,
     "auth": "public"
   },
   {
@@ -1418,7 +1418,7 @@
   {
     "command": "Diva Moment",
     "emote": "emote-threadexchange-posing",
-    "duration": 24.0,
+    "duration": 24,
     "auth": "public"
   },
   {
@@ -1436,7 +1436,7 @@
   {
     "command": "Emote Cartwheel",
     "emote": "emote-cartwheel",
-    "duration": 5.0,
+    "duration": 5,
     "auth": "public"
   },
   {
@@ -1520,7 +1520,7 @@
   {
     "command": "Emote Pose13",
     "emote": "emote-pose13",
-    "duration": 5.0,
+    "duration": 5,
     "auth": "public"
   },
   {
@@ -1532,13 +1532,13 @@
   {
     "command": "Emote Shocked",
     "emote": "emote-shocked",
-    "duration": 4.0,
+    "duration": 4,
     "auth": "public"
   },
   {
     "command": "Emote Surf",
     "emote": "emote-surf",
-    "duration": 17.0,
+    "duration": 17,
     "auth": "public"
   },
   {
@@ -1574,7 +1574,7 @@
   {
     "command": "Fishing Idle",
     "emote": "fishing-idle",
-    "duration": 16.0,
+    "duration": 16,
     "auth": "public"
   },
   {
@@ -1592,7 +1592,7 @@
   {
     "command": "Hip Shake",
     "emote": "dance-hipshake",
-    "duration": 12.0,
+    "duration": 12,
     "auth": "public"
   },
   {
@@ -1604,7 +1604,7 @@
   {
     "command": "Idle Phone",
     "emote": "idle-phone",
-    "duration": 13.0,
+    "duration": 13,
     "auth": "public"
   },
   {
@@ -1622,7 +1622,7 @@
   {
     "command": "Landing A Fish!",
     "emote": "fishing-pull-small",
-    "duration": 1.0,
+    "duration": 1,
     "auth": "public"
   },
   {
@@ -1634,7 +1634,7 @@
   {
     "command": "Mine Dance",
     "emote": "mining-mine",
-    "duration": 3.0,
+    "duration": 3,
     "auth": "public"
   },
   {
@@ -1652,13 +1652,13 @@
   {
     "command": "Moonlit Howl",
     "emote": "emote-howl",
-    "duration": 10.0,
+    "duration": 10,
     "auth": "public"
   },
   {
     "command": "Petal Perch",
     "emote": "emote-pose-sit",
-    "duration": 6.0,
+    "duration": 6,
     "auth": "public"
   },
   {
@@ -1682,7 +1682,7 @@
   {
     "command": "Pure Heart",
     "emote": "dance-true-heart",
-    "duration": 11.0,
+    "duration": 11,
     "auth": "public"
   },
   {
@@ -1700,7 +1700,7 @@
   {
     "command": "Sakura Step",
     "emote": "emote-pose-stand2",
-    "duration": 5.0,
+    "duration": 5,
     "auth": "public"
   },
   {
@@ -1730,19 +1730,19 @@
   {
     "command": "Spring Sun",
     "emote": "sit-idle-springSun",
-    "duration": 10.0,
+    "duration": 10,
     "auth": "public"
   },
   {
     "command": "Sugar Stun",
     "emote": "emote-outfit3",
-    "duration": 15.0,
+    "duration": 15,
     "auth": "public"
   },
   {
     "command": "Sweet Smooch",
     "emote": "emote-kissing",
-    "duration": 5.0,
+    "duration": 5,
     "auth": "public"
   },
   {
@@ -1754,7 +1754,7 @@
   {
     "command": "TikTok Dance 1",
     "emote": "dance-tiktok1",
-    "duration": 11.0,
+    "duration": 11,
     "auth": "public"
   },
   {
@@ -1784,37 +1784,37 @@
   {
     "command": "Trampoline",
     "emote": "emote-trampoline",
-    "duration": 15.0,
+    "duration": 15,
     "auth": "public"
   },
   {
     "command": "Tree Pose",
     "emote": "emote-yoga-treePose",
-    "duration": 5.0,
+    "duration": 5,
     "auth": "public"
   },
   {
     "command": "Twerk It Out",
     "emote": "dance-twerk",
-    "duration": 11.0,
+    "duration": 11,
     "auth": "public"
   },
   {
     "command": "Upmmm",
     "emote": "emote-thought",
-    "duration": 5.0,
+    "duration": 5,
     "auth": "public"
   },
   {
     "command": "Wait",
     "emote": "dance-wait",
-    "duration": 9.0,
+    "duration": 9,
     "auth": "public"
   },
   {
     "command": "Warrior II",
     "emote": "emote-yoga-warrior2",
-    "duration": 5.0,
+    "duration": 5,
     "auth": "public"
   },
   {
@@ -1826,7 +1826,7 @@
   {
     "command": "Wild",
     "emote": "dance-wild",
-    "duration": 20.0,
+    "duration": 20,
     "auth": "public"
   },
   {
@@ -1850,67 +1850,67 @@
   {
     "command": "Salute",
     "emote": "emote-salute",
-    "duration": 3.0,
+    "duration": 3,
     "auth": "public"
   },
   {
     "command": "Run Vertical",
     "emote": "run-vertical",
-    "duration": 1.0,
+    "duration": 1,
     "auth": "public"
   },
   {
     "command": "Walk Vertical",
     "emote": "walk-vertical",
-    "duration": 1.0,
+    "duration": 1,
     "auth": "public"
   },
   {
     "command": "Fishing Pull",
     "emote": "fishing-pull",
-    "duration": 1.0,
+    "duration": 1,
     "auth": "public"
   },
   {
     "command": "Spiderman",
     "emote": "emote-spiderman",
-    "duration": 10.0,
+    "duration": 10,
     "auth": "public"
   },
   {
     "command": "Star Exchange",
     "emote": "emote-threadexchange-star",
-    "duration": 16.0,
+    "duration": 16,
     "auth": "public"
   },
   {
     "command": "Sit Idle Phone Text",
     "emote": "sit-idle-phone-text",
-    "duration": 15.0,
+    "duration": 15,
     "auth": "public"
   },
   {
     "command": "Phone Camera",
     "emote": "idle-phone-camera",
-    "duration": 11.0,
+    "duration": 11,
     "auth": "public"
   },
   {
     "command": "Phone",
     "emote": "emote-phone",
-    "duration": 15.0,
+    "duration": 15,
     "auth": "public"
   },
   {
     "command": "Phone Talking",
     "emote": "idle-phone-talking",
-    "duration": 13.0,
+    "duration": 13,
     "auth": "public"
   },
   {
     "command": "Laying Phone Texting",
     "emote": "idle-laying-phone-texting",
-    "duration": 22.0,
+    "duration": 22,
     "auth": "public"
   },
   {
@@ -1964,31 +1964,31 @@
   {
     "command": "The Fresh Step",
     "emote": "dance-freshprince",
-    "duration": 11.0,
+    "duration": 11,
     "auth": "public"
   },
   {
     "command": "Mine Dance",
     "emote": "dance-mine",
-    "duration": 11.0,
+    "duration": 11,
     "auth": "public"
   },
   {
     "command": "Popular Vibe",
     "emote": "dance-popularvibe",
-    "duration": 11.0,
+    "duration": 11,
     "auth": "public"
   },
   {
     "command": "Swag Bounce",
     "emote": "dance-swagbounce",
-    "duration": 11.0,
+    "duration": 11,
     "auth": "public"
   },
   {
     "command": "Woah",
     "emote": "dance-woah",
-    "duration": 8.0,
+    "duration": 8,
     "auth": "public"
   },
   {
@@ -2006,19 +2006,19 @@
   {
     "command": "Guitar",
     "emote": "emote-guitar",
-    "duration": 10.0,
+    "duration": 10,
     "auth": "public"
   },
   {
     "command": "Handwalk",
     "emote": "emote-handwalk",
-    "duration": 6.0,
+    "duration": 6,
     "auth": "public"
   },
   {
     "command": "Kawaii Go Go",
     "emote": "emote-kawaiigogo",
-    "duration": 10.0,
+    "duration": 10,
     "auth": "public"
   },
   {
@@ -2030,7 +2030,7 @@
   {
     "command": "Knock Knock",
     "emote": "emote-knocking-screen",
-    "duration": 5.0,
+    "duration": 5,
     "auth": "public"
   },
   {
@@ -2042,7 +2042,7 @@
   {
     "command": "celebration",
     "emote": "emote-collab-celebrate-right",
-    "duration": 7.0,
+    "duration": 7,
     "auth": "public"
   },
   {
@@ -2054,7 +2054,7 @@
   {
     "command": "Tactical Flex",
     "emote": "emote-rifle",
-    "duration": 5.0,
+    "duration": 5,
     "auth": "public"
   },
   {
@@ -2102,7 +2102,7 @@
   {
     "command": "Swingnet3",
     "emote": "emote-swing-net-3",
-    "duration": 2.0,
+    "duration": 2,
     "auth": "public"
   },
   {
@@ -2114,25 +2114,25 @@
   {
     "command": "Ignition Boost",
     "emote": "hcc-jetpack",
-    "duration": 8.0,
+    "duration": 8,
     "auth": "public"
   },
   {
     "command": "Howl2",
     "emote": "idle-howl",
-    "duration": 10.0,
+    "duration": 10,
     "auth": "public"
   },
   {
     "command": "Laying Phone Talk",
     "emote": "idle-laying-phone-talking",
-    "duration": 22.0,
+    "duration": 22,
     "auth": "public"
   },
   {
     "command": "Tired",
     "emote": "idle-loop-tired",
-    "duration": 22.0,
+    "duration": 22,
     "auth": "public"
   },
   {
@@ -2144,19 +2144,19 @@
   {
     "command": "Cute Sit",
     "emote": "sit-cute",
-    "duration": 15.0,
+    "duration": 15,
     "auth": "public"
   },
   {
     "command": "Ground Sit Crossed",
     "emote": "sit-ground-crossed",
-    "duration": 20.0,
+    "duration": 20,
     "auth": "public"
   },
   {
     "command": "Ground Sit Relaxed",
     "emote": "sit-ground-relaxed",
-    "duration": 20.0,
+    "duration": 20,
     "auth": "public"
   },
   {
@@ -2168,7 +2168,7 @@
   {
     "command": "TikTok Dance",
     "emote": "dance-tiktok4",
-    "duration": 15.0,
+    "duration": 15,
     "auth": "public"
   },
   {
@@ -2192,19 +2192,19 @@
   {
     "command": "Yoga Surprise",
     "emote": "emote-yogaSurprise",
-    "duration": 17.0,
+    "duration": 17,
     "auth": "public"
   },
   {
     "command": "kicking",
     "emote": "sit-idle-laidBack",
-    "duration": 20.0,
+    "duration": 20,
     "auth": "public"
   },
   {
     "command": "gwiddy",
     "emote": "dance-griddy",
-    "duration": 20.0,
+    "duration": 20,
     "auth": "public"
   },
   {
@@ -2223,6 +2223,24 @@
     "command": "scuba dance",
     "emote": "emote-scuba-dance",
     "duration": 8.5,
+    "auth": "public"
+  },
+  {
+    "command": "emote-solo-tea-right",
+    "emote": "emote-solo-tea-right",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "emote-solo-tea-left",
+    "emote": "emote-solo-tea-left",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "emote-ascension",
+    "emote": "emote-ascension",
+    "duration": 5,
     "auth": "public"
   }
 ]

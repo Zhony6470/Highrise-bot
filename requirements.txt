@@ -1,5 +1,4 @@
-highrise-bot-sdk
-supabase
+highrise-bot-sdk==25.1.0
 yt-dlp[default]
 google-api-python-client
 websockets<10

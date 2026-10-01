@@ -7,32 +7,28 @@ import time
 from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import quote
 
 HOST = os.getenv("AUTODJ_HOST", "0.0.0.0")
 PORT = int(os.getenv("AUTODJ_PORT", "8090"))
 TOKEN = os.getenv("AUTODJ_TOKEN", "")
-
-ICECAST_HOST = os.getenv("ICECAST_HOST", "icecast")
-ICECAST_PORT = int(os.getenv("ICECAST_PORT", "8000"))
-ICECAST_SOURCE = os.getenv("ICECAST_SOURCE", "source")
-ICECAST_PASSWORD = os.getenv("ICECAST_PASSWORD", "")
-ICECAST_MOUNT = os.getenv("ICECAST_MOUNT", "stream").strip("/")
+if not TOKEN:
+    raise RuntimeError("AUTODJ_TOKEN es obligatorio.")
 
 CACHE = Path(os.getenv("AUTODJ_CACHE_DIR", "/data/cache"))
 DEFAULT = Path(os.getenv("AUTODJ_DEFAULT_DIR", "/data/default_music"))
 QUEUE_FILE = Path(os.getenv("AUTODJ_QUEUE_FILE", "/data/request_queue.json"))
+RESULT_FILE = Path(os.getenv("AUTODJ_RESULT_FILE", "/data/last_request_result.json"))
 PLAYLIST = Path(os.getenv("AUTODJ_PLAYLIST_FILE", "/data/default_playlist.json"))
 COOKIES = os.getenv("YOUTUBE_COOKIES_PATH", "/app/cookies.txt")
 
-SAMPLE_RATE = 44100
-CHANNELS = 2
-BLOCK = 16384
-
 queue = deque()
 lock = threading.RLock()
-skip_event = threading.Event()
-state = {"current": None, "started_at": None, "status": "idle", "last_default_id": None}
+state = {"current": None, "started_at": None, "status": "idle", "last_default_id": None, "last_request_results": []}
+
+# Locks for concurrent yt-dlp downloads and background prefetch workers.
+download_lock = threading.RLock()
+prefetch_lock = threading.RLock()
+prefetching = set()
 
 
 def load(path: Path, default):
@@ -50,11 +46,22 @@ def save(path: Path, value) -> None:
 
 
 def metadata(item: dict) -> dict:
-    return item.get("metadata") or {
-        "title": item.get("title", "Pista desconocida"),
-        "channel": item.get("channel", "Highrise Radio"),
-        "duration": item.get("duration"),
-    }
+    source = item.get("metadata") or {}
+    result = dict(source)
+
+    # Playlist/default items historically stored duration at the top level
+    # while requested tracks store it inside metadata. Keep both forms
+    # compatible so Liquidsoap always receives the duration.
+    if not result.get("title"):
+        result["title"] = item.get("title", "Pista desconocida")
+    if not result.get("channel"):
+        result["channel"] = item.get("channel", "Highrise Radio")
+    if not result.get("artist"):
+        result["artist"] = item.get("artist") or result.get("channel")
+    if result.get("duration") is None:
+        result["duration"] = item.get("duration")
+
+    return result
 
 
 def authorized(handler) -> bool:
@@ -63,7 +70,8 @@ def authorized(handler) -> bool:
 
 def queue_snapshot():
     with lock:
-        return list(queue)
+        items = list(queue)
+        return items
 
 
 def ensure_file(item: dict) -> Path:
@@ -80,69 +88,79 @@ def ensure_file(item: dict) -> Path:
     if matches:
         return matches[0]
 
-    command = [
+    # No forzamos ios/android/web_embedded. YouTube puede rechazar
+    # web_embedded cuando el propietario desactiva la reproducción externa,
+    # aunque el video siga siendo visible normalmente.
+    #
+    # Primera opción: sesión pública sin cookies, usando los clientes por
+    # defecto de yt-dlp. Esto evita que una cookie de sesión vieja rompa
+    # videos públicos.
+    profiles = [
+        ("public-default", [
+            "yt-dlp",
+            "--no-playlist",
+            "--no-part",
+            "-f", "bestaudio/best",
+            "--extractor-args", "youtube:player_client=default",
+            "-o", str(CACHE / "%(id)s.%(ext)s"),
+        ]),
+    ]
+
+    # Segunda opción: si el video necesita autenticación/cookies, permitir
+    # clientes que aceptan cookies. No usamos web_embedded aquí porque solo
+    # sirve para videos que permiten reproducción embebida.
+    cookie_command = [
         "yt-dlp",
         "--no-playlist",
         "--no-part",
         "-f", "bestaudio/best",
-        "--extractor-args", "youtube:player_client=ios,android,web_embedded",
+        "--extractor-args", "youtube:player_client=default,web_safari",
         "-o", str(CACHE / "%(id)s.%(ext)s"),
     ]
     if Path(COOKIES).exists():
-        command += ["--cookies", COOKIES]
+        cookie_command += ["--cookies", COOKIES]
+        profiles.append(("cookies-default", cookie_command))
 
-    subprocess.run(
-        command + [f"https://www.youtube.com/watch?v={video_id}"],
-        check=True,
-        timeout=180,
-    )
+    with download_lock:
+        # Re comprobar después de adquirir el lock: otra tarea puede haber
+        # terminado la descarga mientras esperábamos.
+        matches = list(CACHE.glob(video_id + ".*"))
+        if matches:
+            return matches[0]
+
+        last_error = None
+        for profile_name, command in profiles:
+            try:
+                print(
+                    f"[AUTODJ] YT-DLP: intentando {profile_name} para {video_id}",
+                    flush=True,
+                )
+                subprocess.run(
+                    command + [f"https://www.youtube.com/watch?v={video_id}"],
+                    check=True,
+                    timeout=180,
+                )
+                matches = list(CACHE.glob(video_id + ".*"))
+                if matches:
+                    print(
+                        f"[AUTODJ] YT-DLP: descarga OK con {profile_name} para {video_id}",
+                        flush=True,
+                    )
+                    return matches[0]
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+                last_error = error
+                # El primer perfil puede fallar por restricciones del cliente;
+                # probamos el segundo antes de marcar la pista como fallida.
+                continue
+
+        raise RuntimeError(
+            f"yt-dlp no pudo descargar {video_id} con los perfiles disponibles: {last_error}"
+        )
 
     matches = list(CACHE.glob(video_id + ".*"))
     if not matches:
         raise RuntimeError("yt-dlp no generó el archivo de audio.")
     return matches[0]
-
-
-def icecast_url():
-    return (
-        f"icecast://{quote(ICECAST_SOURCE, safe='')}:"
-        f"{quote(ICECAST_PASSWORD, safe='')}@"
-        f"{ICECAST_HOST}:{ICECAST_PORT}/"
-        f"{quote(ICECAST_MOUNT, safe='/')}"
-    )
-
-
-def play_file(path: Path):
-    command = [
-        "ffmpeg", "-hide_banner", "-loglevel", "warning",
-        "-re",
-        "-i", str(path),
-        "-vn",
-        "-c:a", "libmp3lame",
-        "-b:a", "128k",
-        "-ar", str(SAMPLE_RATE),
-        "-ac", str(CHANNELS),
-        "-content_type", "audio/mpeg",
-        "-f", "mp3",
-        icecast_url(),
-    ]
-
-    return subprocess.Popen(command)
-
-
-def stop_decoder(process):
-    if process is None:
-        return
-
-    try:
-        process.terminate()
-        process.wait(timeout=2)
-    except Exception:
-        try:
-            process.kill()
-            process.wait(timeout=1)
-        except Exception:
-            pass
 
 
 def choose_default():
@@ -195,103 +213,87 @@ def choose_default():
     }
 
 
-def next_item():
+def set_request_result(item: dict, status: str, error: str | None = None) -> None:
+    request_id = item.get("request_id")
+    if not request_id:
+        return
+
+    result = {
+        "request_id": request_id,
+        "status": status,
+        "video_id": item.get("video_id"),
+        "metadata": metadata(item),
+    }
+    if error:
+        result["error"] = error
+
     with lock:
-        if queue:
-            item = queue.popleft()
-            save(QUEUE_FILE, list(queue))
-            return item
-
-    return choose_default()
+        results = state.setdefault("last_request_results", [])
+        results.append(result)
+        state["last_request_results"] = results[-200:]
+        save(RESULT_FILE, state["last_request_results"])
 
 
-def has_requests() -> bool:
-    with lock:
-        return bool(queue)
+def prefetch_item(item: dict) -> None:
+    """Descarga en segundo plano la siguiente pista para evitar huecos entre canciones."""
+    if not item:
+        return
 
+    video_id = item.get("video_id")
+    file_path = item.get("file_path")
+    key = video_id or file_path
+    if not key:
+        return
 
-def player_loop():
-    while True:
-        item = None
-        process = None
+    with prefetch_lock:
+        if key in prefetching:
+            return
+        prefetching.add(key)
+
+    def worker():
+        original_item = item
+        resolved_item = original_item
         try:
-            item = next_item()
-            if not item:
-                with lock:
-                    state["status"] = "idle"
-                time.sleep(1)
-                continue
-
-            item = dict(item)
-            item["file_path"] = str(ensure_file(item))
-
-            if item.get("default_track") and queue_snapshot():
-                print(
-                    "[AUTODJ] Solicitud pendiente; descartando DEFAULT antes de reproducir.",
-                    flush=True,
-                )
-                continue
-
-            item["metadata"] = metadata(item)
-
+            path = ensure_file(original_item)
+            original_item["file_path"] = str(path)
+            request_id = original_item.get("request_id")
             with lock:
-                state["current"] = item
-                state["started_at"] = time.time()
-                state["status"] = "playing"
-                if item.get("default_track"):
-                    state["last_default_id"] = (
-                        item.get("video_id") or item.get("file_path")
-                    )
-
+                if request_id:
+                    for queued in queue:
+                        if queued.get("request_id") == request_id:
+                            queued["file_path"] = str(path)
+                            # Reutilizamos el mismo objeto para que el controller
+                            # pueda enviarlo a Liquidsoap con file_path ya resuelto.
+                            resolved_item = queued
+                            break
+                save(QUEUE_FILE, list(queue))
             print(
-                f"[AUTODJ] {'DEFAULT' if item.get('default_track') else 'REQUEST'}: "
-                f"{item['metadata'].get('title', 'Pista')}",
+                f"[AUTODJ] PRELOAD: {resolved_item.get('metadata', {}).get('title', resolved_item.get('title', 'Pista'))}",
                 flush=True,
             )
-
-            process = play_file(Path(item["file_path"]))
-
-            while True:
-                if skip_event.is_set():
-                    break
-
-                if item.get("default_track") and has_requests():
-                    print(
-                        "[AUTODJ] Solicitud prioritaria detectada.",
-                        flush=True,
-                    )
-                    break
-
-                if process.poll() is not None:
-                    break
-
-                time.sleep(0.25)
-
-            stop_decoder(process)
-            process = None
-
-            skip_event.clear()
-
-            with lock:
-                state["current"] = None
-                state["started_at"] = None
-                state["status"] = "idle"
-
+            if liquidsoap_controller is not None and not resolved_item.get("default_track"):
+                liquidsoap_controller.enqueue_request(resolved_item)
         except Exception as error:
-            print(f"[AUTODJ] error: {error}", flush=True)
+            print(f"[AUTODJ] Error precargando pista: {error}", flush=True)
+        finally:
+            with prefetch_lock:
+                prefetching.discard(key)
 
-            if process is not None:
-                stop_decoder(process)
+    threading.Thread(target=worker, daemon=True, name="autodj-prefetch").start()
 
-            skip_event.clear()
 
-            with lock:
-                state["current"] = None
-                state["started_at"] = None
-                state["status"] = "recovering"
+def _make_liquidsoap_controller():
+    if os.getenv("AUTODJ_USE_LIQUIDSOAP", "0") != "1":
+        return None
+    from liquidsoap_controller import LiquidsoapController
+    return LiquidsoapController(
+        queue=queue, lock=lock, state=state, queue_file=QUEUE_FILE,
+        result_writer=set_request_result, metadata_fn=metadata,
+        choose_default=choose_default, ensure_file=ensure_file, save_fn=save,
+    )
 
-            time.sleep(1)
 
+liquidsoap_controller = _make_liquidsoap_controller()
 
 class API(BaseHTTPRequestHandler):
     def reply(self, code: int, value) -> None:
@@ -322,7 +324,7 @@ class API(BaseHTTPRequestHandler):
                 )
                 started = state.get("started_at")
                 snapshot["elapsed"] = time.time() - started if started else 0
-                snapshot["queue"] = list(queue)
+                snapshot["queue"] = queue_snapshot()
             return self.reply(200, snapshot)
 
         if self.path == "/queue":
@@ -348,23 +350,22 @@ class API(BaseHTTPRequestHandler):
                 item = {
                     "video_id": video_id,
                     "metadata": data.get("metadata", {}),
+                    "request_id": data.get("request_id"),
                     "requested_track": True,
                 }
 
                 with lock:
                     queue.append(item)
                     save(QUEUE_FILE, list(queue))
-                    current = state.get("current")
+                # Resolver la URL mientras la pista actual sigue sonando.
+                # Esto hace que !play/!skip no tenga que esperar a yt-dlp.
+                prefetch_item(item)
                 return self.reply(200, {"ok": True, "queued": item})
 
             if self.path == "/skip":
-                with lock:
-                    active = state.get("current") is not None
-
-                if not active:
-                    return self.reply(200, {"ok": True, "active": False})
-
-                skip_event.set()
+                if liquidsoap_controller is None:
+                    return self.reply(503, {"error": "liquidsoap_controller_unavailable"})
+                liquidsoap_controller.skip()
                 return self.reply(200, {"ok": True, "active": True})
 
             if self.path in ("/default-add", "/default-remove"):
@@ -413,6 +414,12 @@ if __name__ == "__main__":
     CACHE.mkdir(parents=True, exist_ok=True)
     DEFAULT.mkdir(parents=True, exist_ok=True)
 
+    stored_results = load(RESULT_FILE, [])
+    if isinstance(stored_results, list):
+        state["last_request_results"] = stored_results[-200:]
+    elif isinstance(stored_results, dict):
+        state["last_request_results"] = [stored_results]
+
     stored_queue = load(QUEUE_FILE, [])
     if isinstance(stored_queue, list):
         queue.extend(
@@ -420,6 +427,12 @@ if __name__ == "__main__":
             if isinstance(item, dict) and item.get("video_id")
         )
 
-    threading.Thread(target=player_loop, daemon=True).start()
+    if liquidsoap_controller is None:
+        raise RuntimeError("AUTODJ_USE_LIQUIDSOAP=1 es obligatorio para AutoDJ.")
+
+    # Recover persisted !play requests after a container restart.
+    for queued_item in list(queue):
+        prefetch_item(queued_item)
+    liquidsoap_controller.start()
     print(f"[AUTODJ] API escuchando en {HOST}:{PORT}", flush=True)
     ThreadingHTTPServer((HOST, PORT), API).serve_forever()
