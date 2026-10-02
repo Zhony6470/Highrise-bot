@@ -1,6 +1,8 @@
 {
   "capture_region": null,
   "debug": true,
+  "overlay_enabled": true,
+  "overlay_labels": false,
   "min_area": 250,
   "max_area": 30000,
   "match_threshold": 0.72,
