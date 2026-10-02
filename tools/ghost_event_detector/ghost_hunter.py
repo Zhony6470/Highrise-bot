@@ -168,37 +168,110 @@ def select_region(sct):
             return region
 
 
+def _find_eye_pair(roi):
+    """Busca dos puntos brillantes separados horizontalmente dentro del candidato."""
+    if roi.size == 0:
+        return False, 0.0
+
+    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    white = cv2.inRange(hsv, np.array([0, 0, 185], dtype=np.uint8), np.array([179, 120, 255], dtype=np.uint8))
+    yellow = cv2.inRange(hsv, np.array([10, 65, 175], dtype=np.uint8), np.array([48, 255, 255], dtype=np.uint8))
+    eye_mask = cv2.bitwise_or(white, yellow)
+    eye_mask = cv2.morphologyEx(eye_mask, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8))
+
+    contours, _ = cv2.findContours(eye_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    points = []
+    rh, rw = roi.shape[:2]
+
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        x, y, w, h = cv2.boundingRect(contour)
+        if area < 1.0 or area > max(80.0, rw * rh * 0.025):
+            continue
+        if w < 2 or h < 2 or w > max(20, int(rw * 0.28)) or h > max(20, int(rh * 0.22)):
+            continue
+        cx, cy = x + w / 2.0, y + h / 2.0
+        if cy > rh * 0.68:
+            continue
+        points.append((cx, cy, w, h, area))
+
+    if len(points) < 2:
+        return False, 0.0
+
+    best = 0.0
+    for i in range(len(points)):
+        for j in range(i + 1, len(points)):
+            a, b = points[i], points[j]
+            left, right = sorted((a, b), key=lambda p: p[0])
+            dx, dy = right[0] - left[0], abs(right[1] - left[1])
+            if dx < rw * 0.10 or dx > rw * 0.80 or dy > rh * 0.22:
+                continue
+            sa = max(left[2] * left[3], 1.0)
+            sb = max(right[2] * right[3], 1.0)
+            size_ratio = min(sa, sb) / max(sa, sb)
+            if size_ratio < 0.25:
+                continue
+            separation_score = 1.0 - abs((dx / max(rw, 1)) - 0.35) / 0.35
+            separation_score = max(0.0, min(1.0, separation_score))
+            level_score = 1.0 - min(1.0, dy / max(1.0, rh * 0.22))
+            score = 0.45 * size_ratio + 0.35 * separation_score + 0.20 * level_score
+            best = max(best, score)
+
+    return best >= 0.42, best
+
+
+def _candidate_shape_score(contour, w, h, area):
+    """Puntúa siluetas compactas y verticales, penalizando rectángulos."""
+    box_area = float(max(w * h, 1))
+    extent = area / box_area
+    hull = cv2.convexHull(contour)
+    hull_area = cv2.contourArea(hull)
+    solidity = area / hull_area if hull_area > 0 else 0.0
+    perimeter = cv2.arcLength(contour, True)
+    circularity = (4.0 * np.pi * area / (perimeter * perimeter)) if perimeter > 0 else 0.0
+    ratio = w / float(max(h, 1))
+
+    score = 0.0
+    if 0.45 <= ratio <= 1.20:
+        score += 0.30
+    elif 1.20 < ratio <= 1.55:
+        score += 0.08
+    if 0.22 <= extent <= 0.78:
+        score += 0.25
+    elif extent < 0.90:
+        score += 0.08
+    if 0.35 <= solidity <= 0.92:
+        score += 0.25
+    elif solidity < 0.97:
+        score += 0.08
+    if 0.08 <= circularity <= 0.90:
+        score += 0.20
+    return score
+
+
 def find_candidates(frame, config):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    saturation = hsv[:, :, 1]
-    value = hsv[:, :, 2]
 
-    mask = cv2.inRange(
-        np.dstack([hsv[:, :, 0], saturation, value]),
-        np.array([0, 70, 130], dtype=np.uint8),
+    color_mask = cv2.inRange(
+        hsv,
+        np.array([0, 70, 120], dtype=np.uint8),
         np.array([179, 255, 255], dtype=np.uint8),
     )
+    bright_mask = cv2.inRange(
+        hsv,
+        np.array([0, 0, 185], dtype=np.uint8),
+        np.array([179, 105, 255], dtype=np.uint8),
+    )
+    mask = cv2.bitwise_or(color_mask, bright_mask)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
 
-    mask = cv2.morphologyEx(
-        mask,
-        cv2.MORPH_OPEN,
-        np.ones((3, 3), np.uint8),
-    )
-    mask = cv2.morphologyEx(
-        mask,
-        cv2.MORPH_CLOSE,
-        np.ones((7, 7), np.uint8),
-    )
-
-    contours, _ = cv2.findContours(
-        mask,
-        cv2.RETR_EXTERNAL,
-        cv2.CHAIN_APPROX_SIMPLE,
-    )
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     candidates = []
-    min_area = config["min_area"]
-    max_area = config["max_area"]
+    min_area = config.get("min_area", 250)
+    max_area = config.get("max_area", 30000)
+    min_score = config.get("ghost_score_threshold", 0.62)
 
     for contour in contours:
         area = cv2.contourArea(contour)
@@ -206,26 +279,53 @@ def find_candidates(frame, config):
             continue
 
         x, y, w, h = cv2.boundingRect(contour)
-        if w < 25 or h < 25:
+        if w < 24 or h < 24:
             continue
 
         ratio = w / float(h)
-        if ratio < 0.45 or ratio > 1.9:
+        if ratio < 0.40 or ratio > 1.60:
             continue
 
-        candidates.append(
-            {
-                "x": x,
-                "y": y,
-                "w": w,
-                "h": h,
-                "area": area,
-                "cx": x + w // 2,
-                "cy": y + h // 2,
-            }
-        )
+        shape_score = _candidate_shape_score(contour, w, h, area)
+        pad_x = max(1, int(w * 0.06))
+        pad_y = max(1, int(h * 0.04))
+        x1, y1 = max(0, x + pad_x), max(0, y + pad_y)
+        x2, y2 = min(frame.shape[1], x + w - pad_x), min(frame.shape[0], y + h - pad_y)
+        roi = frame[y1:y2, x1:x2]
+        has_eyes, eye_score = _find_eye_pair(roi)
 
-    return candidates
+        combined = 0.48 * shape_score + 0.52 * eye_score
+        if has_eyes:
+            combined += 0.08
+
+        if combined < min_score:
+            continue
+
+        candidates.append({
+            "x": x, "y": y, "w": w, "h": h, "area": area,
+            "cx": x + w // 2, "cy": y + h // 2,
+            "score": round(combined, 3),
+            "eye_score": round(eye_score, 3),
+            "shape_score": round(shape_score, 3),
+        })
+
+    candidates.sort(key=lambda c: c["score"], reverse=True)
+    filtered = []
+    for candidate in candidates:
+        overlaps = False
+        for kept in filtered:
+            ax1, ay1 = max(candidate["x"], kept["x"]), max(candidate["y"], kept["y"])
+            ax2, ay2 = min(candidate["x"] + candidate["w"], kept["x"] + kept["w"]), min(candidate["y"] + candidate["h"], kept["y"] + kept["h"])
+            inter = max(0, ax2 - ax1) * max(0, ay2 - ay1)
+            if inter == 0:
+                continue
+            union = candidate["w"] * candidate["h"] + kept["w"] * kept["h"] - inter
+            if inter / float(max(union, 1)) >= 0.35:
+                overlaps = True
+                break
+        if not overlaps:
+            filtered.append(candidate)
+    return filtered
 
 
 def classify_size(candidate):
@@ -261,6 +361,9 @@ def print_candidates(candidates, origin_x, origin_y):
                 ),
                 "size": classify_size(candidate),
                 "box": (candidate["w"], candidate["h"]),
+                "score": candidate.get("score"),
+                "eyes": candidate.get("eye_score"),
+                "shape": candidate.get("shape_score"),
             }
         )
     print("[GHOST] candidatos:", data)
