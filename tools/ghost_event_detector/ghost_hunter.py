@@ -7,6 +7,8 @@ import cv2
 import mss
 import numpy as np
 
+from overlay import GhostOverlay
+
 
 ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = ROOT / "config.json"
@@ -50,16 +52,21 @@ def grab_monitor(sct):
     return frame, monitor["left"], monitor["top"]
 
 
-def screenshot(sct, region):
+def screenshot(sct, region, overlay=None):
+    # The overlay is hidden for the actual capture so its own rectangles
+    # cannot become false-positive candidates.
+    if overlay is not None:
+        overlay.hide_for_capture()
+
     if region is None:
-        return grab_monitor(sct)
+        frame, origin_x, origin_y = grab_monitor(sct)
+    else:
+        shot = sct.grab(region)
+        origin_x = region["left"]
+        origin_y = region["top"]
+        frame = np.array(shot)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
 
-    shot = sct.grab(region)
-    origin_x = region["left"]
-    origin_y = region["top"]
-
-    frame = np.array(shot)
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
     return frame, origin_x, origin_y
 
 
@@ -71,32 +78,26 @@ def select_region(sct):
         "start": None,
         "end": None,
         "dragging": False,
-        "finished": False,
     }
-
-    display = frame.copy()
 
     def mouse_callback(event, x, y, flags, _param):
         if event == cv2.EVENT_LBUTTONDOWN:
             state["start"] = (x, y)
             state["end"] = (x, y)
             state["dragging"] = True
-
         elif event == cv2.EVENT_MOUSEMOVE and state["dragging"]:
             state["end"] = (x, y)
-
         elif event == cv2.EVENT_LBUTTONUP and state["dragging"]:
             state["end"] = (x, y)
             state["dragging"] = False
-            state["finished"] = True
 
     cv2.namedWindow(window, cv2.WINDOW_NORMAL)
     cv2.setWindowProperty(window, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
     cv2.setMouseCallback(window, mouse_callback)
 
-    print("[GHOST] Selecciona con el mouse la zona de Highrise que quieres analizar.")
-    print("[GHOST] Arrastra desde una esquina hasta la esquina opuesta.")
-    print("[GHOST] ENTER confirma | ESC cancela | R reinicia la selección.")
+    print("[GHOST] Selecciona la zona de Highrise.")
+    print("[GHOST] Arrastra con el mouse y pulsa ENTER para confirmar.")
+    print("[GHOST] ESC cancela | R reinicia.")
 
     while True:
         display = frame.copy()
@@ -108,10 +109,9 @@ def select_region(sct):
 
             width = abs(x2 - x1)
             height = abs(y2 - y1)
-            label = f"Zona: {width} x {height} px"
             cv2.putText(
                 display,
-                label,
+                f"Zona: {width} x {height} px",
                 (min(x1, x2) + 10, max(25, min(y1, y2) - 10)),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.7,
@@ -122,7 +122,7 @@ def select_region(sct):
 
         cv2.putText(
             display,
-            "ARRASTRA para seleccionar | ENTER confirmar | ESC cancelar | R reiniciar",
+            "ARRASTRA | ENTER confirmar | ESC cancelar | R reiniciar",
             (20, 35),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.65,
@@ -143,7 +143,6 @@ def select_region(sct):
             state["start"] = None
             state["end"] = None
             state["dragging"] = False
-            state["finished"] = False
 
         if key in (13, 10) and state["start"] and state["end"]:
             x1, y1 = state["start"]
@@ -158,7 +157,7 @@ def select_region(sct):
             height = bottom - top
 
             if width < 100 or height < 100:
-                print("[GHOST] La zona es demasiado pequeña. Selecciona al menos 100x100 px.")
+                print("[GHOST] La zona debe ser de al menos 100x100 px.")
                 continue
 
             region = {
@@ -174,7 +173,6 @@ def select_region(sct):
 
 def find_candidates(frame, config):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
     saturation = hsv[:, :, 1]
     value = hsv[:, :, 2]
 
@@ -184,11 +182,22 @@ def find_candidates(frame, config):
         np.array([179, 255, 255], dtype=np.uint8),
     )
 
-    kernel = np.ones((3, 3), np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
+    mask = cv2.morphologyEx(
+        mask,
+        cv2.MORPH_OPEN,
+        np.ones((3, 3), np.uint8),
+    )
+    mask = cv2.morphologyEx(
+        mask,
+        cv2.MORPH_CLOSE,
+        np.ones((7, 7), np.uint8),
+    )
 
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(
+        mask,
+        cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_SIMPLE,
+    )
 
     candidates = []
     min_area = config["min_area"]
@@ -219,7 +228,7 @@ def find_candidates(frame, config):
             }
         )
 
-    return candidates, mask
+    return candidates
 
 
 def classify_size(candidate):
@@ -227,106 +236,134 @@ def classify_size(candidate):
     return "large" if area >= 9000 else "small"
 
 
-def draw_candidates(frame, candidates):
-    output = frame.copy()
+def make_overlay_candidates(candidates, config):
+    result = []
     for candidate in candidates:
-        x, y, w, h = (
-            candidate["x"],
-            candidate["y"],
-            candidate["w"],
-            candidate["h"],
-        )
         kind = classify_size(candidate)
-        cv2.rectangle(output, (x, y), (x + w, y + h), (255, 255, 255), 2)
-        cv2.putText(
-            output,
-            f"{kind} {w}x{h}",
-            (x, max(20, y - 8)),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.55,
-            (255, 255, 255),
-            2,
-            cv2.LINE_AA,
+        result.append(
+            {
+                **candidate,
+                "kind": kind,
+                "label": f"{kind} {candidate['w']}x{candidate['h']}",
+            }
         )
-    return output
+    return result
 
 
-def run(debug=False, select=False):
+def print_candidates(candidates, origin_x, origin_y):
+    if not candidates:
+        return
+
+    data = []
+    for candidate in candidates:
+        data.append(
+            {
+                "screen": (
+                    candidate["cx"] + origin_x,
+                    candidate["cy"] + origin_y,
+                ),
+                "size": classify_size(candidate),
+                "box": (candidate["w"], candidate["h"]),
+            }
+        )
+    print("[GHOST] candidatos:", data)
+
+
+def run(overlay_enabled=True, select=False):
     config = load_config()
 
     if config.get("click_enabled"):
         raise RuntimeError(
-            "click_enabled=true is blocked in this initial calibration build. "
-            "Validate detection first."
+            "click_enabled=true está bloqueado en esta fase. "
+            "Primero valida la detección."
         )
 
-    with mss.mss() as sct:
-        if select:
-            region = select_region(sct)
-            if region is None:
-                return
+    overlay = GhostOverlay() if overlay_enabled else None
+    last_print = 0.0
 
-            config["capture_region"] = region
-            save_config(config)
+    try:
+        with mss.mss() as sct:
+            if select:
+                region = select_region(sct)
+                if region is None:
+                    return
 
-            print(f"[GHOST] Zona guardada: {region}")
-            print("[GHOST] Esa zona se usará en los próximos arranques.")
+                config["capture_region"] = region
+                save_config(config)
 
-        region = config.get("capture_region")
-        templates = load_templates()
+                print(f"[GHOST] Zona guardada: {region}")
 
-        print(f"[GHOST] templates cargadas: {len(templates)}")
-        print("[GHOST] modo calibración: NO hace clic.")
+            region = config.get("capture_region")
+            templates = load_templates()
 
-        if region:
-            print(f"[GHOST] capturando solamente: {region}")
-        else:
-            print("[GHOST] capturando monitor completo.")
+            print(f"[GHOST] templates cargadas: {len(templates)}")
+            print("[GHOST] modo calibración: NO hace clic.")
+            print("[GHOST] overlay:", "ACTIVO" if overlay_enabled else "DESACTIVADO")
 
-        while True:
-            frame, origin_x, origin_y = screenshot(sct, region)
-            candidates, mask = find_candidates(frame, config)
-
-            if candidates:
-                print(
-                    "[GHOST] candidatos:",
-                    [
+            if region:
+                print(f"[GHOST] capturando solamente: {region}")
+                if overlay:
+                    overlay.set_region(region)
+            else:
+                print("[GHOST] capturando monitor completo.")
+                if overlay:
+                    monitor = get_monitor(sct)
+                    overlay.set_region(
                         {
-                            "screen": (
-                                c["cx"] + origin_x,
-                                c["cy"] + origin_y,
-                            ),
-                            "size": classify_size(c),
-                            "box": (c["w"], c["h"]),
+                            "left": monitor["left"],
+                            "top": monitor["top"],
+                            "width": monitor["width"],
+                            "height": monitor["height"],
                         }
-                        for c in candidates
-                    ],
+                    )
+
+            while True:
+                frame, origin_x, origin_y = screenshot(
+                    sct,
+                    region,
+                    overlay=overlay,
                 )
+                candidates = find_candidates(frame, config)
 
-            if debug:
-                preview = draw_candidates(frame, candidates)
-                cv2.imshow("Highrise Ghost Detector - DEBUG", preview)
-                cv2.imshow("Highrise Ghost Detector - MASK", mask)
+                now = time.monotonic()
+                if candidates and now - last_print >= 0.5:
+                    print_candidates(candidates, origin_x, origin_y)
+                    last_print = now
 
-                key = cv2.waitKey(1) & 0xFF
-                if key == ord("q"):
-                    break
+                if overlay:
+                    overlay.draw(make_overlay_candidates(candidates, config))
+                    overlay.show()
 
-            time.sleep(0.02)
+                time.sleep(0.03)
 
-    cv2.destroyAllWindows()
+    except KeyboardInterrupt:
+        print("\n[GHOST] Detector detenido.")
+    finally:
+        if overlay:
+            overlay.close()
+        cv2.destroyAllWindows()
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--debug", action="store_true")
+    parser = argparse.ArgumentParser(
+        description="Detector local de fantasmas para pruebas en Highrise."
+    )
     parser.add_argument(
         "--select-region",
         action="store_true",
-        help="selecciona con el mouse la zona de pantalla que analizará el detector",
+        help="selecciona nuevamente la zona de captura.",
+    )
+    parser.add_argument(
+        "--console-only",
+        action="store_true",
+        help="desactiva el overlay y deja solo la salida de consola.",
     )
     args = parser.parse_args()
-    run(debug=args.debug, select=args.select_region)
+
+    run(
+        overlay_enabled=not args.console_only,
+        select=args.select_region,
+    )
 
 
 if __name__ == "__main__":
