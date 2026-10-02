@@ -10,10 +10,9 @@ WS_EX_TOOLWINDOW = 0x00000080
 WS_EX_NOACTIVATE = 0x08000000
 HWND_TOPMOST = -1
 SW_SHOWNOACTIVATE = 4
-SWP_NOSIZE = 0x0001
-SWP_NOMOVE = 0x0002
 SWP_NOACTIVATE = 0x0010
 SWP_SHOWWINDOW = 0x0040
+
 
 try:
     GET_EXSTYLE = USER32.GetWindowLongPtrW
@@ -24,7 +23,7 @@ except AttributeError:
 
 
 class GhostOverlay:
-    """Windows overlay transparente, siempre encima y click-through."""
+    """Overlay Windows transparente, topmost y click-through."""
 
     def __init__(self):
         self.root = tk.Tk()
@@ -33,9 +32,7 @@ class GhostOverlay:
         self.root.attributes("-topmost", True)
         self.root.configure(bg="magenta")
 
-        # Tkinter/Windows hace transparente únicamente el color magenta.
-        # No usamos SetLayeredWindowAttributes porque en algunas versiones
-        # de Tk/Windows puede volver invisible toda la ventana.
+        # El fondo magenta se vuelve transparente en Windows.
         self.root.wm_attributes("-transparentcolor", "magenta")
 
         self.canvas = tk.Canvas(
@@ -46,7 +43,9 @@ class GhostOverlay:
         )
         self.canvas.pack(fill="both", expand=True)
 
+        self.root.update_idletasks()
         self.root.update()
+
         self.hwnd = self.root.winfo_id()
         self._make_click_through()
 
@@ -70,33 +69,8 @@ class GhostOverlay:
             f"{self.region['width']}x{self.region['height']}"
             f"+{self.region['left']}+{self.region['top']}"
         )
+        self.root.update_idletasks()
         self.root.update()
-
-    def show(self):
-        if self.region is None:
-            return
-
-        self.root.deiconify()
-        self.root.update()
-
-        USER32.SetWindowPos(
-            self.hwnd,
-            HWND_TOPMOST,
-            self.region["left"],
-            self.region["top"],
-            self.region["width"],
-            self.region["height"],
-            SWP_NOACTIVATE | SWP_SHOWWINDOW,
-        )
-        USER32.ShowWindow(self.hwnd, SW_SHOWNOACTIVATE)
-        self.root.update()
-        self._visible = True
-
-    def hide_for_capture(self):
-        if self._visible:
-            self.root.withdraw()
-            self.root.update()
-            self._visible = False
 
     def draw(self, candidates):
         self.canvas.delete("all")
@@ -115,13 +89,16 @@ class GhostOverlay:
             else:
                 outline = "#FFFFFF"
 
+            # Rectángulo doble para que sea muy visible sobre el juego.
             self.canvas.create_rectangle(
-                x,
-                y,
-                x + w,
-                y + h,
+                x, y, x + w, y + h,
                 outline=outline,
-                width=3,
+                width=4,
+            )
+            self.canvas.create_rectangle(
+                x + 2, y + 2, x + w - 2, y + h - 2,
+                outline="white",
+                width=1,
             )
 
             if candidate.get("show_label", False) and y >= 20:
@@ -134,7 +111,46 @@ class GhostOverlay:
                     font=("Segoe UI", 9, "bold"),
                 )
 
+        self.root.update_idletasks()
         self.root.update()
+
+    def show(self):
+        if self.region is None:
+            return
+
+        # Forzamos geometría y topmost cada vez que reaparece.
+        self.root.geometry(
+            f"{self.region['width']}x{self.region['height']}"
+            f"+{self.region['left']}+{self.region['top']}"
+        )
+        self.root.attributes("-topmost", True)
+        self.root.deiconify()
+        self.root.lift()
+
+        self.root.update_idletasks()
+        self.root.update()
+
+        USER32.SetWindowPos(
+            self.hwnd,
+            HWND_TOPMOST,
+            self.region["left"],
+            self.region["top"],
+            self.region["width"],
+            self.region["height"],
+            SWP_NOACTIVATE | SWP_SHOWWINDOW,
+        )
+        USER32.ShowWindow(self.hwnd, SW_SHOWNOACTIVATE)
+        self.root.update_idletasks()
+        self.root.update()
+
+        self._visible = True
+
+    def hide_for_capture(self):
+        if self._visible:
+            self.root.withdraw()
+            self.root.update_idletasks()
+            self.root.update()
+            self._visible = False
 
     def close(self):
         try:
