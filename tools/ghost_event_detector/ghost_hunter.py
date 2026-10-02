@@ -53,11 +53,8 @@ def grab_monitor(sct):
 
 
 def screenshot(sct, region, overlay=None):
-    # The overlay is hidden for the actual capture so its own rectangles
-    # cannot become false-positive candidates.
-    if overlay is not None:
-        overlay.hide_for_capture()
-
+    # El overlay permanece visible durante la captura. Sus rectángulos
+    # son blancos (saturación baja), así que la máscara HSV los ignora.
     if region is None:
         frame, origin_x, origin_y = grab_monitor(sct)
     else:
