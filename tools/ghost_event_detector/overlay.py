@@ -3,13 +3,17 @@ import tkinter as tk
 
 
 USER32 = ctypes.windll.user32
+
 GWL_EXSTYLE = -20
-WS_EX_LAYERED = 0x00080000
 WS_EX_TRANSPARENT = 0x00000020
 WS_EX_TOOLWINDOW = 0x00000080
 WS_EX_NOACTIVATE = 0x08000000
-LWA_COLORKEY = 0x00000001
+HWND_TOPMOST = -1
 SW_SHOWNOACTIVATE = 4
+SWP_NOSIZE = 0x0001
+SWP_NOMOVE = 0x0002
+SWP_NOACTIVATE = 0x0010
+SWP_SHOWWINDOW = 0x0040
 
 try:
     GET_EXSTYLE = USER32.GetWindowLongPtrW
@@ -20,16 +24,18 @@ except AttributeError:
 
 
 class GhostOverlay:
-    """Transparent, topmost, click-through Windows overlay."""
+    """Windows overlay transparente, siempre encima y click-through."""
 
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Highrise Ghost Detector Overlay")
+        self.root.withdraw()
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
         self.root.configure(bg="magenta")
 
-        # Windows color-key transparency: magenta pixels are invisible.
+        # Tkinter/Windows hace transparente únicamente el color magenta.
+        # No usamos SetLayeredWindowAttributes porque en algunas versiones
+        # de Tk/Windows puede volver invisible toda la ventana.
         self.root.wm_attributes("-transparentcolor", "magenta")
 
         self.canvas = tk.Canvas(
@@ -40,54 +46,49 @@ class GhostOverlay:
         )
         self.canvas.pack(fill="both", expand=True)
 
+        self.root.update_idletasks()
         self.hwnd = self.root.winfo_id()
         self._make_click_through()
 
         self.region = None
         self._visible = False
-        self.root.withdraw()
-        self.root.update_idletasks()
 
     def _make_click_through(self):
         style = GET_EXSTYLE(self.hwnd)
-        style |= (
-            WS_EX_LAYERED
-            | WS_EX_TRANSPARENT
-            | WS_EX_TOOLWINDOW
-            | WS_EX_NOACTIVATE
-        )
+        style |= WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE
         SET_EXSTYLE(self.hwnd, style)
 
-        # Ensure the layered window uses the same transparent color.
-        USER32.SetLayeredWindowAttributes(
-            self.hwnd,
-            0x00FF00FF,  # magenta COLORREF
-            0,
-            LWA_COLORKEY,
-        )
-
     def set_region(self, region):
-        self.region = region
+        self.region = {
+            "left": int(region["left"]),
+            "top": int(region["top"]),
+            "width": int(region["width"]),
+            "height": int(region["height"]),
+        }
+
         self.root.geometry(
-            f"{int(region['width'])}x{int(region['height'])}"
-            f"+{int(region['left'])}+{int(region['top'])}"
+            f"{self.region['width']}x{self.region['height']}"
+            f"+{self.region['left']}+{self.region['top']}"
         )
         self.root.update_idletasks()
 
     def show(self):
         if self.region is None:
             return
+
         self.root.deiconify()
-        USER32.ShowWindow(self.hwnd, SW_SHOWNOACTIVATE)
+        self.root.update_idletasks()
+
         USER32.SetWindowPos(
             self.hwnd,
-            -1,  # HWND_TOPMOST
-            int(self.region["left"]),
-            int(self.region["top"]),
-            int(self.region["width"]),
-            int(self.region["height"]),
-            0x0010 | 0x0004,  # SWP_NOACTIVATE | SWP_SHOWWINDOW
+            HWND_TOPMOST,
+            self.region["left"],
+            self.region["top"],
+            self.region["width"],
+            self.region["height"],
+            SWP_NOACTIVATE | SWP_SHOWWINDOW,
         )
+        USER32.ShowWindow(self.hwnd, SW_SHOWNOACTIVATE)
         self.root.update_idletasks()
         self._visible = True
 
@@ -123,13 +124,11 @@ class GhostOverlay:
                 width=3,
             )
 
-            # Small label just above the box.
-            label = candidate.get("label", kind)
-            if y >= 20:
+            if candidate.get("show_label", False) and y >= 20:
                 self.canvas.create_text(
                     x + 2,
                     y - 4,
-                    text=label,
+                    text=candidate.get("label", kind),
                     anchor="sw",
                     fill=outline,
                     font=("Segoe UI", 9, "bold"),
