@@ -46,7 +46,7 @@ class GhostOverlay:
         )
         self.canvas.pack(fill="both", expand=True)
 
-        self.root.update_idletasks()
+        self.root.update()
         self.hwnd = self.root.winfo_id()
         self._make_click_through()
 
@@ -70,14 +70,14 @@ class GhostOverlay:
             f"{self.region['width']}x{self.region['height']}"
             f"+{self.region['left']}+{self.region['top']}"
         )
-        self.root.update_idletasks()
+        self.root.update()
 
     def show(self):
         if self.region is None:
             return
 
         self.root.deiconify()
-        self.root.update_idletasks()
+        self.root.update()
 
         USER32.SetWindowPos(
             self.hwnd,
@@ -89,13 +89,13 @@ class GhostOverlay:
             SWP_NOACTIVATE | SWP_SHOWWINDOW,
         )
         USER32.ShowWindow(self.hwnd, SW_SHOWNOACTIVATE)
-        self.root.update_idletasks()
+        self.root.update()
         self._visible = True
 
     def hide_for_capture(self):
         if self._visible:
             self.root.withdraw()
-            self.root.update_idletasks()
+            self.root.update()
             self._visible = False
 
     def draw(self, candidates):
@@ -134,7 +134,7 @@ class GhostOverlay:
                     font=("Segoe UI", 9, "bold"),
                 )
 
-        self.root.update_idletasks()
+        self.root.update()
 
     def close(self):
         try:
