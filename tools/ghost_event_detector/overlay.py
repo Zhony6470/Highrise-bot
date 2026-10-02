@@ -82,12 +82,8 @@ class GhostOverlay:
             h = int(candidate["h"])
             kind = candidate.get("kind", "candidate")
 
-            if kind == "large":
-                outline = "#00FF66"
-            elif kind == "small":
-                outline = "#FFD400"
-            else:
-                outline = "#FFFFFF"
+            # Blanco: saturación baja, por lo que no entra en la máscara HSV.
+            outline = "#FFFFFF"
 
             # Rectángulo doble para que sea muy visible sobre el juego.
             self.canvas.create_rectangle(
