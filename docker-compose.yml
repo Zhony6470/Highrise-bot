@@ -126,6 +126,35 @@ services:
         done
 
 
+  ghost-wave-bot:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.bot
+    container_name: highrise-ghost-wave-bot
+    restart: unless-stopped
+    networks:
+      - highrise
+    env_file:
+      - .env
+    environment:
+      GHOST_WAVE_ROOM_ID: ${GHOST_WAVE_ROOM_ID}
+      GHOST_WAVE_API_KEY: ${GHOST_WAVE_API_KEY}
+      GHOST_WAVE_TIMEZONE: ${GHOST_WAVE_TIMEZONE:-UTC}
+      GHOST_WAVE_DEFAULT_INTERVAL: ${GHOST_WAVE_DEFAULT_INTERVAL:-75}
+      GHOST_WAVE_DATA_FILE: /app/bots/ghost_wave/data/ghost_wave.json
+    volumes:
+      - ./bots/ghost_wave/data/ghost_wave.json:/app/bots/ghost_wave/data/ghost_wave.json
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          python -u -m bots.ghost_wave.main
+          code=$?
+          echo "[GHOST] Proceso finalizó con código $code; reiniciando en 2s..."
+          sleep 2
+        done
+
   fun-bot:
     build:
       context: .
