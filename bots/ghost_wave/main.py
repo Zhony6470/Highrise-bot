@@ -36,6 +36,15 @@ class Bot(BaseBot):
         if h>23 or n>59:return None
         base=base or self.now(); x=base.replace(hour=h,minute=n,second=0,microsecond=0)
         return x if x>base else x+timedelta(days=1)
+
+    def actual_clock(self,s):
+        m=re.fullmatch(r"(\d{1,2}):(\d{2})",s.strip())
+        if not m:return None
+        h,n=map(int,m.groups())
+        if h>23 or n>59:return None
+        predicted=self.iso(self.store.d.get("next"))
+        base=predicted or self.now()
+        return base.replace(hour=h,minute=n,second=0,microsecond=0)
     def iso(self,x):
         try:return datetime.fromisoformat(x) if x else None
         except:return None
@@ -74,7 +83,7 @@ class Bot(BaseBot):
     async def command(self,u,msg):
         if not msg.lower().startswith("!ghost"):
             if self.admin(u) and self.store.d["waiting"]:
-                x=self.clock(msg)
+                x=self.actual_clock(msg)
                 if x: await self.actual(x); return f"✅ Registrada {x:%H:%M}.\n{self.status()}"
             return None
         p=msg.split(); a=p[1:]; c=a[0].lower() if a else "ayuda"
@@ -99,7 +108,7 @@ class Bot(BaseBot):
             self.store.d.update(enabled=False,next=None,waiting=False,alerted=False);self.store.save();return "▶️ Listo. Configura de nuevo con !ghost iniciar HH:MM 75."
         if c=="hora":
             if not self.admin(u) or len(a)!=2:return "🔒 Sin permiso o uso: !ghost hora HH:MM"
-            x=self.clock(a[1])
+            x=self.actual_clock(a[1]) if self.store.d["waiting"] else self.clock(a[1])
             if not x:return "🕐 Hora inválida."
             await self.actual(x);return f"✅ Hora real {x:%H:%M}.\n{self.status()}"
         if c=="intervalo":
