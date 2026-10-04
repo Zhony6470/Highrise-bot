@@ -3,198 +3,563 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 from zoneinfo import ZoneInfo
+
 from highrise import BaseBot, SessionMetadata
 from highrise.__main__ import BotDefinition, main as highrise_main
 
-DATA=Path(os.getenv("GHOST_WAVE_DATA_FILE","/app/bots/ghost_wave/data/ghost_wave.json"))
-DEFAULT_INTERVAL=int(os.getenv("GHOST_WAVE_DEFAULT_INTERVAL","75"))
-TZNAME=os.getenv("GHOST_WAVE_TIMEZONE","UTC")
+DATA = Path(os.getenv("GHOST_WAVE_DATA_FILE", "/app/bots/ghost_wave/data/ghost_wave.json"))
+DEFAULT_INTERVAL = int(os.getenv("GHOST_WAVE_DEFAULT_INTERVAL", "75"))
+TZNAME = os.getenv("GHOST_WAVE_TIMEZONE", "UTC")
+
 
 class Store:
     def __init__(self):
-        self.d={"enabled":False,"interval":DEFAULT_INTERVAL,"next":None,"last":None,"waiting":False,"alerted":False,"room":None,"rooms":{},"admins":[],"subs":[],"conversations":{},"names":{}}
+        self.d = {
+            "enabled": False,
+            "rooms": {},
+            "admins": [],
+            "subs": [],
+            "conversations": {},
+            "names": {},
+        }
         try:
-            if DATA.exists(): self.d.update(json.loads(DATA.read_text(encoding="utf8")))
-        except Exception as e: print("[GHOST] load:",e)
-        for k,v in {"rooms":{},"admins":[],"subs":[],"conversations":{},"names":{}}.items(): self.d.setdefault(k,v)
+            if DATA.exists():
+                self.d.update(json.loads(DATA.read_text(encoding="utf8")))
+        except Exception as e:
+            print("[GHOST] load:", e)
+        for key, value in {
+            "rooms": {}, "admins": [], "subs": [], "conversations": {}, "names": {}
+        }.items():
+            self.d.setdefault(key, value)
+
+        # Compatibilidad con una configuración antigua de una sola sala.
+        if "room" in self.d and self.d.get("room") and self.d["room"] in self.d["rooms"]:
+            room = self.d["rooms"][self.d["room"]]
+            room.setdefault("next", self.d.get("next"))
+            room.setdefault("last", self.d.get("last"))
+            room.setdefault("interval", self.d.get("interval", DEFAULT_INTERVAL))
+            room.setdefault("waiting", self.d.get("waiting", False))
+            room.setdefault("alerted", self.d.get("alerted", False))
+            room.setdefault("enabled", self.d.get("enabled", False))
+
     def save(self):
-        DATA.parent.mkdir(parents=True,exist_ok=True)
-        t=DATA.with_suffix(".tmp"); t.write_text(json.dumps(self.d,ensure_ascii=False,indent=2),encoding="utf8"); t.replace(DATA)
+        DATA.parent.mkdir(parents=True, exist_ok=True)
+        tmp = DATA.with_suffix(".tmp")
+        tmp.write_text(json.dumps(self.d, ensure_ascii=False, indent=2), encoding="utf8")
+        tmp.replace(DATA)
+
 
 class Bot(BaseBot):
     def __init__(self):
-        super().__init__(); self.owner_id=None; self.bot_id=None; self.store=Store(); self.task=None
+        super().__init__()
+        self.owner_id = None
+        self.bot_id = None
+        self.store = Store()
+        self.task = None
+
     @property
     def tz(self):
-        try:return ZoneInfo(str(self.store.d.get("timezone") or TZNAME))
-        except:return ZoneInfo("UTC")
-    def now(self): return datetime.now(self.tz)
-    def clock(self,s,base=None):
-        m=re.fullmatch(r"(\d{1,2}):(\d{2})",s.strip())
-        if not m:return None
-        h,n=map(int,m.groups())
-        if h>23 or n>59:return None
-        base=base or self.now(); x=base.replace(hour=h,minute=n,second=0,microsecond=0)
-        return x if x>base else x+timedelta(days=1)
+        try:
+            return ZoneInfo(str(self.store.d.get("timezone") or TZNAME))
+        except Exception:
+            return ZoneInfo("UTC")
 
-    def actual_clock(self,s):
-        m=re.fullmatch(r"(\d{1,2}):(\d{2})",s.strip())
-        if not m:return None
-        h,n=map(int,m.groups())
-        if h>23 or n>59:return None
-        predicted=self.iso(self.store.d.get("next"))
-        base=predicted or self.now()
-        return base.replace(hour=h,minute=n,second=0,microsecond=0)
-    def iso(self,x):
-        try:return datetime.fromisoformat(x) if x else None
-        except:return None
-    def owner(self,u): return u==self.owner_id
-    def admin(self,u): return self.owner(u) or u in self.store.d["admins"]
-    def fmt(self,x): return x.astimezone(self.tz).strftime("%d/%m %H:%M") if x else "no configurada"
-    async def inbox(self,u,msg):
-        cid=self.store.d["conversations"].get(u)
-        try:
-            if cid and await self.highrise.send_message(cid,msg) is None:return True
-        except Exception as e: print("[GHOST] inbox:",e)
-        try:return await self.highrise.send_message_bulk([u],msg) is None
-        except Exception as e: print("[GHOST] bulk:",e); return False
-    async def broadcast(self,ids,msg):
-        for u in list(dict.fromkeys(ids)):
-            await self.inbox(u,msg); await asyncio.sleep(.15)
-    async def find(self,name):
-        name=name.lstrip("@")
-        try:
-            r=await self.webapi.get_users(username=name)
-            x=next((u for u in r.users if u.username.casefold()==name.casefold()),None)
-            if x:return x.id,x.username
-        except Exception as e: print("[GHOST] find:",e)
-        return None
-    def room_id(self,link):
-        q=parse_qs(urlparse(link).query)
-        if q.get("id"):return q["id"][0]
-        m=re.search(r"(?:room[=/]|id=)([A-Za-z0-9_-]{10,})",link)
-        return m.group(1) if m else None
-    def status(self):
-        n=self.iso(self.store.d["next"]); l=self.iso(self.store.d["last"])
-        r=self.store.d["rooms"].get(self.store.d["room"],{})
-        return f"👻 GHOST WAVE\n{'🟢 ACTIVO' if self.store.d['enabled'] else '⏸️ DETENIDO'}\n⏱️ Intervalo: {self.store.d['interval']} min\n📅 Próxima: {self.fmt(n)}\n🕐 Última real: {self.fmt(l)}\n🏠 Sala: {r.get('name','no configurada')}\n🔗 {r.get('link','')}"+("\n⚠️ Esperando hora real." if self.store.d["waiting"] else "")
-    def help(self):
-        return "👻 GHOST WAVE\n!ghost estado\n!ghost iniciar HH:MM [min]\n!ghost parar\n!ghost reanudar\n!ghost hora HH:MM\n!ghost intervalo 75\n!ghost sala agregar nombre link\n!ghost sala principal nombre\n!ghost salas\n!ghost admin @usuario\n!ghost radmin @usuario\n!ghost suscribir @usuario\n!ghost quitar-suscripcion @usuario\n!ghost usuarios"
-    async def command(self,u,msg):
-        if not msg.lower().startswith("!ghost"):
-            if self.admin(u) and self.store.d["waiting"]:
-                x=self.actual_clock(msg)
-                if x: await self.actual(x); return f"✅ Registrada {x:%H:%M}.\n{self.status()}"
+    def now(self):
+        return datetime.now(self.tz)
+
+    def clock(self, value, base=None):
+        match = re.fullmatch(r"(\d{1,2}):(\d{2})", value.strip())
+        if not match:
             return None
-        p=msg.split(); a=p[1:]; c=a[0].lower() if a else "ayuda"
-        if c in ("ayuda","help"):return self.help()
-        if c=="estado":return self.status()
-        if c=="salas":return self.room_list()
-        if c=="iniciar":
-            if not self.admin(u):return "🔒 Sin permiso."
-            if len(a)<2:return "Uso: !ghost iniciar HH:MM [min]"
-            x=self.clock(a[1])
-            if not x:return "🕐 Hora inválida."
-            if not self.store.d["room"]:return "🏠 Primero configura una sala principal."
-            iv=int(a[2]) if len(a)>2 and a[2].isdigit() else self.store.d["interval"]
-            if iv<=0:return "⏱️ Intervalo inválido."
-            self.store.d.update(enabled=True,interval=iv,next=x.isoformat(),last=None,waiting=False,alerted=False);self.store.save()
-            return f"🟢 Iniciado. Próxima {x:%H:%M}; aviso {(x-timedelta(minutes=5)):%H:%M}; intervalo {iv} min."
-        if c in ("parar","detener","pausar"):
-            if not self.admin(u):return "🔒 Sin permiso."
-            self.store.d.update(enabled=False,waiting=False,alerted=False);self.store.save();return "⏸️ Anuncios detenidos. Al volver debes configurar una nueva hora."
-        if c in ("reanudar","activar"):
-            if not self.admin(u):return "🔒 Sin permiso."
-            self.store.d.update(enabled=False,next=None,waiting=False,alerted=False);self.store.save();return "▶️ Listo. Configura de nuevo con !ghost iniciar HH:MM 75."
-        if c=="hora":
-            if not self.admin(u) or len(a)!=2:return "🔒 Sin permiso o uso: !ghost hora HH:MM"
-            x=self.actual_clock(a[1]) if self.store.d["waiting"] else self.clock(a[1])
-            if not x:return "🕐 Hora inválida."
-            await self.actual(x);return f"✅ Hora real {x:%H:%M}.\n{self.status()}"
-        if c=="intervalo":
-            if not self.admin(u) or len(a)!=2 or not a[1].isdigit() or int(a[1])<=0:return "Uso: !ghost intervalo 75"
-            self.store.d["interval"]=int(a[1]);self.store.save();return f"⏱️ Intervalo: {a[1]} min."
-        if c=="admin" or c=="radmin" or c=="suscribir" or c=="quitar-suscripcion":
-            if not self.owner(u):return "🔒 Solo el propietario puede administrar accesos."
-            if len(a)!=2:return "Uso: !ghost admin|radmin|suscribir|quitar-suscripcion @usuario"
-            x=await self.find(a[1])
-            if not x:return "🔎 Usuario no encontrado."
-            uid,name=x; self.store.d["names"][uid]=name
-            if c=="admin":self.store.d["admins"]=sorted(set(self.store.d["admins"]+[uid]));out=f"🔐 @{name} puede configurar el bot."
-            elif c=="radmin":self.store.d["admins"]=[i for i in self.store.d["admins"] if i!=uid];out=f"🔓 @{name} perdió el acceso de configuración."
-            elif c=="suscribir":self.store.d["subs"]=sorted(set(self.store.d["subs"]+[uid]));out=f"📨 @{name} recibirá los avisos por buzón."
-            else:self.store.d["subs"]=[i for i in self.store.d["subs"] if i!=uid];out=f"🔕 @{name} ya no recibirá avisos."
-            self.store.save();return out
-        if c=="usuarios":
-            if not self.admin(u):return "🔒 Sin permiso."
-            n=self.store.d["names"];return "👥 ACCESOS\n🔐 Admins:\n"+"\n".join("@"+n.get(i,i) for i in self.store.d["admins"])+"\n📨 Suscritos:\n"+"\n".join("@"+n.get(i,i) for i in self.store.d["subs"])
-        if c=="sala":
-            if not self.admin(u):return "🔒 Sin permiso."
-            if len(a)<2:return self.room_list()
-            act=a[1].lower()
-            if act in ("agregar","editar") and len(a)>=4:
-                name=a[2];link=a[3];rid=self.room_id(link)
-                if not rid:return "🔗 Link de sala inválido."
-                self.store.d["rooms"][name]={"name":name,"link":link,"room_id":rid,"enabled":True}
-                self.store.d["room"]=self.store.d["room"] or name;self.store.save();return f"🏠 Sala {name} guardada."
-            if act=="principal" and len(a)==3:
-                if a[2] not in self.store.d["rooms"]:return "🔎 Sala no encontrada."
-                self.store.d["room"]=a[2];self.store.save();return f"⭐ Sala principal: {a[2]}"
-            if act in ("borrar","eliminar") and len(a)==3:
-                if a[2] not in self.store.d["rooms"]:return "🔎 Sala no encontrada."
-                del self.store.d["rooms"][a[2]]
-                if self.store.d["room"]==a[2]:self.store.d["room"]=next(iter(self.store.d["rooms"]),None)
-                self.store.save();return "🗑️ Sala eliminada."
-            return "🏠 Uso: !ghost sala agregar nombre link | principal nombre | borrar nombre"
-        return "❓ Usa !ghost ayuda."
+        hour, minute = map(int, match.groups())
+        if hour > 23 or minute > 59:
+            return None
+        base = base or self.now()
+        result = base.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        return result if result > base else result + timedelta(days=1)
+
+    def actual_clock(self, value, room_name=None):
+        match = re.fullmatch(r"(\d{1,2}):(\d{2})", value.strip())
+        if not match:
+            return None
+        hour, minute = map(int, match.groups())
+        if hour > 23 or minute > 59:
+            return None
+
+        if room_name and room_name in self.store.d["rooms"]:
+            predicted = self.iso(self.store.d["rooms"][room_name].get("next"))
+            base = predicted or self.now()
+        else:
+            base = self.now()
+
+        # La hora real puede ser anterior a la prevista en unos minutos.
+        result = base.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        if predicted := self.iso(self.store.d["rooms"].get(room_name, {}).get("next")) if room_name else None:
+            if result > predicted + timedelta(minutes=30):
+                result -= timedelta(days=1)
+        return result
+
+    def iso(self, value):
+        try:
+            return datetime.fromisoformat(value) if value else None
+        except Exception:
+            return None
+
+    def fmt(self, value):
+        return value.astimezone(self.tz).strftime("%d/%m %H:%M") if value else "--:--"
+
+    def owner(self, user_id):
+        return user_id == self.owner_id
+
+    def admin(self, user_id):
+        return self.owner(user_id) or user_id in self.store.d["admins"]
+
+    async def inbox(self, user_id, message):
+        conversation_id = self.store.d["conversations"].get(user_id)
+        try:
+            if conversation_id:
+                result = await self.highrise.send_message(conversation_id, message)
+                if result is None:
+                    return True
+        except Exception as e:
+            print("[GHOST] inbox:", e)
+        try:
+            result = await self.highrise.send_message_bulk([user_id], message)
+            return result is None
+        except Exception as e:
+            print("[GHOST] bulk:", e)
+            return False
+
+    async def broadcast(self, user_ids, message):
+        for user_id in list(dict.fromkeys(user_ids)):
+            await self.inbox(user_id, message)
+            await asyncio.sleep(0.15)
+
+    async def find_user(self, username):
+        username = username.lstrip("@")
+        try:
+            response = await self.webapi.get_users(username=username)
+            user = next(
+                (u for u in response.users
+                 if u.username.casefold() == username.casefold()),
+                None,
+            )
+            if user:
+                return user.id, user.username
+        except Exception as e:
+            print("[GHOST] find:", e)
+        return None
+
+    def extract_room_id(self, link):
+        query = parse_qs(urlparse(link).query)
+        if query.get("id"):
+            return query["id"][0]
+        match = re.search(r"(?:room[=/]|id=)([A-Za-z0-9_-]{10,})", link)
+        return match.group(1) if match else None
+
+    def room_names(self):
+        return list(self.store.d["rooms"].keys())
+
     def room_list(self):
-        if not self.store.d["rooms"]:return "🏠 No hay salas."
-        return "\n".join(("⭐ " if k==self.store.d["room"] else "• ")+k+"\n  "+v["link"] for k,v in self.store.d["rooms"].items())
-    async def actual(self,x):
-        nxt=x+timedelta(minutes=int(self.store.d["interval"]))
-        self.store.d.update(last=x.isoformat(),next=nxt.isoformat(),enabled=True,waiting=False,alerted=False);self.store.save()
-        await self.broadcast([self.owner_id]+self.store.d["admins"],f"✅ Oleada real: {x:%H:%M}\n👻 Próxima: {nxt:%H:%M}\n🔔 Aviso: {(nxt-timedelta(minutes=5)):%H:%M}")
-    async def invite(self,u,r):
-        cid=self.store.d["conversations"].get(u)
-        if cid and r.get("room_id"):
-            try: await self.highrise.send_message(cid,f"👻 Invitación: {r['name']}","invite",r["room_id"])
-            except Exception as e:print("[GHOST] invite:",e)
+        rooms = self.store.d["rooms"]
+        if not rooms:
+            return "🏠 No hay salas configuradas."
+
+        lines = ["🏠 SALAS Y HORARIOS"]
+        for name, room in rooms.items():
+            next_wave = self.iso(room.get("next"))
+            interval = int(room.get("interval", DEFAULT_INTERVAL))
+            if room.get("enabled") and next_wave:
+                alert = next_wave - timedelta(minutes=5)
+                state = "🟢 ACTIVA"
+                schedule = f"⏰ Próxima: {self.fmt(next_wave)} | 🔔 Aviso: {self.fmt(alert)}"
+            elif room.get("waiting"):
+                state = "🟡 ESPERANDO HORA REAL"
+                schedule = f"⏰ Prevista: {self.fmt(next_wave)}"
+            else:
+                state = "⏸️ DETENIDA"
+                schedule = "⏰ Sin horario"
+            lines.append(
+                f"\n{'⭐ ' if name == self.store.d.get('active_room') else '• '}{name} — {state}"
+            )
+            lines.append(f"   ⏱️ Cada {interval} min | {schedule}")
+            lines.append(f"   🔗 {room.get('link', '')}")
+        return "\n".join(lines)
+
+    def permissions_text(self):
+        names = self.store.d["names"]
+        admins = self.store.d["admins"]
+        subs = self.store.d["subs"]
+        lines = [
+            "🔐 PERMISOS GHOST WAVE",
+            f"👑 Propietario: @{names.get(self.owner_id, self.owner_id)}",
+            "",
+            "🛠️ Administradores:",
+        ]
+        lines += [f"• @{names.get(uid, uid)}" for uid in admins] or ["• Ninguno"]
+        lines += ["", "📨 Personas que reciben anuncios:"]
+        lines += [f"• @{names.get(uid, uid)}" for uid in subs] or ["• Ninguno"]
+        lines += [
+            "",
+            "ℹ️ Administrador = puede configurar.",
+            "ℹ️ Suscrito = recibe anuncios e invitaciones.",
+        ]
+        return "\n".join(lines)
+
+    def status(self):
+        enabled = [n for n, r in self.store.d["rooms"].items() if r.get("enabled")]
+        waiting = [n for n, r in self.store.d["rooms"].items() if r.get("waiting")]
+        return (
+            "👻 GHOST WAVE\n"
+            f"🟢 Salas activas: {len(enabled)}\n"
+            f"🟡 Esperando confirmación: {len(waiting)}\n"
+            f"🏠 Salas configuradas: {len(self.store.d['rooms'])}\n"
+            f"📨 Suscritos: {len(self.store.d['subs'])}\n"
+            f"🔐 Administradores: {len(self.store.d['admins'])}\n\n"
+            + self.room_list()
+        )
+
+    def help(self):
+        return (
+            "👻 GHOST WAVE — AYUDA\n\n"
+            "📊 !ghost estado\n"
+            "🏠 !ghost salas\n"
+            "▶️ !ghost iniciar <sala> HH:MM [min]\n"
+            "🕐 !ghost hora <sala> HH:MM\n"
+            "⏸️ !ghost parar <sala>\n"
+            "▶️ !ghost reanudar\n"
+            "⏱️ !ghost intervalo <sala> 75\n"
+            "➕ !ghost sala agregar <nombre> <link>\n"
+            "✏️ !ghost sala editar <nombre> <link>\n"
+            "🗑️ !ghost sala borrar <nombre>\n"
+            "⭐ !ghost sala principal <nombre>\n"
+            "📨 !ghost usuarios\n"
+            "🔐 !ghost permisos\n"
+            "🔑 !ghost admin @usuario\n"
+            "🔓 !ghost radmin @usuario\n"
+            "📩 !ghost suscribir @usuario\n"
+            "🔕 !ghost quitar-suscripcion @usuario"
+        )
+
+    async def command(self, user_id, message):
+        if not message.lower().startswith("!ghost"):
+            # Si hay exactamente una sala esperando confirmación, se puede
+            # responder solamente con HH:MM. Con varias, se exige indicar sala.
+            waiting = [
+                name for name, room in self.store.d["rooms"].items()
+                if room.get("waiting")
+            ]
+            if self.admin(user_id) and len(waiting) == 1:
+                actual = self.actual_clock(message, waiting[0])
+                if actual:
+                    await self.register_actual(waiting[0], actual)
+                    return f"✅ {waiting[0]} registrada a las {actual:%H:%M}."
+            return None
+
+        parts = message.split()
+        args = parts[1:]
+        command = args[0].lower() if args else "ayuda"
+
+        if command in ("ayuda", "help"):
+            return self.help()
+        if command == "estado":
+            if not self.admin(user_id):
+                return "🔒 Sin permiso."
+            return self.status()
+        if command == "salas":
+            return self.room_list()
+        if command == "permisos":
+            if not self.admin(user_id):
+                return "🔒 Sin permiso."
+            return self.permissions_text()
+        if command == "usuarios":
+            if not self.admin(user_id):
+                return "🔒 Sin permiso."
+            return self.permissions_text()
+
+        if command == "iniciar":
+            if not self.admin(user_id):
+                return "🔒 Sin permiso."
+            if len(args) < 3:
+                return "Uso: !ghost iniciar <sala> HH:MM [min]"
+            name, time_text = args[1], args[2]
+            room = self.store.d["rooms"].get(name)
+            if not room:
+                return "🔎 Sala no encontrada."
+            start = self.clock(time_text)
+            if not start:
+                return "🕐 Hora inválida. Usa HH:MM."
+            interval = int(args[3]) if len(args) >= 4 and args[3].isdigit() else int(room.get("interval", DEFAULT_INTERVAL))
+            if interval <= 0:
+                return "⏱️ Intervalo inválido."
+            room.update(
+                enabled=True, interval=interval, next=start.isoformat(),
+                last=None, waiting=False, alerted=False
+            )
+            self.store.save()
+            return (
+                f"🟢 {name} iniciada.\n"
+                f"⏰ Próxima: {start:%H:%M}\n"
+                f"🔔 Aviso: {(start - timedelta(minutes=5)):%H:%M}\n"
+                f"⏱️ Intervalo: {interval} minutos."
+            )
+
+        if command in ("parar", "detener", "pausar"):
+            if not self.admin(user_id):
+                return "🔒 Sin permiso."
+            if len(args) != 2:
+                return "Uso: !ghost parar <sala>"
+            room = self.store.d["rooms"].get(args[1])
+            if not room:
+                return "🔎 Sala no encontrada."
+            room.update(enabled=False, waiting=False, alerted=False)
+            self.store.save()
+            return f"⏸️ Anuncios detenidos para {args[1]}."
+
+        if command in ("reanudar", "activar"):
+            if not self.admin(user_id):
+                return "🔒 Sin permiso."
+            for room in self.store.d["rooms"].values():
+                room.update(enabled=False, waiting=False, alerted=False, next=None)
+            self.store.save()
+            return "▶️ Sistema listo. Debes configurar nuevamente cada sala con !ghost iniciar."
+
+        if command == "hora":
+            if not self.admin(user_id):
+                return "🔒 Sin permiso."
+            if len(args) != 3:
+                return "Uso: !ghost hora <sala> HH:MM"
+            name, time_text = args[1], args[2]
+            if name not in self.store.d["rooms"]:
+                return "🔎 Sala no encontrada."
+            actual = self.actual_clock(time_text, name)
+            if not actual:
+                return "🕐 Hora inválida."
+            await self.register_actual(name, actual)
+            return f"✅ {name}: activación real {actual:%H:%M}."
+
+        if command == "intervalo":
+            if not self.admin(user_id):
+                return "🔒 Sin permiso."
+            if len(args) != 3 or not args[2].isdigit() or int(args[2]) <= 0:
+                return "Uso: !ghost intervalo <sala> 75"
+            room = self.store.d["rooms"].get(args[1])
+            if not room:
+                return "🔎 Sala no encontrada."
+            room["interval"] = int(args[2])
+            self.store.save()
+            return f"⏱️ {args[1]} ahora usa {args[2]} minutos."
+
+        if command in ("admin", "radmin", "suscribir", "quitar-suscripcion"):
+            if not self.owner(user_id):
+                return "🔒 Solo el propietario puede administrar accesos."
+            if len(args) != 2:
+                return "Uso: !ghost admin|radmin|suscribir|quitar-suscripcion @usuario"
+            found = await self.find_user(args[1])
+            if not found:
+                return "🔎 Usuario no encontrado."
+            target_id, username = found
+            self.store.d["names"][target_id] = username
+
+            if command == "admin":
+                self.store.d["admins"] = sorted(set(self.store.d["admins"] + [target_id]))
+                reply = f"🔐 @{username} puede configurar el bot."
+            elif command == "radmin":
+                self.store.d["admins"] = [x for x in self.store.d["admins"] if x != target_id]
+                reply = f"🔓 @{username} ya no puede configurar el bot."
+            elif command == "suscribir":
+                self.store.d["subs"] = sorted(set(self.store.d["subs"] + [target_id]))
+                reply = f"📨 @{username} recibirá los anuncios por buzón."
+            else:
+                self.store.d["subs"] = [x for x in self.store.d["subs"] if x != target_id]
+                reply = f"🔕 @{username} ya no recibirá anuncios."
+
+            self.store.save()
+            return reply
+
+        if command == "sala":
+            if not self.admin(user_id):
+                return "🔒 Sin permiso."
+            if len(args) < 2:
+                return self.room_list()
+
+            action = args[1].lower()
+
+            if action in ("agregar", "editar") and len(args) >= 4:
+                name, link = args[2], args[3]
+                room_id = self.extract_room_id(link)
+                if not room_id:
+                    return "🔗 Link de sala inválido."
+                old = self.store.d["rooms"].get(name, {})
+                self.store.d["rooms"][name] = {
+                    **old,
+                    "name": name,
+                    "link": link,
+                    "room_id": room_id,
+                    "enabled": old.get("enabled", False),
+                    "interval": int(old.get("interval", DEFAULT_INTERVAL)),
+                    "next": old.get("next"),
+                    "last": old.get("last"),
+                    "waiting": old.get("waiting", False),
+                    "alerted": old.get("alerted", False),
+                }
+                self.store.save()
+                return f"🏠 Sala '{name}' guardada/actualizada."
+
+            if action in ("borrar", "eliminar") and len(args) == 3:
+                name = args[2]
+                room = self.store.d["rooms"].get(name)
+                if not room:
+                    return "🔎 Sala no encontrada."
+                if room.get("enabled") or room.get("waiting"):
+                    return (
+                        "⚠️ Esa sala tiene un horario activo o esperando confirmación. "
+                        "Primero usa !ghost parar " + name
+                    )
+                del self.store.d["rooms"][name]
+                self.store.save()
+                return f"🗑️ Sala '{name}' eliminada."
+
+            if action == "principal" and len(args) == 3:
+                name = args[2]
+                if name not in self.store.d["rooms"]:
+                    return "🔎 Sala no encontrada."
+                self.store.d["active_room"] = name
+                self.store.save()
+                return f"⭐ Sala principal: {name}"
+
+            return "🏠 Uso: agregar, editar, borrar o principal."
+
+        return "❓ Usa !ghost ayuda."
+
+    async def register_actual(self, room_name, actual):
+        room = self.store.d["rooms"][room_name]
+        interval = int(room.get("interval", DEFAULT_INTERVAL))
+        next_wave = actual + timedelta(minutes=interval)
+        room.update(
+            last=actual.isoformat(),
+            next=next_wave.isoformat(),
+            enabled=True,
+            waiting=False,
+            alerted=False,
+        )
+        self.store.save()
+
+        await self.broadcast(
+            [self.owner_id] + self.store.d["admins"],
+            f"✅ {room_name}: activación real {actual:%H:%M}.\n"
+            f"👻 Próxima: {next_wave:%H:%M}\n"
+            f"🔔 Aviso: {(next_wave - timedelta(minutes=5)):%H:%M}\n"
+            f"⏱️ Intervalo: {interval} minutos."
+        )
+
+    async def send_invite(self, user_id, room):
+        conversation_id = self.store.d["conversations"].get(user_id)
+        room_id = room.get("room_id")
+        if not conversation_id or not room_id:
+            return
+        try:
+            result = await self.highrise.send_message(
+                conversation_id,
+                f"👻 Invitación: {room['name']}",
+                "invite",
+                room_id,
+            )
+            if result is not None:
+                print("[GHOST] invite rejected:", result)
+        except Exception as e:
+            print("[GHOST] invite:", e)
+
     async def scheduler(self):
         while True:
             try:
-                if not self.store.d["enabled"] or self.store.d["waiting"]:await asyncio.sleep(3);continue
-                x=self.iso(self.store.d["next"])
-                if not x:await asyncio.sleep(3);continue
-                now=self.now(); r=self.store.d["rooms"].get(self.store.d["room"],{})
-                if not self.store.d["alerted"] and now>=x-timedelta(minutes=5):
-                    msg=f"👻 OLEADA EN 5 MINUTOS\n⏰ {x:%H:%M}\n🏠 {r.get('name','Sala')}\n🔗 {r.get('link','')}"
-                    await self.broadcast(self.store.d["subs"]+[self.owner_id],msg)
-                    for u in self.store.d["subs"]+[self.owner_id]:await self.invite(u,r)
-                    self.store.d["alerted"]=True;self.store.save()
-                if now>=x:
-                    await self.broadcast([self.owner_id]+self.store.d["admins"],f"👻 ¡HORA DE CONFIRMAR! Estaba prevista {x:%H:%M}. ¿A qué hora se activó realmente? Responde HH:MM.")
-                    self.store.d["waiting"]=True;self.store.save()
+                now = self.now()
+                for name, room in list(self.store.d["rooms"].items()):
+                    if not room.get("enabled") or room.get("waiting"):
+                        continue
+
+                    next_wave = self.iso(room.get("next"))
+                    if not next_wave:
+                        continue
+
+                    alert_at = next_wave - timedelta(minutes=5)
+
+                    if not room.get("alerted") and now >= alert_at:
+                        recipients = self.store.d["subs"] + [self.owner_id]
+                        message = (
+                            "👻 OLEADA EN 5 MINUTOS\n"
+                            f"🏠 Sala: {name}\n"
+                            f"⏰ Hora prevista: {next_wave:%H:%M}\n"
+                            f"🔗 {room.get('link', '')}\n\n"
+                            "¡Prepárate para entrar!"
+                        )
+                        await self.broadcast(recipients, message)
+                        for user_id in list(dict.fromkeys(recipients)):
+                            await self.send_invite(user_id, room)
+                            await asyncio.sleep(0.15)
+
+                        room["alerted"] = True
+                        self.store.save()
+
+                    if now >= next_wave and not room.get("waiting"):
+                        admins = [self.owner_id] + self.store.d["admins"]
+                        await self.broadcast(
+                            admins,
+                            "👻 ¡CONFIRMA LA OLEADA!\n"
+                            f"🏠 Sala: {name}\n"
+                            f"⏰ Estaba prevista para {next_wave:%H:%M}.\n\n"
+                            f"Responde: !ghost hora {name} HH:MM\n"
+                            "Si solo hay una sala esperando, también puedes responder HH:MM."
+                        )
+                        room["waiting"] = True
+                        self.store.save()
+
                 await asyncio.sleep(2)
-            except asyncio.CancelledError:raise
-            except Exception as e:print("[GHOST] scheduler:",e);await asyncio.sleep(5)
-    async def on_start(self,meta:SessionMetadata):
-        self.bot_id=meta.user_id;self.owner_id=meta.room_info.owner_id
-        if self.owner_id not in self.store.d["subs"]:self.store.d["subs"].append(self.owner_id)
-        self.store.save();self.task=asyncio.create_task(self.scheduler())
-        print(f"[GHOST] conectado bot={self.bot_id} owner={self.owner_id} tz={self.tz.key}")
-    async def on_message(self,user_id,conversation_id,is_new_conversation):
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                print("[GHOST] scheduler:", e)
+                await asyncio.sleep(5)
+
+    async def on_start(self, session_metadata: SessionMetadata):
+        self.bot_id = session_metadata.user_id
+        self.owner_id = session_metadata.room_info.owner_id
+        self.store.d["names"].setdefault(self.owner_id, "Propietario")
+        if self.owner_id not in self.store.d["subs"]:
+            self.store.d["subs"].append(self.owner_id)
+        self.store.save()
+        self.task = asyncio.create_task(self.scheduler())
+        print(
+            f"[GHOST] conectado bot={self.bot_id} "
+            f"owner={self.owner_id} tz={self.tz.key}"
+        )
+
+    async def on_message(self, user_id, conversation_id, is_new_conversation):
         try:
-            self.store.d["conversations"][user_id]=conversation_id;self.store.save()
-            c=await self.highrise.get_messages(conversation_id)
-            if not c.messages:return
-            response=await self.command(user_id,c.messages[0].content.strip())
-            if response:await self.highrise.send_message(conversation_id,response)
-        except Exception as e:print("[GHOST] message:",e)
-    async def on_chat(self,user,message):return
+            self.store.d["conversations"][user_id] = conversation_id
+            self.store.save()
+
+            conversation = await self.highrise.get_messages(conversation_id)
+            if not conversation.messages:
+                return
+
+            response = await self.command(user_id, conversation.messages[0].content.strip())
+            if response:
+                await self.highrise.send_message(conversation_id, response)
+        except Exception as e:
+            print("[GHOST] message:", e)
+
+    async def on_chat(self, user, message):
+        return
+
 
 async def main():
-    rid=os.getenv("GHOST_WAVE_ROOM_ID","").strip();key=os.getenv("GHOST_WAVE_API_KEY","").strip()
-    if not rid or not key:raise RuntimeError("Faltan GHOST_WAVE_ROOM_ID/GHOST_WAVE_API_KEY")
-    await highrise_main([BotDefinition(Bot(),rid,key)])
+    room_id = os.getenv("GHOST_WAVE_ROOM_ID", "").strip()
+    api_key = os.getenv("GHOST_WAVE_API_KEY", "").strip()
+    if not room_id or not api_key:
+        raise RuntimeError("Faltan GHOST_WAVE_ROOM_ID/GHOST_WAVE_API_KEY")
+    await highrise_main([BotDefinition(Bot(), room_id, api_key)])
 
-if __name__=="__main__":asyncio.run(main())
+
+if __name__ == "__main__":
+    asyncio.run(main())
