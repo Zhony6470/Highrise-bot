@@ -1,0 +1,1 @@
+Ghost Wave bot test
