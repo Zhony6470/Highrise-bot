@@ -1,0 +1,14 @@
+{
+  "enabled": false,
+  "interval": 75,
+  "next": null,
+  "last": null,
+  "waiting": false,
+  "alerted": false,
+  "room": null,
+  "rooms": {},
+  "admins": [],
+  "subs": [],
+  "conversations": {},
+  "names": {}
+}
