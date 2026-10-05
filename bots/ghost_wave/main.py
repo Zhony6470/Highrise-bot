@@ -99,6 +99,22 @@ class Bot(BaseBot):
                 result -= timedelta(days=1)
         return result
 
+    def last_wave_clock(self, value):
+        """Interpreta HH:MM como la última activación real, no como una hora futura."""
+        match = re.fullmatch(r"(\d{1,2}):(\d{2})", value.strip())
+        if not match:
+            return None
+        hour, minute = map(int, match.groups())
+        if hour > 23 or minute > 59:
+            return None
+
+        now = self.now()
+        result = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        # Si la hora indicada aún no ha ocurrido hoy, la última activación fue ayer.
+        if result > now:
+            result -= timedelta(days=1)
+        return result
+
     def iso(self, value):
         try:
             return datetime.fromisoformat(value) if value else None
@@ -232,7 +248,7 @@ class Bot(BaseBot):
             "👻 GHOST WAVE — AYUDA\n\n"
             "📊 !ghost estado\n"
             "🏠 !ghost salas\n"
-            "▶️ !ghost iniciar <sala> HH:MM [min]\n"
+            "▶️ !ghost iniciar <sala> HH:MM [min] (última oleada)\n"
             "🕐 !ghost hora <sala> HH:MM\n"
             "⏸️ !ghost parar <sala>\n"
             "▶️ !ghost reanudar\n"
@@ -293,21 +309,30 @@ class Bot(BaseBot):
             room = self.store.d["rooms"].get(name)
             if not room:
                 return "🔎 Sala no encontrada."
-            start = self.clock(time_text)
-            if not start:
-                return "🕐 Hora inválida. Usa HH:MM."
+            last_wave = self.last_wave_clock(time_text)
+            if not last_wave:
+                return "🕐 Hora inválida. Usa HH:MM como la última hora real de la oleada."
             interval = int(args[3]) if len(args) >= 4 and args[3].isdigit() else int(room.get("interval", DEFAULT_INTERVAL))
             if interval <= 0:
                 return "⏱️ Intervalo inválido."
+
+            next_wave = last_wave + timedelta(minutes=interval)
+            now = self.now()
+            # Si el cálculo quedó en el pasado, avanzar por intervalos hasta
+            # encontrar la próxima oleada que todavía no haya vencido.
+            while next_wave <= now:
+                next_wave += timedelta(minutes=interval)
+
             room.update(
-                enabled=True, interval=interval, next=start.isoformat(),
-                last=None, waiting=False, alerted=False
+                enabled=True, interval=interval, next=next_wave.isoformat(),
+                last=last_wave.isoformat(), waiting=False, alerted=False
             )
             self.store.save()
             return (
                 f"🟢 {name} iniciada.\n"
-                f"⏰ Próxima: {start:%H:%M}\n"
-                f"🔔 Aviso: {(start - timedelta(minutes=5)):%H:%M}\n"
+                f"🕐 Última oleada: {last_wave:%d/%m %H:%M}\n"
+                f"⏰ Próxima estimada: {next_wave:%H:%M}\n"
+                f"🔔 Aviso: {(next_wave - timedelta(minutes=5)):%H:%M}\n"
                 f"⏱️ Intervalo: {interval} minutos."
             )
 
