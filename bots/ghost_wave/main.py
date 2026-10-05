@@ -68,13 +68,11 @@ class Bot(BaseBot):
         return datetime.now(self.tz)
 
     def parse_clock(self, value):
-        """Acepta horas de 12 horas como 10:20 AM o 10:20 PM."""
-        match = re.fullmatch(r"(1[0-2]|0?[1-9]):([0-5]\d)\s*(AM|PM)", value.strip(), re.IGNORECASE)
+        """Acepta una hora sencilla H:MM/HH:MM sin AM ni PM."""
+        match = re.fullmatch(r"(1[0-2]|0?[1-9]):([0-5]\d)", value.strip())
         if not match:
             return None
         hour, minute = int(match.group(1)), int(match.group(2))
-        meridiem = match.group(3).upper()
-        hour = hour % 12 + (12 if meridiem == "PM" else 0)
         return hour, minute
 
     def actual_clock(self, value, room_name=None):
@@ -88,26 +86,35 @@ class Bot(BaseBot):
             predicted = self.iso(self.store.d["rooms"][room_name].get("next"))
         base = predicted or self.now()
 
-        result = base.replace(hour=hour, minute=minute, second=0, microsecond=0)
-        # La activación real suele estar cerca de la hora prevista.
-        if predicted and result > predicted + timedelta(minutes=30):
-            result -= timedelta(days=1)
-        elif not predicted and result > self.now():
-            result -= timedelta(days=1)
-        return result
+        # Sin AM/PM, elegimos la ocurrencia más cercana a la hora prevista.
+        candidates = [
+            base.replace(hour=hour % 12, minute=minute, second=0, microsecond=0),
+            base.replace(hour=(hour % 12) + 12, minute=minute, second=0, microsecond=0),
+        ]
+        if predicted:
+            candidates += [candidate - timedelta(days=1) for candidate in candidates]
+            candidates += [candidate + timedelta(days=1) for candidate in candidates[:2]]
+            return min(candidates, key=lambda candidate: abs((candidate - predicted).total_seconds()))
+        now = self.now()
+        past_candidates = [candidate for candidate in candidates if candidate <= now]
+        return max(past_candidates, default=max(candidates, key=lambda candidate: abs((candidate - now).total_seconds())))
 
     def last_wave_clock(self, value):
-        """Interpreta una hora AM/PM como la última activación real."""
+        """Interpreta una hora sencilla como la última activación real."""
         parsed = self.parse_clock(value)
         if not parsed:
             return None
         hour, minute = parsed
         now = self.now()
-        result = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-        # Si la hora indicada aún no ha ocurrido hoy, la última activación fue ayer.
-        if result > now:
-            result -= timedelta(days=1)
-        return result
+        candidates = [
+            now.replace(hour=hour % 12, minute=minute, second=0, microsecond=0),
+            now.replace(hour=(hour % 12) + 12, minute=minute, second=0, microsecond=0),
+        ]
+        # La última oleada debe ser una ocurrencia pasada; elige la más reciente.
+        past_candidates = [candidate for candidate in candidates if candidate <= now]
+        if not past_candidates:
+            past_candidates = [candidate - timedelta(days=1) for candidate in candidates]
+        return max(past_candidates)
 
     def iso(self, value):
         try:
@@ -116,7 +123,7 @@ class Bot(BaseBot):
             return None
 
     def fmt(self, value):
-        return value.astimezone(self.tz).strftime("%d/%m %I:%M %p") if value else "--:--"
+        return value.astimezone(self.tz).strftime("%d/%m %I:%M") if value else "--:--"
 
     def owner(self, user_id):
         return user_id == self.owner_id
@@ -242,8 +249,8 @@ class Bot(BaseBot):
             "👻 GHOST WAVE — AYUDA\n\n"
             "📊 !ghost estado\n"
             "🏠 !ghost salas\n"
-            "▶️ !ghost iniciar <sala> HH:MM AM/PM [min] (última oleada)\n"
-            "🕐 !ghost hora <sala> HH:MM AM/PM\n"
+            "▶️ !ghost iniciar <sala> HH:MM [min] (última oleada)\n"
+            "🕐 !ghost hora <sala> HH:MM\n"
             "⏸️ !ghost parar <sala>\n"
             "▶️ !ghost reanudar\n"
             "⏱️ !ghost intervalo <sala> 75\n"
@@ -298,7 +305,7 @@ class Bot(BaseBot):
             if not self.admin(user_id):
                 return "🔒 Sin permiso."
             if len(args) < 3:
-                return "Uso: !ghost iniciar <sala> HH:MM AM/PM [min]"
+                return "Uso: !ghost iniciar <sala> HH:MM [min]"
             name = args[1]
             time_text = args[2]
             interval_index = 3
@@ -310,7 +317,7 @@ class Bot(BaseBot):
                 return "🔎 Sala no encontrada."
             last_wave = self.last_wave_clock(time_text)
             if not last_wave:
-                return "🕐 Hora inválida. Usa formato de 12 horas, por ejemplo 10:20 AM o 10:20 PM."
+                return "🕐 Hora inválida. Usa formato de 12 horas, por ejemplo 10:20."
             interval = int(args[interval_index]) if len(args) > interval_index and args[interval_index].isdigit() else int(room.get("interval", DEFAULT_INTERVAL))
             if interval <= 0:
                 return "⏱️ Intervalo inválido."
@@ -329,9 +336,9 @@ class Bot(BaseBot):
             self.store.save()
             return (
                 f"🟢 {name} iniciada.\n"
-                f"🕐 Última oleada: {last_wave:%d/%m %I:%M %p}\n"
-                f"⏰ Próxima estimada: {next_wave:%I:%M %p}\n"
-                f"🔔 Aviso: {(next_wave - timedelta(minutes=5)):%I:%M %p}\n"
+                f"🕐 Última oleada: {last_wave:%d/%m %I:%M}\n"
+                f"⏰ Próxima estimada: {next_wave:%I:%M}\n"
+                f"🔔 Aviso: {(next_wave - timedelta(minutes=5)):%I:%M}\n"
                 f"⏱️ Intervalo: {interval} minutos."
             )
 
@@ -359,7 +366,7 @@ class Bot(BaseBot):
             if not self.admin(user_id):
                 return "🔒 Sin permiso."
             if len(args) not in (3, 4):
-                return "Uso: !ghost hora <sala> HH:MM AM/PM"
+                return "Uso: !ghost hora <sala> HH:MM"
             name, time_text = args[1], args[2]
             if len(args) == 4 and args[3].upper() in ("AM", "PM"):
                 time_text += " " + args[3]
@@ -476,7 +483,7 @@ class Bot(BaseBot):
             confirmed_by = room.get("confirmed_by")
             confirmed_at = self.iso(room.get("last"))
             name = self.store.d["names"].get(confirmed_by, confirmed_by or "otro administrador")
-            when = confirmed_at.strftime("%I:%M %p") if confirmed_at else "--:--"
+            when = confirmed_at.strftime("%I:%M") if confirmed_at else "--:--"
             return (
                 f"ℹ️ {room_name} ya fue confirmada por @{name} a las {when}.\n"
                 "La primera confirmación es la que se utiliza para calcular la próxima oleada."
@@ -503,16 +510,16 @@ class Bot(BaseBot):
                 others,
                 f"👻 Oleada confirmada\n"
                 f"🏠 Sala: {room_name}\n"
-                f"👤 @{confirmer_name} ya configuró la hora de activación: {actual:%I:%M %p}.\n"
-                f"🔮 Próxima oleada: {next_wave:%I:%M %p}\n"
-                f"🔔 Aviso: {(next_wave - timedelta(minutes=5)):%I:%M %p}\n"
+                f"👤 @{confirmer_name} ya configuró la hora de activación: {actual:%I:%M}.\n"
+                f"🔮 Próxima oleada: {next_wave:%I:%M}\n"
+                f"🔔 Aviso: {(next_wave - timedelta(minutes=5)):%I:%M}\n"
                 "ℹ️ No es necesario volver a configurar esta oleada."
             )
 
         return (
-            f"✅ {room_name}: activación real {actual:%I:%M %p}.\n"
-            f"👻 Próxima: {next_wave:%I:%M %p}\n"
-            f"🔔 Aviso: {(next_wave - timedelta(minutes=5)):%I:%M %p}\n"
+            f"✅ {room_name}: activación real {actual:%I:%M}.\n"
+            f"👻 Próxima: {next_wave:%I:%M}\n"
+            f"🔔 Aviso: {(next_wave - timedelta(minutes=5)):%I:%M}\n"
             f"⏱️ Intervalo: {interval} minutos."
         )
 
@@ -552,7 +559,7 @@ class Bot(BaseBot):
                         message = (
                             "👻 OLEADA EN 5 MINUTOS\n"
                             f"🏠 Sala: {name}\n"
-                            f"⏰ Hora prevista: {next_wave:%I:%M %p}\n"
+                            f"⏰ Hora prevista: {next_wave:%I:%M}\n"
                             f"🔗 {room.get('link', '')}\n\n"
                             "¡Prepárate para entrar!"
                         )
@@ -570,9 +577,9 @@ class Bot(BaseBot):
                             admins,
                             "👻 ¡CONFIRMA LA OLEADA!\n"
                             f"🏠 Sala: {name}\n"
-                            f"⏰ Estaba prevista para {next_wave:%I:%M %p}.\n\n"
-                            f"Responde: !ghost hora {name} HH:MM AM/PM\n"
-                            "Si solo hay una sala esperando, también puedes responder HH:MM AM/PM."
+                            f"⏰ Estaba prevista para {next_wave:%I:%M}.\n\n"
+                            f"Responde: !ghost hora {name} HH:MM\n"
+                            "Si solo hay una sala esperando, también puedes responder HH:MM."
                         )
                         room["waiting"] = True
                         self.store.save()
