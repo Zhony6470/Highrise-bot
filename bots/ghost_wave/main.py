@@ -136,16 +136,24 @@ class Bot(BaseBot):
             await asyncio.sleep(0.15)
 
     async def find_user(self, username):
-        username = username.lstrip("@")
+        username = username.lstrip("@").strip()
+        normalized = username.casefold()
+
+        # Primero consulta los usuarios que ya han escrito al bot.
+        # Esto evita depender exclusivamente del filtro público de WebAPI.
+        for user_id, known_name in self.store.d["names"].items():
+            if str(known_name).lstrip("@").casefold() == normalized:
+                return user_id, known_name
+
         try:
             response = await self.webapi.get_users(username=username)
             user = next(
                 (u for u in response.users
-                 if u.username.casefold() == username.casefold()),
+                 if (u.username or "").lstrip("@").casefold() == normalized),
                 None,
             )
             if user:
-                return user.id, user.username
+                return user.user_id, user.username or username
         except Exception as e:
             print("[GHOST] find:", e)
         return None
@@ -566,6 +574,17 @@ class Bot(BaseBot):
     async def on_message(self, user_id, conversation_id, is_new_conversation):
         try:
             self.store.d["conversations"][user_id] = conversation_id
+
+            # Guardar el username real de cualquiera que escriba al bot,
+            # para poder asignarle permisos aunque la búsqueda WebAPI falle.
+            try:
+                profile = await self.webapi.get_user(user_id)
+                username = getattr(profile.user, "username", None)
+                if username:
+                    self.store.d["names"][user_id] = username
+            except Exception as e:
+                print("[GHOST] profile lookup:", e)
+
             self.store.save()
 
             conversation = await self.highrise.get_messages(conversation_id)
