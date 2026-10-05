@@ -56,6 +56,7 @@ class Bot(BaseBot):
         self.bot_id = None
         self.store = Store()
         self.task = None
+        self.scheduler_lock = asyncio.Lock()
 
     @property
     def tz(self):
@@ -555,34 +556,57 @@ class Bot(BaseBot):
                     alert_at = next_wave - timedelta(minutes=5)
 
                     if not room.get("alerted") and now >= alert_at:
-                        recipients = self.store.d["subs"] + [self.owner_id]
-                        message = (
-                            "👻 OLEADA EN 5 MINUTOS\n"
-                            f"🏠 Sala: {name}\n"
-                            f"⏰ Hora prevista: {next_wave:%I:%M}\n"
-                            f"🔗 {room.get('link', '')}\n\n"
-                            "¡Prepárate para entrar!"
-                        )
-                        await self.broadcast(recipients, message)
-                        for user_id in list(dict.fromkeys(recipients)):
-                            await self.send_invite(user_id, room)
-                            await asyncio.sleep(0.15)
-
-                        room["alerted"] = True
-                        self.store.save()
+                        # Registrar el aviso antes de enviar mensajes. Si hay otra
+                        # tarea de scheduler, no debe volver a anunciar el mismo evento.
+                        async with self.scheduler_lock:
+                            room = self.store.d["rooms"].get(name)
+                            if room and room.get("enabled") and not room.get("waiting") and not room.get("alerted"):
+                                current_next = self.iso(room.get("next"))
+                                if current_next and self.now() >= current_next - timedelta(minutes=5):
+                                    room["alerted"] = True
+                                    self.store.save()
+                                    recipients = list(dict.fromkeys(self.store.d["subs"] + [self.owner_id]))
+                                    message = (
+                                        "👻 OLEADA EN 5 MINUTOS\n"
+                                        f"🏠 Sala: {name}\n"
+                                        f"⏰ Hora prevista: {current_next:%I:%M}\n"
+                                        f"🔗 {room.get('link', '')}\n\n"
+                                        "¡Prepárate para entrar!"
+                                    )
+                                else:
+                                    recipients = []
+                                    message = ""
+                            else:
+                                recipients = []
+                                message = ""
+                        if recipients:
+                            await self.broadcast(recipients, message)
+                            for user_id in recipients:
+                                await self.send_invite(user_id, room)
+                                await asyncio.sleep(0.15)
 
                     if now >= next_wave and not room.get("waiting"):
-                        admins = [self.owner_id] + self.store.d["admins"]
-                        await self.broadcast(
-                            admins,
-                            "👻 ¡CONFIRMA LA OLEADA!\n"
-                            f"🏠 Sala: {name}\n"
-                            f"⏰ Estaba prevista para {next_wave:%I:%M}.\n\n"
-                            f"Responde: !ghost hora {name} HH:MM\n"
-                            "Si solo hay una sala esperando, también puedes responder HH:MM."
-                        )
-                        room["waiting"] = True
-                        self.store.save()
+                        # Marcar primero la confirmación pendiente para impedir que
+                        # otros ciclos/tareas envíen el mismo aviso de confirmación.
+                        async with self.scheduler_lock:
+                            room = self.store.d["rooms"].get(name)
+                            current_next = self.iso(room.get("next")) if room else None
+                            if room and room.get("enabled") and not room.get("waiting") and current_next and self.now() >= current_next:
+                                room["waiting"] = True
+                                self.store.save()
+                                admins = list(dict.fromkeys([self.owner_id] + self.store.d["admins"]))
+                                confirmation_message = (
+                                    "👻 ¡CONFIRMA LA OLEADA!\n"
+                                    f"🏠 Sala: {name}\n"
+                                    f"⏰ Estaba prevista para {current_next:%I:%M}.\n\n"
+                                    f"Responde: !ghost hora {name} HH:MM\n"
+                                    "Si solo hay una sala esperando, también puedes responder HH:MM."
+                                )
+                            else:
+                                admins = []
+                                confirmation_message = ""
+                        if admins:
+                            await self.broadcast(admins, confirmation_message)
 
                 await asyncio.sleep(2)
             except asyncio.CancelledError:
@@ -598,7 +622,10 @@ class Bot(BaseBot):
         if self.owner_id not in self.store.d["subs"]:
             self.store.d["subs"].append(self.owner_id)
         self.store.save()
-        self.task = asyncio.create_task(self.scheduler())
+        # Highrise puede disparar on_start más de una vez durante reconexiones.
+        # Mantener una sola tarea de scheduler por instancia del bot.
+        if self.task is None or self.task.done():
+            self.task = asyncio.create_task(self.scheduler())
         print(
             f"[GHOST] conectado bot={self.bot_id} "
             f"owner={self.owner_id} tz={self.tz.key}"
