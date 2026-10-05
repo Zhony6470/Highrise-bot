@@ -69,7 +69,7 @@ class Bot(BaseBot):
 
     def parse_clock(self, value):
         """Acepta horas de 12 horas como 10:20 AM o 10:20 PM."""
-        match = re.fullmatch(r"(1[0-2]|0?[1-9]):([0-5]\\d)\\s*(AM|PM)", value.strip(), re.IGNORECASE)
+        match = re.fullmatch(r"(1[0-2]|0?[1-9]):([0-5]\d)\s*(AM|PM)", value.strip(), re.IGNORECASE)
         if not match:
             return None
         hour, minute = int(match.group(1)), int(match.group(2))
