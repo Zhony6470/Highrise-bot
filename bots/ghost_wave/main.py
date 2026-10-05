@@ -424,10 +424,12 @@ class Bot(BaseBot):
             return reply
 
         if command == "sala":
-            if not self.admin(user_id):
-                return "🔒 Sin permiso."
+            # Cualquier usuario puede consultar salas y horarios; solo los
+            # administradores pueden agregar, editar, borrar o elegir la principal.
             if len(args) < 2:
                 return self.room_list()
+            if not self.admin(user_id):
+                return "🔒 Sin permiso."
 
             action = args[1].lower()
 
