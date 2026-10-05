@@ -252,8 +252,7 @@ class Bot(BaseBot):
             if self.admin(user_id) and len(waiting) == 1:
                 actual = self.actual_clock(message, waiting[0])
                 if actual:
-                    await self.register_actual(waiting[0], actual)
-                    return f"✅ {waiting[0]} registrada a las {actual:%H:%M}."
+                    return await self.register_actual(waiting[0], actual, user_id)
             return None
 
         parts = message.split()
@@ -332,11 +331,16 @@ class Bot(BaseBot):
             name, time_text = args[1], args[2]
             if name not in self.store.d["rooms"]:
                 return "🔎 Sala no encontrada."
+            room = self.store.d["rooms"][name]
+            if not room.get("waiting"):
+                return (
+                    f"ℹ️ {name} ya no está esperando confirmación. "
+                    "La hora de esta oleada ya fue registrada."
+                )
             actual = self.actual_clock(time_text, name)
             if not actual:
                 return "🕐 Hora inválida."
-            await self.register_actual(name, actual)
-            return f"✅ {name}: activación real {actual:%H:%M}."
+            return await self.register_actual(name, actual, user_id)
 
         if command == "intervalo":
             if not self.admin(user_id):
@@ -432,21 +436,46 @@ class Bot(BaseBot):
 
         return "❓ Usa !ghost ayuda."
 
-    async def register_actual(self, room_name, actual):
+    async def register_actual(self, room_name, actual, confirmer_id):
         room = self.store.d["rooms"][room_name]
+        if not room.get("waiting"):
+            confirmed_by = room.get("confirmed_by")
+            confirmed_at = self.iso(room.get("last"))
+            name = self.store.d["names"].get(confirmed_by, confirmed_by or "otro administrador")
+            when = confirmed_at.strftime("%H:%M") if confirmed_at else "--:--"
+            return (
+                f"ℹ️ {room_name} ya fue confirmada por @{name} a las {when}.\n"
+                "La primera confirmación es la que se utiliza para calcular la próxima oleada."
+            )
+
         interval = int(room.get("interval", DEFAULT_INTERVAL))
         next_wave = actual + timedelta(minutes=interval)
+        confirmer_name = self.store.d["names"].get(confirmer_id, confirmer_id)
         room.update(
             last=actual.isoformat(),
             next=next_wave.isoformat(),
             enabled=True,
             waiting=False,
             alerted=False,
+            confirmed_by=confirmer_id,
         )
+        self.store.d["names"].setdefault(confirmer_id, confirmer_name)
         self.store.save()
 
-        await self.broadcast(
-            [self.owner_id] + self.store.d["admins"],
+        admins = list(dict.fromkeys([self.owner_id] + self.store.d["admins"]))
+        others = [uid for uid in admins if uid != confirmer_id]
+        if others:
+            await self.broadcast(
+                others,
+                f"👻 Oleada confirmada\n"
+                f"🏠 Sala: {room_name}\n"
+                f"👤 @{confirmer_name} ya configuró la hora de activación: {actual:%H:%M}.\n"
+                f"🔮 Próxima oleada: {next_wave:%H:%M}\n"
+                f"🔔 Aviso: {(next_wave - timedelta(minutes=5)):%H:%M}\n"
+                "ℹ️ No es necesario volver a configurar esta oleada."
+            )
+
+        return (
             f"✅ {room_name}: activación real {actual:%H:%M}.\n"
             f"👻 Próxima: {next_wave:%H:%M}\n"
             f"🔔 Aviso: {(next_wave - timedelta(minutes=5)):%H:%M}\n"
