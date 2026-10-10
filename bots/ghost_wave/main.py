@@ -7,6 +7,11 @@ from zoneinfo import ZoneInfo
 from highrise import BaseBot, SessionMetadata
 from highrise.__main__ import BotDefinition, main as highrise_main
 
+from bots.ghost_wave.games.rps import RPSGame
+from bots.ghost_wave.games.reto import RetoGame
+from bots.ghost_wave.games.adivina import AdivinaGame
+from bots.ghost_wave.games.quien import QuienGame
+
 DATA = Path(os.getenv("GHOST_WAVE_DATA_FILE", "/app/bots/ghost_wave/data/ghost_wave.json"))
 DEFAULT_INTERVAL = int(os.getenv("GHOST_WAVE_DEFAULT_INTERVAL", "75"))
 TZNAME = os.getenv("GHOST_WAVE_TIMEZONE", "UTC")
@@ -57,6 +62,11 @@ class Bot(BaseBot):
         self.store = Store()
         self.task = None
         self.scheduler_lock = asyncio.Lock()
+        # Juegos separados del planificador de oleadas; todas sus respuestas son individuales.
+        self.rps_game = RPSGame(self)
+        self.reto_game = RetoGame()
+        self.adivina_game = AdivinaGame()
+        self.quien_game = QuienGame()
 
     @property
     def tz(self):
@@ -249,6 +259,11 @@ class Bot(BaseBot):
         return (
             "👻 GHOST WAVE — AYUDA\n\n"
             "👻 !s <sala> — Avisar que apareció Susan y enviar invitación\n"
+            "🎮 JUEGOS INDIVIDUALES (solo por buzón privado)\n"
+            "⚔️ !rps @usuario — Retar a un jugador; aceptar/rechazar y luego piedra/papel/tijera\n"
+            "🎲 !reto — Recibir un reto personal\n"
+            "🧩 !adivina — Adivinanza individual | !adivina otra | !puntos\n"
+            "🎭 !quien — Pregunta divertida individual\n\n"
             "📊 !ghost estado\n"
             "🏠 !ghost salas\n"
             "▶️ !ghost iniciar <sala> HH:MM [min] (última oleada)\n"
@@ -269,6 +284,23 @@ class Bot(BaseBot):
         )
 
     async def command(self, user_id, message):
+        # Los juegos se procesan antes de los comandos administrativos.
+        # No usan broadcast ni envían mensajes a la lista de suscriptores.
+        game_response = await self.rps_game.handle(user_id, message)
+        if game_response:
+            return game_response
+
+        game_response = await self.reto_game.handle(message)
+        if game_response:
+            return game_response
+
+        game_response = await self.adivina_game.handle(user_id, message)
+        if game_response:
+            return game_response
+
+        game_response = await self.quien_game.handle(message)
+        if game_response:
+            return game_response
         # Aviso urgente de Susan: !s <nombre_sala>
         # Solo admins pueden dispararlo; el aviso y la invitación van a suscriptores.
         if message.strip().lower().startswith("!s"):
