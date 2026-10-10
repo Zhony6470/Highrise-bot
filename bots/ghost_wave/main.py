@@ -259,6 +259,10 @@ class Bot(BaseBot):
         return (
             "👻 GHOST WAVE — AYUDA\n\n"
             "👻 !s <sala> — Avisar que apareció Susan y enviar invitación\n"
+            "📣 !m <mensaje> — Enviar a suscriptores mostrando quién lo envió\n"
+            "📨 !m @usuario <mensaje> — Enviar mensaje identificado a una persona\n"
+            "🕵️ !mp <mensaje> — Enviar mensaje anónimo a suscriptores\n"
+            "🤫 !mp @usuario <mensaje> — Enviar mensaje anónimo a una persona\n"
             "🎮 JUEGOS INDIVIDUALES (solo por buzón privado)\n"
             "⚔️ !rps @usuario — Retar a un jugador; aceptar/rechazar y luego piedra/papel/tijera\n"
             "🎲 !reto — Recibir un reto personal\n"
@@ -301,6 +305,59 @@ class Bot(BaseBot):
         game_response = await self.quien_game.handle(message)
         if game_response:
             return game_response
+        # Mensajes manuales para suscriptores o una persona concreta.
+        # Solo administradores pueden emitir mensajes para evitar spam.
+        if message.strip().lower().startswith(("!m ", "!mp ")):
+            parts = message.strip().split(maxsplit=2)
+            cmd = parts[0].lower()
+            if not self.admin(user_id):
+                return "🔒 Solo los administradores pueden usar !m y !mp."
+            if len(parts) < 2:
+                return "Uso: !m <mensaje> | !mp <mensaje> | !m @usuario <mensaje> | !mp @usuario <mensaje>"
+
+            anonymous = cmd == "!mp"
+            target_id = None
+            target_name = None
+            message_text = ""
+
+            if parts[1].startswith("@"):
+                if len(parts) < 3 or not parts[2].strip():
+                    return f"Uso: {cmd} @usuario <mensaje>"
+                found = await self.find_user(parts[1])
+                if not found:
+                    return "🔎 No encuentro a ese usuario. Pídele que escriba primero 'hola' a Ghost Wave."
+                target_id, target_name = found
+                if target_id == user_id and not anonymous:
+                    sender_name = self.store.d["names"].get(user_id, "Administrador")
+                    message_text = parts[2].strip()
+                else:
+                    message_text = parts[2].strip()
+                if not self.store.d["conversations"].get(target_id):
+                    return "📩 Esa persona debe escribir primero 'hola' a Ghost Wave para habilitar su conversación privada."
+                if anonymous:
+                    outgoing = f"📨 MENSAJE ANÓNIMO\n\n{message_text}"
+                else:
+                    sender_name = self.store.d["names"].get(user_id, "Administrador")
+                    outgoing = f"📨 MENSAJE DE @{sender_name}\n\n{message_text}"
+                ok = await self.inbox(target_id, outgoing)
+                if not ok:
+                    return "⚠️ No pude entregar el mensaje. Revisa los registros del bot."
+                return f"✅ Mensaje {'anónimo ' if anonymous else ''}enviado a @{target_name}."
+
+            message_text = message[len(parts[0]):].strip()
+            if not message_text:
+                return f"Uso: {cmd} <mensaje>"
+            recipients = list(dict.fromkeys(self.store.d["subs"]))
+            if not recipients:
+                return "📭 No hay suscriptores configurados."
+            if anonymous:
+                outgoing = f"📨 MENSAJE ANÓNIMO\n\n{message_text}"
+            else:
+                sender_name = self.store.d["names"].get(user_id, "Administrador")
+                outgoing = f"📨 MENSAJE DE @{sender_name}\n\n{message_text}"
+            await self.broadcast(recipients, outgoing)
+            return f"✅ Mensaje {'anónimo ' if anonymous else ''}enviado a {len(recipients)} suscriptores."
+
         # Aviso urgente de Susan: !s <nombre_sala>
         # Solo admins pueden dispararlo; el aviso y la invitación van a suscriptores.
         if message.strip().lower().startswith("!s"):
