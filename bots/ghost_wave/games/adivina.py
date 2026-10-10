@@ -26,6 +26,9 @@ class AdivinaGame:
             return "🧩 Nueva adivinanza:\n" + riddle[0]
         if text == "!puntos":
             return f"⭐ Tus puntos de adivinanzas: {self.points.get(user_id, 0)}"
+        # Los comandos de Ghost Wave y otros comandos ajenos al juego deben seguir funcionando.
+        if text.startswith("!") and text not in ("!adivina", "!adivina otra", "!adivina ayuda", "!puntos"):
+            return None
         if user_id not in self.sessions:
             if text == "!adivina ayuda":
                 return "🧩 !adivina — empieza una adivinanza individual. Responde en tu conversación privada. !adivina otra cambia la pregunta; !puntos muestra tu puntaje."
