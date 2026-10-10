@@ -248,6 +248,7 @@ class Bot(BaseBot):
     def help(self):
         return (
             "👻 GHOST WAVE — AYUDA\n\n"
+            "👻 !s <sala> — Avisar que apareció Susan y enviar invitación\n"
             "📊 !ghost estado\n"
             "🏠 !ghost salas\n"
             "▶️ !ghost iniciar <sala> HH:MM [min] (última oleada)\n"
@@ -268,6 +269,34 @@ class Bot(BaseBot):
         )
 
     async def command(self, user_id, message):
+        # Aviso urgente de Susan: !s <nombre_sala>
+        # Solo admins pueden dispararlo; el aviso y la invitación van a suscriptores.
+        if message.strip().lower().startswith("!s"):
+            parts = message.strip().split()
+            if parts and parts[0].lower() == "!s":
+                if not self.admin(user_id):
+                    return "🔒 Solo los administradores pueden avisar sobre Susan."
+                if len(parts) != 2:
+                    return "Uso: !s <sala>"
+                name = parts[1]
+                room = self.store.d["rooms"].get(name)
+                if not room:
+                    return f"🔎 No encuentro la sala '{name}'. Usa !ghost salas para ver las salas configuradas."
+                recipients = list(dict.fromkeys(self.store.d["subs"]))
+                if not recipients:
+                    return "📭 No hay suscriptores configurados."
+                message_text = (
+                    f"👻 ¡Ha aparecido Susan, el gran fantasma, en la {name}!\n\n"
+                    f"🔗 Entra aquí: {room.get('link', '')}\n\n"
+                    "⏳ Cuando llegues, espera a los demás para explotarla juntos. "
+                    "¡Rápido antes de que desaparezca!"
+                )
+                await self.broadcast(recipients, message_text)
+                for recipient_id in recipients:
+                    await self.send_invite(recipient_id, room)
+                    await asyncio.sleep(0.15)
+                return f"✅ Aviso de Susan enviado a {len(recipients)} suscriptores para {name}."
+
         if not message.lower().startswith("!ghost"):
             # Si hay exactamente una sala esperando confirmación, se puede
             # responder solamente con HH:MM. Con varias, se exige indicar sala.
