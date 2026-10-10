@@ -109,7 +109,7 @@ class RPSGame:
 
     def _cancel_timeout(self, match_id):
         task = self.timeout_tasks.pop(match_id, None)
-        if task and not task.done():
+        if task and task is not asyncio.current_task() and not task.done():
             task.cancel()
 
     async def _timeout(self, match_id):
