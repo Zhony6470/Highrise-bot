@@ -44,6 +44,9 @@ class RPSGame:
         match_id = self.user_match.get(user_id)
         if not match_id:
             return None
+        # No interceptar los comandos normales de Ghost Wave mientras hay una partida.
+        if cmd.startswith("!") and cmd not in ("!aceptar", "!rechazar", "!cancelar", "!piedra", "!papel", "!tijera"):
+            return None
         match = self.matches.get(match_id)
         if not match:
             self.user_match.pop(user_id, None)
