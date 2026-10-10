@@ -128,14 +128,16 @@ class RPSGame:
                 return
             if len(choices) == 1:
                 winner = next(iter(choices))
-                loser = p2 if winner == p1 else p1
                 match["wins"][winner] += 1
-                note = f"⏳ Se acabó el tiempo. @{match[\"names\"][winner]} gana la ronda porque el rival no eligió."
-                score = f"📊 Marcador: @{match[\"names\"][p1]} {match[\"wins\"][p1]} - {match[\"wins\"][p2]} @{match[\"names\"][p2]}"
+                winner_name = match["names"][winner]
+                p1_name = match["names"][p1]
+                p2_name = match["names"][p2]
+                note = f"⏳ Se acabó el tiempo. @{winner_name} gana la ronda porque el rival no eligió."
+                score = f"📊 Marcador: @{p1_name} {match['wins'][p1]} - {match['wins'][p2]} @{p2_name}"
                 for uid in (p1, p2):
-                    await self.bot.inbox(uid, note + "\\n" + score)
+                    await self.bot.inbox(uid, note + "\n" + score)
                 if match["wins"][winner] >= 2:
-                    final = f"🏆 ¡Partida terminada! Ganó @{match[\"names\"][winner]}."
+                    final = f"🏆 ¡Partida terminada! Ganó @{winner_name}."
                     await self.bot.inbox(p1, final)
                     await self.bot.inbox(p2, final)
                     self._cleanup(match_id)
