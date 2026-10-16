@@ -418,19 +418,23 @@ class Bot(BotRuntimeMixin, BaseBot):
         loop = asyncio.get_running_loop()
         next_send_at = loop.time()
 
-        try:
-            while True:
+        while True:
+            try:
                 random_emote = choice(self.emotes_list)
                 await self.highrise.send_emote(random_emote["emote"], user_id)
 
                 interval = max(float(random_emote.get("duration", 3)) - 0.12, 0.1)
                 next_send_at += interval
+                # Si la API se retrasó demasiado, evita enviar varias solicitudes seguidas.
+                if next_send_at < loop.time():
+                    next_send_at = loop.time() + interval
                 await asyncio.sleep(max(0.0, next_send_at - loop.time()))
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            print(f"Error enviando emote aleatorio a {user_id}: {e}")
-            await asyncio.sleep(2)
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                print(f"Error enviando emote aleatorio a {user_id}: {e}")
+                await asyncio.sleep(2)
+                next_send_at = loop.time()
 
     async def follow_user_loop(self):
         """Bucle para seguir al usuario que activó !follow."""
