@@ -1,5 +1,11 @@
 [
   {
+    "command": "Summoning",
+    "emote": "emote-summoning",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
     "command": "Rest",
     "emote": "sit-idle-cute",
     "duration": 17.1,
