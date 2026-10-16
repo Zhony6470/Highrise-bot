@@ -2568,10 +2568,7 @@
     "command": "Jumpscared 1",
     "emote": "emote-jumpscared1",
     "duration": 5,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 375,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+    "auth": "public"
   },
   {
     "command": "Jumpscared 2",
