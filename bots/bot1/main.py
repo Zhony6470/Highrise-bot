@@ -390,32 +390,47 @@ class Bot(BotRuntimeMixin, BaseBot):
         return True
 
     async def emote_loop(self, user_id: str, emote_id: str, duration: float, first_already_sent: bool = False):
-        """Bucle continuo para ejecutar un emote en un usuario."""
-        first_iteration = True
-        while True:
-            try:
-                if not (first_iteration and first_already_sent):
-                    await self.highrise.send_emote(emote_id, user_id)
-                first_iteration = False
-                await asyncio.sleep(duration)
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                print(f"[EMOTE LOOP ERROR] Error enviando {emote_id} a {user_id}: {e}")
-                break
+        """Repite un emote con tiempos programados para reducir pausas acumuladas."""
+        loop = asyncio.get_running_loop()
+        interval = max(float(duration) - 0.12, 0.1)
+        next_send_at = loop.time()
+
+        try:
+            if first_already_sent:
+                # El primer emote ya fue enviado por el comando que inició el bucle.
+                next_send_at += interval
+            else:
+                await self.highrise.send_emote(emote_id, user_id)
+                next_send_at += interval
+
+            while True:
+                # Plazos monotónicos evitan sumar la latencia de la API a cada ciclo.
+                await asyncio.sleep(max(0.0, next_send_at - loop.time()))
+                await self.highrise.send_emote(emote_id, user_id)
+                next_send_at += interval
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            print(f"[EMOTE LOOP ERROR] Error enviando {emote_id} a {user_id}: {e}")
 
     async def random_emote_loop(self, user_id: str):
-        """Ejecuta un bucle de emotes aleatorios sobre un usuario."""
-        while True:
-            try:
+        """Ejecuta emotes aleatorios usando plazos para evitar acumular latencia."""
+        loop = asyncio.get_running_loop()
+        next_send_at = loop.time()
+
+        try:
+            while True:
                 random_emote = choice(self.emotes_list)
                 await self.highrise.send_emote(random_emote["emote"], user_id)
-                await asyncio.sleep(random_emote.get("duration", 3))
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                print(f"Error enviando emote aleatorio a {user_id}: {e}")
-                await asyncio.sleep(2)
+
+                interval = max(float(random_emote.get("duration", 3)) - 0.12, 0.1)
+                next_send_at += interval
+                await asyncio.sleep(max(0.0, next_send_at - loop.time()))
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            print(f"Error enviando emote aleatorio a {user_id}: {e}")
+            await asyncio.sleep(2)
 
     async def follow_user_loop(self):
         """Bucle para seguir al usuario que activó !follow."""
