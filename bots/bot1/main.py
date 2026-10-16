@@ -102,6 +102,10 @@ class Bot(BotRuntimeMixin, BaseBot):
             for emote in emotes:
                 if not isinstance(emote, dict):
                     continue
+                # Los emotes desactivados se conservan al final del JSON,
+                # pero no se cargan al catálogo ejecutable.
+                if emote.get("disabled") is True:
+                    continue
                 emote_id = emote.get("emote", emote.get("id"))
                 command = emote.get("command", emote.get("name"))
                 if not emote_id or not command:
@@ -118,9 +122,22 @@ class Bot(BotRuntimeMixin, BaseBot):
             return []
 
     def _save_emotes_data(self) -> None:
+        """Guarda emotes activos antes del bloque histórico desactivado."""
         try:
+            with open(EMOTES_FILE, "r", encoding="utf-8") as file:
+                current = load(file)
+
+            disabled = [
+                dict(item) for item in current
+                if isinstance(item, dict) and item.get("disabled") is True
+            ]
+            disabled.sort(
+                key=lambda item: int(item.get("disabled_original_index", 10**9))
+            )
+
             with open(EMOTES_FILE, "w", encoding="utf-8") as file:
-                dump(self.emotes_list, file, ensure_ascii=False, indent=2)
+                dump(self.emotes_list + disabled, file, ensure_ascii=False, indent=2)
+                file.write("\n")
         except (OSError, TypeError, ValueError) as error:
             print(f"[EMOTE DISCOVERY] No pude guardar emotes.json: {error}")
 
@@ -131,6 +148,19 @@ class Bot(BotRuntimeMixin, BaseBot):
 
         if self.emotes_manager.get_by_id(emote_id):
             return
+
+        # Evita que el descubrimiento automático reactive un emote desactivado.
+        try:
+            with open(EMOTES_FILE, "r", encoding="utf-8") as file:
+                saved_emotes = load(file)
+            if any(
+                isinstance(item, dict)
+                and str(item.get("emote") or item.get("id") or "").strip() == emote_id
+                for item in saved_emotes
+            ):
+                return
+        except (OSError, TypeError, ValueError):
+            pass
 
         discovered = {
             "command": emote_id,
