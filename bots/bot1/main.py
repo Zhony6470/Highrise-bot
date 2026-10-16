@@ -421,10 +421,9 @@ class Bot(BotRuntimeMixin, BaseBot):
                 next_send_at += interval
                 await self.highrise.send_emote(emote_id, user_id)
 
-                # Si Highrise tardó más que el ciclo completo, evita una ráfaga
-                # de solicitudes consecutivas y vuelve a programar desde ahora.
-                if next_send_at <= loop.time():
-                    next_send_at = loop.time() + interval
+                # Mantiene el plazo original aunque la respuesta de Highrise tarde.
+                # Si el plazo ya pasó, la siguiente solicitud se envía enseguida:
+                # así la latencia de red no añade otra duración completa al intervalo.
         except asyncio.CancelledError:
             raise
         except Exception as e:
