@@ -41,17 +41,28 @@ class DanceManager:
         return "<#66FF99>💃 Baile del bot activado." if send_message else ""
 
     async def _random_dance_loop(self, public_emotes) -> None:
+        loop = asyncio.get_running_loop()
+        next_send_at = loop.time()
+
         while True:
             try:
                 emote = choice(public_emotes)
-                self.bot.current_bot_emote = emote["emote"]
-                await self.bot.highrise.send_emote(emote["emote"], self.bot.bot_id)
-                await asyncio.sleep(emote.get("duration", 3))
+                emote_id = emote["emote"]
+                duration = max(float(emote.get("duration", 3)), 0.1)
+                interval = max(duration - 0.35, 0.1)
+
+                self.bot.current_bot_emote = emote_id
+                send_started_at = loop.time()
+                next_send_at = max(next_send_at, send_started_at)
+                await self.bot.highrise.send_emote(emote_id, self.bot.bot_id)
+                next_send_at = max(next_send_at, send_started_at) + interval
+                await asyncio.sleep(max(0.0, next_send_at - loop.time()))
             except asyncio.CancelledError:
                 return
             except Exception as error:
                 print(f"Error en el baile del bot: {error}")
-                await asyncio.sleep(2)
+                await asyncio.sleep(1)
+                next_send_at = loop.time()
 
     async def _stop_runtime(self) -> None:
         if self.task:
@@ -84,16 +95,25 @@ class DanceManager:
         return f"<#66FF99>✨ Emote del bot activado: {emote_id}." if send_message else ""
 
     async def _bot_emote_loop(self, emote_id: str) -> None:
-        duration = next(
+        duration = max(float(next(
             (item.get("duration", 1) for item in getattr(self.bot, "emotes_list", [])
              if item.get("emote") == emote_id),
             1,
-        )
+        )), 0.1)
+        interval = max(duration - 0.35, 0.1)
+        loop = asyncio.get_running_loop()
+        next_send_at = loop.time()
+
         try:
             while True:
                 self.bot.current_bot_emote = emote_id
+                send_started_at = loop.time()
                 await self.bot.highrise.send_emote(emote_id, self.bot.bot_id)
-                await asyncio.sleep(duration)
+
+                # Schedule from the start of the request, not its response.
+                # This avoids adding network latency to every emote cycle.
+                next_send_at = max(next_send_at, send_started_at) + interval
+                await asyncio.sleep(max(0.0, next_send_at - loop.time()))
         except asyncio.CancelledError:
             return
         except Exception as error:
