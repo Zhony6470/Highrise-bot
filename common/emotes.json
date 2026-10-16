@@ -2242,5 +2242,23 @@
     "emote": "emote-ascension",
     "duration": 5,
     "auth": "public"
+  },
+  {
+    "command": "Jumpscared 1",
+    "emote": "emote-jumpscared1",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "Jumpscared 2",
+    "emote": "emote-jumpscared2",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "Jumpscared 3",
+    "emote": "emote-jumpscared3",
+    "duration": 5,
+    "auth": "public"
   }
 ]
