@@ -148,6 +148,7 @@ services:
       - sh
       - -c
       - |
+        mkdir -p /app/bots/ghost_wave/data
         while true; do
           python -u -m bots.ghost_wave.main
           code=$?
