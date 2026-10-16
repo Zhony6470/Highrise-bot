@@ -102,7 +102,7 @@ class DanceManager:
         )), 0.1)
         # Reenviar antes de la fase de recuperación/levantarse del avatar.
         # Es una prueba de continuidad visual; la API normal no expone loop nativo.
-        interval = max(duration * 0.97, 0.1)
+        interval = max(duration * 0.95, 0.1)
         loop = asyncio.get_running_loop()
         next_send_at = loop.time()
 
