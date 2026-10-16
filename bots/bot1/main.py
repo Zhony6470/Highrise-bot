@@ -401,7 +401,9 @@ class Bot(BotRuntimeMixin, BaseBot):
     ):
         """Repite el emote midiendo cada intervalo desde el inicio del envío."""
         loop = asyncio.get_running_loop()
-        interval = max(float(duration) - 0.35, 0.1)
+        # Repetir anticipadamente en cualquier usuario para evitar la fase de recuperación.
+        # Mantiene el mismo intervalo del emote persistente del propio bot.
+        interval = max(float(duration) * 0.80, 0.1)
         next_send_at = loop.time()
 
         try:
