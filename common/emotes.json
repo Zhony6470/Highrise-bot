@@ -1,20 +1,5 @@
 [
   {
-    "command": "Summoning",
-    "emote": "emote-summoning",
-    "duration": 5,
-    "auth": "public"
-  },
-  {
-    "command": "Rest",
-    "emote": "sit-idle-cute",
-    "duration": 17.1,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 1,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
     "command": "Zombie",
     "emote": "idle_zombie",
     "duration": 28.8,
@@ -121,15 +106,6 @@
     "emote": "idle-enthusiastic",
     "duration": 15.2,
     "auth": "public"
-  },
-  {
-    "command": "Boogie Swing",
-    "emote": "idle-dance-swinging",
-    "duration": 13.2,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 20,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
     "command": "Feel The Beat",
@@ -324,15 +300,6 @@
     "auth": "public"
   },
   {
-    "command": "Flirty Wave",
-    "emote": "emote-lust",
-    "duration": 4.7,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 53,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
     "command": "Level Up!",
     "emote": "emote-levelup",
     "duration": 6.1,
@@ -393,15 +360,6 @@
     "auth": "public"
   },
   {
-    "command": "Hero Entrance",
-    "emote": "emote-hero",
-    "duration": 5,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 64,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
     "command": "Hello",
     "emote": "emote-hello",
     "duration": 2.5,
@@ -438,15 +396,6 @@
     "auth": "public"
   },
   {
-    "command": "Graceful",
-    "emote": "emote-graceful",
-    "duration": 3.8,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 71,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
     "command": "Moonwalk",
     "emote": "emote-gordonshuffle",
     "duration": 8.1,
@@ -463,15 +412,6 @@
     "emote": "emote-gangnam",
     "duration": 7.3,
     "auth": "public"
-  },
-  {
-    "command": "Frolic",
-    "emote": "emote-frollicking",
-    "duration": 3.7,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 75,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
     "command": "Faint",
@@ -696,28 +636,10 @@
     "auth": "public"
   },
   {
-    "command": "Flex",
-    "emote": "emoji-flex",
-    "duration": 2.1,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 113,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
     "command": "Stunned",
     "emote": "emoji-dizzy",
     "duration": 4.1,
     "auth": "public"
-  },
-  {
-    "command": "Cursing Emote",
-    "emote": "emoji-cursing",
-    "duration": 2.4,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 115,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
     "command": "Sob",
@@ -768,15 +690,6 @@
     "auth": "public"
   },
   {
-    "command": "Yoga Flow",
-    "emote": "dance-spiritual",
-    "duration": 15.8,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 124,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
     "command": "Smoothwalk",
     "emote": "dance-smoothwalk",
     "duration": 6.7,
@@ -801,15 +714,6 @@
     "auth": "public"
   },
   {
-    "command": "Robotic",
-    "emote": "dance-robotic",
-    "duration": 17.8,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 129,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
     "command": "Penny's Dance",
     "emote": "dance-pennywise",
     "duration": 0.7,
@@ -826,15 +730,6 @@
     "emote": "dance-metal",
     "duration": 15.1,
     "auth": "public"
-  },
-  {
-    "command": "Karate",
-    "emote": "dance-martial-artist",
-    "duration": 13.3,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 133,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
     "command": "Macarena",
@@ -859,15 +754,6 @@
     "emote": "dance-duckwalk",
     "duration": 11.7,
     "auth": "public"
-  },
-  {
-    "command": "Breakdance",
-    "emote": "dance-breakdance",
-    "duration": 17.6,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 138,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
     "command": "K-Pop Dance",
@@ -1054,15 +940,6 @@
     "emote": "emote-frog",
     "duration": 14.1,
     "auth": "public"
-  },
-  {
-    "command": "Superpose",
-    "emote": "emote-superpose",
-    "duration": 5.3,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 170,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
     "command": "Cute",
@@ -1377,24 +1254,6 @@
     "auth": "public"
   },
   {
-    "command": "Daydreaming",
-    "emote": "emote-idle-daydreaming",
-    "duration": 11.4,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 223,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
-    "command": "Ballet Bliss",
-    "emote": "dance-ballet",
-    "duration": 7.8,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 224,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
     "command": "Bloom Charm",
     "emote": "emote-bloomify-pose2",
     "duration": 7.5,
@@ -1437,6 +1296,471 @@
     "auth": "public"
   },
   {
+    "command": "Cute Salute",
+    "emote": "emote-cutesalute",
+    "duration": 2.4,
+    "auth": "public"
+  },
+  {
+    "command": "Fail 3",
+    "emote": "emote-fail3",
+    "duration": 6.7,
+    "auth": "public"
+  },
+  {
+    "command": "Fairy Float",
+    "emote": "idle-floating",
+    "duration": 26.1,
+    "auth": "public"
+  },
+  {
+    "command": "Fairy Twirl",
+    "emote": "emote-looping",
+    "duration": 8.6,
+    "auth": "public"
+  },
+  {
+    "command": "Fishing Cast",
+    "emote": "fishing-cast",
+    "duration": 1.5,
+    "auth": "public"
+  },
+  {
+    "command": "Fishing Idle",
+    "emote": "fishing-idle",
+    "duration": 16,
+    "auth": "public"
+  },
+  {
+    "command": "Fruity Dance",
+    "emote": "dance-fruity",
+    "duration": 17.6,
+    "auth": "public"
+  },
+  {
+    "command": "Hip Shake",
+    "emote": "dance-hipshake",
+    "duration": 12,
+    "auth": "public"
+  },
+  {
+    "command": "Idle Tough",
+    "emote": "idle_tough",
+    "duration": 26.7,
+    "auth": "public"
+  },
+  {
+    "command": "Landing A Fish!",
+    "emote": "fishing-pull-small",
+    "duration": 1,
+    "auth": "public"
+  },
+  {
+    "command": "Launch",
+    "emote": "emote-launch",
+    "duration": 8.4,
+    "auth": "public"
+  },
+  {
+    "command": "Mine Dance",
+    "emote": "mining-mine",
+    "duration": 3,
+    "auth": "public"
+  },
+  {
+    "command": "Mining Fail",
+    "emote": "mining-fail",
+    "duration": 2.8,
+    "auth": "public"
+  },
+  {
+    "command": "Mining Success",
+    "emote": "mining-success",
+    "duration": 2.5,
+    "auth": "public"
+  },
+  {
+    "command": "Moonlit Howl",
+    "emote": "emote-howl",
+    "duration": 10,
+    "auth": "public"
+  },
+  {
+    "command": "Petal Perch",
+    "emote": "emote-pose-sit",
+    "duration": 6,
+    "auth": "public"
+  },
+  {
+    "command": "Rebel Darling",
+    "emote": "emote-punkandlaces-pose2",
+    "duration": 3.5,
+    "auth": "public"
+  },
+  {
+    "command": "Receive Disappointed",
+    "emote": "emote-receive-disappointed",
+    "duration": 5.3,
+    "auth": "public"
+  },
+  {
+    "command": "Sakura Step",
+    "emote": "emote-pose-stand2",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "Sweet Smooch",
+    "emote": "emote-kissing",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "Sweet Tease",
+    "emote": "emote-punkandlaces-pose3",
+    "duration": 3.5,
+    "auth": "public"
+  },
+  {
+    "command": "TikTok Dance 14",
+    "emote": "dance-tiktok14",
+    "duration": 10.5,
+    "auth": "public"
+  },
+  {
+    "command": "Trampoline",
+    "emote": "emote-trampoline",
+    "duration": 15,
+    "auth": "public"
+  },
+  {
+    "command": "Tree Pose",
+    "emote": "emote-yoga-treePose",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "Warrior II",
+    "emote": "emote-yoga-warrior2",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "Warrior Ill",
+    "emote": "emote-yoga-warrior3",
+    "duration": 5.5,
+    "auth": "public"
+  },
+  {
+    "command": "Wild",
+    "emote": "dance-wild",
+    "duration": 20,
+    "auth": "public"
+  },
+  {
+    "command": "Wop Dance",
+    "emote": "dance-tiktok11",
+    "duration": 9.2,
+    "auth": "public"
+  },
+  {
+    "command": "Sit Relaxed",
+    "emote": "sit-relaxed",
+    "duration": 29.6,
+    "auth": "public"
+  },
+  {
+    "command": "Salute",
+    "emote": "emote-salute",
+    "duration": 3,
+    "auth": "public"
+  },
+  {
+    "command": "Run Vertical",
+    "emote": "run-vertical",
+    "duration": 1,
+    "auth": "public"
+  },
+  {
+    "command": "Walk Vertical",
+    "emote": "walk-vertical",
+    "duration": 1,
+    "auth": "public"
+  },
+  {
+    "command": "Fishing Pull",
+    "emote": "fishing-pull",
+    "duration": 1,
+    "auth": "public"
+  },
+  {
+    "command": "Swing Celebrate",
+    "emote": "emote-swing-celebrate",
+    "duration": 1.6,
+    "auth": "public"
+  },
+  {
+    "command": "Kid Dance",
+    "emote": "dance-kid",
+    "duration": 9.6,
+    "auth": "public"
+  },
+  {
+    "command": "Partytime",
+    "emote": "emote-celebrate",
+    "duration": 3.9,
+    "auth": "public"
+  },
+  {
+    "command": "Kawaii Go Go",
+    "emote": "emote-kawaiigogo",
+    "duration": 10,
+    "auth": "public"
+  },
+  {
+    "command": "celebration",
+    "emote": "emote-collab-celebrate-right",
+    "duration": 7,
+    "auth": "public"
+  },
+  {
+    "command": "Shy Loop",
+    "emote": "emote-shy",
+    "duration": 4.5,
+    "auth": "public"
+  },
+  {
+    "command": "Celebrateidle",
+    "emote": "emote-swing-celebrate-idle",
+    "duration": 1.6,
+    "auth": "public"
+  },
+  {
+    "command": "Swingnet1",
+    "emote": "emote-swing-net",
+    "duration": 2.6,
+    "auth": "public"
+  },
+  {
+    "command": "Swingnet2",
+    "emote": "emote-swing-net-2",
+    "duration": 2.5,
+    "auth": "public"
+  },
+  {
+    "command": "Swingnet3",
+    "emote": "emote-swing-net-3",
+    "duration": 2,
+    "auth": "public"
+  },
+  {
+    "command": "Swingsneak",
+    "emote": "emote-swing-sneak-Idle",
+    "duration": 2.5,
+    "auth": "public"
+  },
+  {
+    "command": "Ignition Boost",
+    "emote": "hcc-jetpack",
+    "duration": 8,
+    "auth": "public"
+  },
+  {
+    "command": "Howl2",
+    "emote": "idle-howl",
+    "duration": 10,
+    "auth": "public"
+  },
+  {
+    "command": "Tired",
+    "emote": "idle-loop-tired",
+    "duration": 22,
+    "auth": "public"
+  },
+  {
+    "command": "Laid2",
+    "emote": "sit-idle-sleep",
+    "duration": 17.3,
+    "auth": "public"
+  },
+  {
+    "command": "sixseven",
+    "emote": "emote-sixseven",
+    "duration": 4.7,
+    "auth": "public"
+  },
+  {
+    "command": "sixseve",
+    "emote": "emote-sixseve-noimg",
+    "duration": 4.7,
+    "auth": "public"
+  },
+  {
+    "command": "scuba dance",
+    "emote": "emote-scuba-dance",
+    "duration": 8.5,
+    "auth": "public"
+  },
+  {
+    "command": "Jumpscared 1",
+    "emote": "emote-jumpscared1",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "Jumpscared 2",
+    "emote": "emote-jumpscared2",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "Jumpscared 3",
+    "emote": "emote-jumpscared3",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "Summoning",
+    "emote": "emote-summoning",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "Rest",
+    "emote": "sit-idle-cute",
+    "duration": 17.1,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 1,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Boogie Swing",
+    "emote": "idle-dance-swinging",
+    "duration": 13.2,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 20,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Flirty Wave",
+    "emote": "emote-lust",
+    "duration": 4.7,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 53,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Hero Entrance",
+    "emote": "emote-hero",
+    "duration": 5,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 64,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Graceful",
+    "emote": "emote-graceful",
+    "duration": 3.8,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 71,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Frolic",
+    "emote": "emote-frollicking",
+    "duration": 3.7,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 75,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Flex",
+    "emote": "emoji-flex",
+    "duration": 2.1,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 113,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Cursing Emote",
+    "emote": "emoji-cursing",
+    "duration": 2.4,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 115,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Yoga Flow",
+    "emote": "dance-spiritual",
+    "duration": 15.8,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 124,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Robotic",
+    "emote": "dance-robotic",
+    "duration": 17.8,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 129,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Karate",
+    "emote": "dance-martial-artist",
+    "duration": 13.3,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 133,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Breakdance",
+    "emote": "dance-breakdance",
+    "duration": 17.6,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 138,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Superpose",
+    "emote": "emote-superpose",
+    "duration": 5.3,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 170,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Daydreaming",
+    "emote": "emote-idle-daydreaming",
+    "duration": 11.4,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 223,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Ballet Bliss",
+    "emote": "dance-ballet",
+    "duration": 7.8,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 224,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
     "command": "Crouch",
     "emote": "idle-crouched",
     "duration": 15,
@@ -1444,12 +1768,6 @@
     "disabled": true,
     "disabled_original_index": 232,
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
-    "command": "Cute Salute",
-    "emote": "emote-cutesalute",
-    "duration": 2.4,
-    "auth": "public"
   },
   {
     "command": "Dance Tiktok15",
@@ -1677,42 +1995,6 @@
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
-    "command": "Fail 3",
-    "emote": "emote-fail3",
-    "duration": 6.7,
-    "auth": "public"
-  },
-  {
-    "command": "Fairy Float",
-    "emote": "idle-floating",
-    "duration": 26.1,
-    "auth": "public"
-  },
-  {
-    "command": "Fairy Twirl",
-    "emote": "emote-looping",
-    "duration": 8.6,
-    "auth": "public"
-  },
-  {
-    "command": "Fishing Cast",
-    "emote": "fishing-cast",
-    "duration": 1.5,
-    "auth": "public"
-  },
-  {
-    "command": "Fishing Idle",
-    "emote": "fishing-idle",
-    "duration": 16,
-    "auth": "public"
-  },
-  {
-    "command": "Fruity Dance",
-    "emote": "dance-fruity",
-    "duration": 17.6,
-    "auth": "public"
-  },
-  {
     "command": "Hip Hop Dance",
     "emote": "dance-hiphop",
     "duration": 26.3,
@@ -1720,12 +2002,6 @@
     "disabled": true,
     "disabled_original_index": 265,
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
-    "command": "Hip Shake",
-    "emote": "dance-hipshake",
-    "duration": 12,
-    "auth": "public"
   },
   {
     "command": "Idle Headless",
@@ -1746,12 +2022,6 @@
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
-    "command": "Idle Tough",
-    "emote": "idle_tough",
-    "duration": 26.7,
-    "auth": "public"
-  },
-  {
     "command": "JUST VIBING!",
     "emote": "emote-jewelrise-vibing",
     "duration": 12.3,
@@ -1759,48 +2029,6 @@
     "disabled": true,
     "disabled_original_index": 270,
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
-    "command": "Landing A Fish!",
-    "emote": "fishing-pull-small",
-    "duration": 1,
-    "auth": "public"
-  },
-  {
-    "command": "Launch",
-    "emote": "emote-launch",
-    "duration": 8.4,
-    "auth": "public"
-  },
-  {
-    "command": "Mine Dance",
-    "emote": "mining-mine",
-    "duration": 3,
-    "auth": "public"
-  },
-  {
-    "command": "Mining Fail",
-    "emote": "mining-fail",
-    "duration": 2.8,
-    "auth": "public"
-  },
-  {
-    "command": "Mining Success",
-    "emote": "mining-success",
-    "duration": 2.5,
-    "auth": "public"
-  },
-  {
-    "command": "Moonlit Howl",
-    "emote": "emote-howl",
-    "duration": 10,
-    "auth": "public"
-  },
-  {
-    "command": "Petal Perch",
-    "emote": "emote-pose-sit",
-    "duration": 6,
-    "auth": "public"
   },
   {
     "command": "Pose 2",
@@ -1837,24 +2065,6 @@
     "disabled": true,
     "disabled_original_index": 281,
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
-    "command": "Rebel Darling",
-    "emote": "emote-punkandlaces-pose2",
-    "duration": 3.5,
-    "auth": "public"
-  },
-  {
-    "command": "Receive Disappointed",
-    "emote": "emote-receive-disappointed",
-    "duration": 5.3,
-    "auth": "public"
-  },
-  {
-    "command": "Sakura Step",
-    "emote": "emote-pose-stand2",
-    "duration": 5,
-    "auth": "public"
   },
   {
     "command": "Shrug",
@@ -1911,18 +2121,6 @@
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
-    "command": "Sweet Smooch",
-    "emote": "emote-kissing",
-    "duration": 5,
-    "auth": "public"
-  },
-  {
-    "command": "Sweet Tease",
-    "emote": "emote-punkandlaces-pose3",
-    "duration": 3.5,
-    "auth": "public"
-  },
-  {
     "command": "TikTok Dance 1",
     "emote": "dance-tiktok1",
     "duration": 11,
@@ -1930,12 +2128,6 @@
     "disabled": true,
     "disabled_original_index": 293,
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
-    "command": "TikTok Dance 14",
-    "emote": "dance-tiktok14",
-    "duration": 10.5,
-    "auth": "public"
   },
   {
     "command": "TikTok Dance 3",
@@ -1965,18 +2157,6 @@
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
-    "command": "Trampoline",
-    "emote": "emote-trampoline",
-    "duration": 15,
-    "auth": "public"
-  },
-  {
-    "command": "Tree Pose",
-    "emote": "emote-yoga-treePose",
-    "duration": 5,
-    "auth": "public"
-  },
-  {
     "command": "Twerk It Out",
     "emote": "dance-twerk",
     "duration": 11,
@@ -2004,30 +2184,6 @@
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
-    "command": "Warrior II",
-    "emote": "emote-yoga-warrior2",
-    "duration": 5,
-    "auth": "public"
-  },
-  {
-    "command": "Warrior Ill",
-    "emote": "emote-yoga-warrior3",
-    "duration": 5.5,
-    "auth": "public"
-  },
-  {
-    "command": "Wild",
-    "emote": "dance-wild",
-    "duration": 20,
-    "auth": "public"
-  },
-  {
-    "command": "Wop Dance",
-    "emote": "dance-tiktok11",
-    "duration": 9.2,
-    "auth": "public"
-  },
-  {
     "command": "ZeroGravity Chill",
     "emote": "idle-space",
     "duration": 36.2,
@@ -2035,36 +2191,6 @@
     "disabled": true,
     "disabled_original_index": 307,
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
-    "command": "Sit Relaxed",
-    "emote": "sit-relaxed",
-    "duration": 29.6,
-    "auth": "public"
-  },
-  {
-    "command": "Salute",
-    "emote": "emote-salute",
-    "duration": 3,
-    "auth": "public"
-  },
-  {
-    "command": "Run Vertical",
-    "emote": "run-vertical",
-    "duration": 1,
-    "auth": "public"
-  },
-  {
-    "command": "Walk Vertical",
-    "emote": "walk-vertical",
-    "duration": 1,
-    "auth": "public"
-  },
-  {
-    "command": "Fishing Pull",
-    "emote": "fishing-pull",
-    "duration": 1,
-    "auth": "public"
   },
   {
     "command": "Spiderman",
@@ -2139,12 +2265,6 @@
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
-    "command": "Swing Celebrate",
-    "emote": "emote-swing-celebrate",
-    "duration": 1.6,
-    "auth": "public"
-  },
-  {
     "command": "Thief",
     "emote": "emote-thief",
     "duration": 4.6,
@@ -2170,12 +2290,6 @@
     "disabled": true,
     "disabled_original_index": 324,
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
-    "command": "Kid Dance",
-    "emote": "dance-kid",
-    "duration": 9.6,
-    "auth": "public"
   },
   {
     "command": "Receive Happy",
@@ -2250,12 +2364,6 @@
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
-    "command": "Partytime",
-    "emote": "emote-celebrate",
-    "duration": 3.9,
-    "auth": "public"
-  },
-  {
     "command": "Guitar",
     "emote": "emote-guitar",
     "duration": 10,
@@ -2272,12 +2380,6 @@
     "disabled": true,
     "disabled_original_index": 336,
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
-    "command": "Kawaii Go Go",
-    "emote": "emote-kawaiigogo",
-    "duration": 10,
-    "auth": "public"
   },
   {
     "command": "Smooch",
@@ -2305,12 +2407,6 @@
     "disabled": true,
     "disabled_original_index": 340,
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
-    "command": "celebration",
-    "emote": "emote-collab-celebrate-right",
-    "duration": 7,
-    "auth": "public"
   },
   {
     "command": "Repose",
@@ -2349,12 +2445,6 @@
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
-    "command": "Shy Loop",
-    "emote": "emote-shy",
-    "duration": 4.5,
-    "auth": "public"
-  },
-  {
     "command": "Star Gaze",
     "emote": "emote-stargaze",
     "duration": 1.1,
@@ -2364,48 +2454,6 @@
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
-    "command": "Celebrateidle",
-    "emote": "emote-swing-celebrate-idle",
-    "duration": 1.6,
-    "auth": "public"
-  },
-  {
-    "command": "Swingnet1",
-    "emote": "emote-swing-net",
-    "duration": 2.6,
-    "auth": "public"
-  },
-  {
-    "command": "Swingnet2",
-    "emote": "emote-swing-net-2",
-    "duration": 2.5,
-    "auth": "public"
-  },
-  {
-    "command": "Swingnet3",
-    "emote": "emote-swing-net-3",
-    "duration": 2,
-    "auth": "public"
-  },
-  {
-    "command": "Swingsneak",
-    "emote": "emote-swing-sneak-Idle",
-    "duration": 2.5,
-    "auth": "public"
-  },
-  {
-    "command": "Ignition Boost",
-    "emote": "hcc-jetpack",
-    "duration": 8,
-    "auth": "public"
-  },
-  {
-    "command": "Howl2",
-    "emote": "idle-howl",
-    "duration": 10,
-    "auth": "public"
-  },
-  {
     "command": "Laying Phone Talk",
     "emote": "idle-laying-phone-talking",
     "duration": 22,
@@ -2413,12 +2461,6 @@
     "disabled": true,
     "disabled_original_index": 355,
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
-    "command": "Tired",
-    "emote": "idle-loop-tired",
-    "duration": 22,
-    "auth": "public"
   },
   {
     "command": "runningman",
@@ -2455,12 +2497,6 @@
     "disabled": true,
     "disabled_original_index": 360,
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
-    "command": "Laid2",
-    "emote": "sit-idle-sleep",
-    "duration": 17.3,
-    "auth": "public"
   },
   {
     "command": "TikTok Dance",
@@ -2526,24 +2562,6 @@
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
-    "command": "sixseven",
-    "emote": "emote-sixseven",
-    "duration": 4.7,
-    "auth": "public"
-  },
-  {
-    "command": "sixseve",
-    "emote": "emote-sixseve-noimg",
-    "duration": 4.7,
-    "auth": "public"
-  },
-  {
-    "command": "scuba dance",
-    "emote": "emote-scuba-dance",
-    "duration": 8.5,
-    "auth": "public"
-  },
-  {
     "command": "emote-solo-tea-right",
     "emote": "emote-solo-tea-right",
     "duration": 5,
@@ -2569,23 +2587,5 @@
     "disabled": true,
     "disabled_original_index": 374,
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
-  },
-  {
-    "command": "Jumpscared 1",
-    "emote": "emote-jumpscared1",
-    "duration": 5,
-    "auth": "public"
-  },
-  {
-    "command": "Jumpscared 2",
-    "emote": "emote-jumpscared2",
-    "duration": 5,
-    "auth": "public"
-  },
-  {
-    "command": "Jumpscared 3",
-    "emote": "emote-jumpscared3",
-    "duration": 5,
-    "auth": "public"
   }
 ]
