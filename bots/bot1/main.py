@@ -408,6 +408,9 @@ class Bot(BotRuntimeMixin, BaseBot):
                 await asyncio.sleep(max(0.0, next_send_at - loop.time()))
                 await self.highrise.send_emote(emote_id, user_id)
                 next_send_at += interval
+                # Evita ráfagas si una llamada de la API tarda más que el intervalo.
+                if next_send_at < loop.time():
+                    next_send_at = loop.time() + interval
         except asyncio.CancelledError:
             raise
         except Exception as e:
