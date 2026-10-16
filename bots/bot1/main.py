@@ -137,7 +137,7 @@ class Bot(BotRuntimeMixin, BaseBot):
 
             with open(EMOTES_FILE, "w", encoding="utf-8") as file:
                 dump(self.emotes_list + disabled, file, ensure_ascii=False, indent=2)
-                file.write("\\n")
+                file.write("\n")
         except (OSError, TypeError, ValueError) as error:
             print(f"[EMOTE DISCOVERY] No pude guardar emotes.json: {error}")
 
