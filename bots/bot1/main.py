@@ -609,7 +609,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             if track_task:
                 track_task.cancel()
             try:
-                await self.highrise.send_emote("", user.id)
+                await self.highrise.send_emote("emote-wave", user.id)
             except Exception as error:
                 print(f"No se pudo detener el emote de {user.id}: {error}")
             await self.highrise.send_whisper(
