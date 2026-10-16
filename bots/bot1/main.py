@@ -349,6 +349,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             )
             return False
 
+        first_send_at = asyncio.get_running_loop().time()
         try:
             await self.highrise.send_emote(emote_id, target_id)
         except Exception as error:
@@ -381,6 +382,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                 emote_id,
                 duration,
                 first_already_sent=True,
+                first_sent_at=first_send_at,
             )
         )
         await self.highrise.send_whisper(
@@ -389,27 +391,39 @@ class Bot(BotRuntimeMixin, BaseBot):
         )
         return True
 
-    async def emote_loop(self, user_id: str, emote_id: str, duration: float, first_already_sent: bool = False):
-        """Repite un emote con tiempos programados para reducir pausas acumuladas."""
+    async def emote_loop(
+        self,
+        user_id: str,
+        emote_id: str,
+        duration: float,
+        first_already_sent: bool = False,
+        first_sent_at: float | None = None,
+    ):
+        """Repite el emote midiendo cada intervalo desde el inicio del envío."""
         loop = asyncio.get_running_loop()
         interval = max(float(duration) - 0.12, 0.1)
         next_send_at = loop.time()
 
         try:
             if first_already_sent:
-                # El primer emote ya fue enviado por el comando que inició el bucle.
-                next_send_at += interval
+                # Cuenta también el tiempo que tardó en responder la primera solicitud.
+                next_send_at = (first_sent_at if first_sent_at is not None else loop.time()) + interval
             else:
+                send_started_at = loop.time()
+                next_send_at = send_started_at + interval
                 await self.highrise.send_emote(emote_id, user_id)
-                next_send_at += interval
 
             while True:
-                # Plazos monotónicos evitan sumar la latencia de la API a cada ciclo.
                 await asyncio.sleep(max(0.0, next_send_at - loop.time()))
-                await self.highrise.send_emote(emote_id, user_id)
+                # Fijamos el siguiente plazo ANTES de esperar la respuesta de la API,
+                # para que la latencia de cada solicitud no se sume al intervalo.
+                send_started_at = loop.time()
                 next_send_at += interval
-                # Evita ráfagas si una llamada de la API tarda más que el intervalo.
-                if next_send_at < loop.time():
+                await self.highrise.send_emote(emote_id, user_id)
+
+                # Si Highrise tardó más que el ciclo completo, evita una ráfaga
+                # de solicitudes consecutivas y vuelve a programar desde ahora.
+                if next_send_at <= loop.time():
                     next_send_at = loop.time() + interval
         except asyncio.CancelledError:
             raise
