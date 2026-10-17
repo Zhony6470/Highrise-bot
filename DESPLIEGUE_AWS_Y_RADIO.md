@@ -25,7 +25,7 @@ La Elastic IP debe permanecer asociada a la instancia. Es la IP para SSH, Radio 
 Conexion desde PowerShell:
 
 ```powershell
-ssh -i ".\highrise-radio-key.pem" ubuntu@16.58.84.50
+ssh -i "$HOME\.ssh\highrise-radio-key.pem" ubuntu@16.58.84.50
 ```
 
 El `.pem` es privado y nunca debe subirse al proyecto.
@@ -192,6 +192,16 @@ El reproductor selecciona las pistas de respaldo en orden y evita repetir la ult
 
 AWS sustituyo a Render como servidor, pero Supabase sigue siendo la persistencia. `services/storage.py` usa Supabase si existen `SUPABASE_URL` y `SUPABASE_KEY`; usa la tabla `bot_files` para `data.json`, `roles.json` y `posiciones.json`. Sin esas variables, usa JSON local.
 
+La tabla requerida por el código actual es:
+
+```text
+bot_files
+  file_name: text, clave primaria o única
+  content: json/jsonb
+```
+
+No se consultan otras tablas desde `services/storage.py`. El archivo `music_bot_data.json` del DJ y los archivos de cola/playlist de AutoDJ continúan siendo almacenamiento local montado en Docker.
+
 ## Mensajes conocidos
 
 - `Emote is not free or owned by target user`: un emote de `emotes.json` no esta disponible; no afecta a la radio.
@@ -206,7 +216,7 @@ PowerShell local, en la carpeta del proyecto:
 ```powershell
 Remove-Item -Recurse -Force .\deploy -ErrorAction SilentlyContinue
 robocopy . .\deploy /E /XD .venv .venv-1 tests .github __pycache__ deploy /XF *.pyc *.pem cookies.txt playlist.json request_queue.json
-scp -r -i ".\highrise-radio-key.pem" .\deploy\* ubuntu@16.58.84.50:/home/ubuntu/highrise-bot/
+scp -r -i "$HOME\.ssh\highrise-radio-key.pem" .\deploy\* ubuntu@16.58.84.50:/home/ubuntu/highrise-bot/
 ```
 
 AWS:

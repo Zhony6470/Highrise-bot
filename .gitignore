@@ -4,6 +4,9 @@ __pycache__/
 .env
 cookies.txt
 *.pem
+**/.env
+**/cookies.txt
+**/*.pem
 music_bot_data.local.json
 request_queue.json
 default_playlist.json
