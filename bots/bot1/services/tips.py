@@ -1,6 +1,7 @@
 import os
 
 from highrise import CurrencyItem, Item, User
+from common.bot_filter import is_known_bot
 from services.storage import load_json, save_json
 
 
@@ -105,17 +106,10 @@ class TipManager:
             recipients = []
             if parts[0] in ("!tipall", "!mtipall"):
                 room_users = await highrise.get_room_users()
-                bot_names = {
-                    str(getattr(bot, "bot_username", "")).casefold(),
-                    os.getenv("BOT1_USERNAME", "Zeta_Bot").casefold(),
-                    os.getenv("DJ_BOT_USERNAME", "Dj.Z").casefold(),
-                }
-                bot_names.discard("")
                 recipients = [
                     (room_user.id, room_user.username)
                     for room_user, _ in room_users.content
-                    if room_user.id != bot.bot_id
-                    and room_user.username.casefold() not in bot_names
+                    if not is_known_bot(bot, room_user.id, room_user.username)
                 ]
                 if not recipients:
                     return "<#FFCC66>🪙 No hay usuarios a quienes enviar propinas."
