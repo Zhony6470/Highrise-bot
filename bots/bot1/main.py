@@ -32,6 +32,7 @@ from bots.bot1.services.anuncios import announcement_loop
 from bots.bot1.services.diversion import handle_diversion_command
 from common.bot_manager import should_handle_for_bot
 from common.bot_runtime import BotRuntimeMixin
+from services.message_pacing import install_message_pacing
 from common.avatar import AvatarManager
 from common.positions import PositionManagerCommon
 from common.dance import DanceManager
@@ -507,6 +508,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             print(f"[TIP ERROR] Error procesando propina de @{sender.username}: {error}")
 
     async def on_start(self, session_metadata: SessionMetadata) -> None:
+        install_message_pacing(self.highrise)
         self.bot_id = session_metadata.user_id
         self.owner_id = session_metadata.room_info.owner_id
         self.bot_status = True
