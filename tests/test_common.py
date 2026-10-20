@@ -23,6 +23,8 @@ def test_known_bot_filter(monkeypatch):
     assert is_known_bot(bot, "own-id", "someone")
     assert is_known_bot(bot, "other-id", "Zeta_Bot")
     assert is_known_bot(bot, "other-id", "Dj.Z")
+    assert is_known_bot(bot, "other-id", "@Dj.Zz")
+    assert is_known_bot(bot, "6590cb69feb3f3d0238ee347", "unknown")
     assert is_known_bot(bot, "other-id", "BotJuegos")
     assert not is_known_bot(bot, "player-id", "RealPlayer")
 
