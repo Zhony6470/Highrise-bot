@@ -12,6 +12,7 @@ from bots.dj.services.youtube import search_youtube, YouTubeSearchError
 from commands.dispatcher import CommandDispatcher
 from common.bot_manager import should_handle_for_bot
 from common.bot_runtime import BotRuntimeMixin
+from services.message_pacing import install_message_pacing
 from common.avatar import AvatarManager
 from common.positions import PositionManagerCommon
 from common.dance import DanceManager
@@ -214,6 +215,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         except Exception as error:
             print(f"[MUSIC] Error en anuncios periódicos: {error}")
     async def on_start(self,s:SessionMetadata):
+        install_message_pacing(self.highrise)
         self.bot_id=s.user_id;self.owner_id=s.room_info.owner_id
         if self.playback_monitor_task:
             self.playback_monitor_task.cancel()
