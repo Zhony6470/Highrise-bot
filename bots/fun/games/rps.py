@@ -5,6 +5,7 @@ import secrets
 from dataclasses import dataclass, field
 
 from highrise import CurrencyItem, Item, User
+from bots.fun.games.chat_queue import send_game_chat
 from common.bot_filter import is_known_bot
 
 
@@ -85,7 +86,7 @@ class RpsGame:
         self.counter = 0
 
     async def _chat(self, message: str) -> None:
-        await self.bot.highrise.chat(message)
+        await send_game_chat(self.bot.highrise, message)
 
     async def _whisper(self, user_id: str, message: str) -> None:
         try:
