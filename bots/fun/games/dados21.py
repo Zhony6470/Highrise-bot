@@ -75,7 +75,7 @@ class Dados21Game:
                 return True
             account = self._account(user.id)
             if account["balance"] < bet:
-                await self._whisper(user.id, f"Saldo insuficiente: {account['balance']} G. Envía oro al bot para aumentar tu saldo.")
+                await self._whisper(user.id, f"Saldo insuficiente: {account['balance']} G. Envía oro al bot; tu saldo se actualizará automáticamente.")
                 return True
             account["balance"] -= bet
             account["username"] = user.username
