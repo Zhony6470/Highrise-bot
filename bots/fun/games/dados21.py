@@ -183,7 +183,11 @@ class Dados21Game:
             await self._whisper(sender.id, f"💰 Depósito confirmado: {tip.amount} G. Saldo disponible: {account['balance']} G.")
         else:
             self._save()
-            await self._whisper(sender.id, f"El depósito solicitado era de {pending['amount']} G, pero recibí {tip.amount} G. No lo añadí al saldo; contacta al dueño para revisar la propina.")
+            refunded = await self._send_amount(sender.id, tip.amount)
+            if refunded:
+                await self._whisper(sender.id, f"El depósito solicitado era de {pending['amount']} G, pero recibí {tip.amount} G. No se añadió al saldo y se intentó devolver la propina.")
+            else:
+                await self._whisper(sender.id, f"El depósito solicitado era de {pending['amount']} G, pero recibí {tip.amount} G. No se añadió al saldo y no pude devolver la propina automáticamente; contacta al dueño para revisión.")
         return True
 
     async def _lobby_timeout(self):
