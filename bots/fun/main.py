@@ -191,6 +191,19 @@ class Bot(BotRuntimeMixin, BaseBot):
             await self.highrise.send_whisper(
                 user.id,
                 "\\n".join([
+                    "<#FFFFFF>🎲 DADOS 21",
+                    "<#FFFFFF>• !dados21 100 — Entrar apostando (10 a 100 G)",
+                    "<#FFFFFF>• !tirar — Lanzar un dado",
+                    "<#FFFFFF>• !doble — Lanzar dos dados",
+                    "<#FFFFFF>• !plantarse — Terminar tu turno",
+                    "<#FFFFFF>• !salir — Salir antes de iniciar",
+                    "<#FFFFFF>• !saldo — Consultar tu saldo",
+                    "<#FFFFFF>• !retirar 50 — Retirar ganancias (mín. 50 G)",
+                ]),
+            )
+            await self.highrise.send_whisper(
+                user.id,
+                "\\n".join([
                     "<#FFFFFF>🎭 VERDAD O RETO",
                     "<#FFFFFF>• !jugarvd",
                     "<#FFFFFF>• !entrarvd",
