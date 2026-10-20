@@ -1171,7 +1171,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             except Exception as error:
                 print(f"[INBOX HELP] No se pudo cargar el usuario: {error}")
             user = User(user_id, username)
-            help_text = await self.command_dispatcher.handle(self, user, "!help")
+            help_text = await self.get_command_help(user)
             if isinstance(help_text, list):
                 for section in help_text:
                     if section:
