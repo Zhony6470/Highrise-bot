@@ -169,25 +169,29 @@ class Dados21Game:
         return True
 
     async def handle_tip(self, sender: User, receiver: User, tip: CurrencyItem | Item) -> bool:
-        if receiver.id != getattr(self.bot, "bot_id", None) or not isinstance(tip, CurrencyItem):
+        """Acredita automáticamente toda propina de oro recibida por este bot."""
+        if receiver.id != getattr(self.bot, "bot_id", None):
             return False
-        pending = self.wallet["pending_deposits"].get(sender.id)
-        if not pending:
+        if not isinstance(tip, CurrencyItem):
             return False
-        self.wallet["pending_deposits"].pop(sender.id, None)
+
         account = self._account(sender.id)
         account["username"] = sender.username
-        if tip.amount == pending["amount"]:
-            account["balance"] += tip.amount
-            self._save()
-            await self._whisper(sender.id, f"💰 Depósito confirmado: {tip.amount} G. Saldo disponible: {account['balance']} G.")
-        else:
-            self._save()
-            refunded = await self._send_amount(sender.id, tip.amount)
-            if refunded:
-                await self._whisper(sender.id, f"El depósito solicitado era de {pending['amount']} G, pero recibí {tip.amount} G. No se añadió al saldo y se intentó devolver la propina.")
-            else:
-                await self._whisper(sender.id, f"El depósito solicitado era de {pending['amount']} G, pero recibí {tip.amount} G. No se añadió al saldo y no pude devolver la propina automáticamente; contacta al dueño para revisión.")
+        account["balance"] += tip.amount
+        account["last_deposit"] = tip.amount
+        self.wallet["pending_deposits"].pop(sender.id, None)
+        self._save()
+        await self._whisper(
+            sender.id,
+            f"💰 Depósito automático confirmado: +{tip.amount} G. "
+            f"Saldo disponible: {account['balance']} G. "
+            "No necesitas usar ningún comando antes de enviar oro."
+        )
+        print(
+            f"[DADOS21] Depósito automático: user={sender.id} "
+            f"username=@{sender.username} amount={tip.amount} "
+            f"balance={account['balance']}"
+        )
         return True
 
     async def _lobby_timeout(self):
