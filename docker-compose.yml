@@ -173,6 +173,7 @@ services:
       - main-bot
     volumes:
       - ./bots/fun/data/data.json:/app/bots/fun/data/data.json
+      - ./bots/fun/data/dados21_wallet.json:/app/bots/fun/data/dados21_wallet.json
     command:
       - sh
       - -c
