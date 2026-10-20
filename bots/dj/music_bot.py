@@ -552,5 +552,11 @@ class Bot(BotRuntimeMixin, BaseBot):
                 await self.highrise.chat(f"<#66FF99>🎵 «{v['title']}» {action} la playlist.")
             except (YouTubeSearchError,RuntimeError) as e:await self.highrise.send_whisper(user.id,f"<#FF6666>⚠️ {e}")
 
+    async def on_whisper(self,user:User,message:str):
+        # En privado, !help muestra la ayuda de música; !help music en sala sigue igual.
+        if message.strip().lower() == "!help":
+            await self.on_chat(user, "!help music")
+
+
 definitions=[BotDefinition(Bot(),ROOM_ID,API_KEY)]
 if __name__=="__main__":asyncio.run(__import__("highrise").__main__.main(definitions))
