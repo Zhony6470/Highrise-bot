@@ -75,7 +75,7 @@ class Dados21Game:
                 return True
             account = self._account(user.id)
             if account["balance"] < bet:
-                await self._whisper(user.id, f"Saldo insuficiente: tienes {account['balance']} G. Usa !depositar {bet} y luego envía esa propina al bot.")
+                await self._whisper(user.id, f"Saldo insuficiente: {account['balance']} G. Envía oro al bot para aumentar tu saldo.")
                 return True
             account["balance"] -= bet
             account["username"] = user.username
@@ -92,7 +92,7 @@ class Dados21Game:
 
         if command == "!saldo":
             account = self._account(user.id)
-            await self._whisper(user.id, f"💰 Saldo disponible: {account['balance']} G. Ganancias acumuladas: {account['winnings']} G.")
+            await self._whisper(user.id, f"Saldo: {account['balance']} G.")
             return True
 
         if command == "!depositar":
@@ -181,12 +181,7 @@ class Dados21Game:
         account["last_deposit"] = tip.amount
         self.wallet["pending_deposits"].pop(sender.id, None)
         self._save()
-        await self._whisper(
-            sender.id,
-            f"💰 Depósito automático confirmado: +{tip.amount} G. "
-            f"Saldo disponible: {account['balance']} G. "
-            "No necesitas usar ningún comando antes de enviar oro."
-        )
+        await self._whisper(sender.id, f"Saldo: {account['balance']} G.")
         print(
             f"[DADOS21] Depósito automático: user={sender.id} "
             f"username=@{sender.username} amount={tip.amount} "
