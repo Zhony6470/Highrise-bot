@@ -1616,7 +1616,7 @@
   {
     "command": "Jumpscared 3",
     "emote": "emote-jumpscared3",
-    "duration": 1.7,
+    "duration": 1.5,
     "auth": "public"
   },
   {
