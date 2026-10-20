@@ -31,6 +31,7 @@ from services.roles import RoleManager
 from bots.bot1.services.tips import TipManager
 from bots.fun.games.verdad_reto import TruthOrDareGame
 from bots.fun.games.rps import RpsGame
+from bots.fun.games.dados21 import Dados21Game
 
 
 DATA_FILE = str(ROOT_DIR / "bots" / "fun" / "data" / "data.json")
@@ -60,6 +61,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         self.emotes_manager = EmotesManager(self.emotes_list)
         self.truth_or_dare = TruthOrDareGame(self, self.is_mod)
         self.rps = RpsGame(self)
+        self.dados21 = Dados21Game(self)
 
     def load_emotes_data(self):
         try:
@@ -236,6 +238,10 @@ class Bot(BotRuntimeMixin, BaseBot):
                 await handle_reset(self, user, msg)
             return
 
+        # 🎲 Dados 21
+        if await self.dados21.handle(user, msg, private=False):
+            return
+
         # ⚔️ Piedra, Papel o Tijera
         if await self.rps.handle(user, msg, private=False):
             return
@@ -321,6 +327,8 @@ class Bot(BotRuntimeMixin, BaseBot):
             return
 
     async def on_whisper(self, user: User, message: str) -> None:
+        if await self.dados21.handle(user, message.strip(), private=True):
+            return
         if await self.rps.handle(user, message.strip(), private=True):
             return
 
@@ -335,6 +343,8 @@ class Bot(BotRuntimeMixin, BaseBot):
         self, sender: User, receiver: User, tip: CurrencyItem | Item
     ) -> None:
         try:
+            if await self.dados21.handle_tip(sender, receiver, tip):
+                return
             if await self.rps.handle_tip(sender, receiver, tip):
                 return
             await self.tip_manager.handle_tip(
