@@ -1166,8 +1166,8 @@ class Bot(BotRuntimeMixin, BaseBot):
             if not response.messages:
                 print("[INBOX DEBUG] La conversación no contiene mensajes")
                 return
-            message = response.messages[-1].content.strip().lower()
-            print(f"[INBOX DEBUG] Último mensaje recibido: {message!r}")
+            message = response.messages[0].content.strip().lower()
+            print(f"[INBOX DEBUG] Primer mensaje de la conversación: {message!r}")
             if message != "!help":
                 return
             username = ""
