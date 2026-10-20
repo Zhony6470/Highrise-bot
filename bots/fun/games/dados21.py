@@ -198,6 +198,9 @@ class Dados21Game:
             self.task = None
             self.players = list(self.lobby.values())
             self.lobby.clear()
+            # Cada partida nueva debe empezar desde el primer jugador.
+            self.turn_index = 0
+            self.current = None
             self.phase = "playing"
             self.active = True
             await self._chat(f"🎲 Inscripción cerrada. Comienza Dados 21 con {len(self.players)} jugador(es).")
