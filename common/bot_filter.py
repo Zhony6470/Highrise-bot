@@ -31,12 +31,15 @@ def is_known_bot(bot, user_id: str | None, username: str | None = None) -> bool:
         )
         if value.strip()
     )
+    # Known room bot: the games bot currently connects as @Dj.Zz.
+    known_ids.add("6590cb69feb3f3d0238ee347")
     if user_id and user_id in known_ids:
         return True
 
     known_names = {
         "zeta_bot",
         "dj.z",
+        "dj.zz",
         "botjuegos",
     }
     known_names.update(_csv_env("HIGHRISE_BOT_USERNAMES"))
