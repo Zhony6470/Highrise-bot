@@ -1500,21 +1500,9 @@
     "auth": "public"
   },
   {
-    "command": "Kid Dance",
-    "emote": "dance-kid",
-    "duration": 9.6,
-    "auth": "public"
-  },
-  {
     "command": "Partytime",
     "emote": "emote-celebrate",
     "duration": 3.9,
-    "auth": "public"
-  },
-  {
-    "command": "Kawaii Go Go",
-    "emote": "emote-kawaiigogo",
-    "duration": 10,
     "auth": "public"
   },
   {
@@ -2592,6 +2580,24 @@
     "auth": "public",
     "disabled": true,
     "disabled_original_index": 374,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Kid Dance",
+    "emote": "dance-kid",
+    "duration": 9.6,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 251,
+    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "Kawaii Go Go",
+    "emote": "emote-kawaiigogo",
+    "duration": 10,
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 253,
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   }
 ]
