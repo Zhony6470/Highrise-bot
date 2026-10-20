@@ -190,7 +190,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             await self.highrise.send_whisper(user.id, "<#66CCFF>🎮 JUEGOS")
             await self.highrise.send_whisper(
                 user.id,
-                "\\n".join([
+                "\n".join([
                     "<#FFFFFF>🎲 DADOS 21",
                     "<#FFFFFF>• !dados21 100 — Entrar apostando (10 a 100 G)",
                     "<#FFFFFF>• !tirar — Lanzar un dado",
@@ -203,7 +203,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             )
             await self.highrise.send_whisper(
                 user.id,
-                "\\n".join([
+                "\n".join([
                     "<#FFFFFF>🎭 VERDAD O RETO",
                     "<#FFFFFF>• !jugarvd",
                     "<#FFFFFF>• !entrarvd",
@@ -213,7 +213,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             )
             await self.highrise.send_whisper(
                 user.id,
-                "\\n".join([
+                "\n".join([
                     "<#FFFFFF>⚔️ RPS",
                     "<#FFFFFF>• !rps — Contra BotJuegos",
                     "<#FFFFFF>• !rps @usuario — Contra jugador",
