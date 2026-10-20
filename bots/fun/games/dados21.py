@@ -277,7 +277,7 @@ class Dados21Game:
             text = f"🤖 BotJuegos gana contra @{user.username}. Apuesta perdida: {bet} G."
         self._save()
         await self._chat(text)
-        await self._whisper(user.id, f"💰 Saldo disponible: {account['balance']} G. Ganancias acumuladas: {account['winnings']} G.")
+        await self._whisper(user.id, f"Saldo: {account['balance']} G.")
         self.turn_index += 1
         await asyncio.sleep(1)
         await self._next_player()
