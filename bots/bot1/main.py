@@ -402,11 +402,11 @@ class Bot(BotRuntimeMixin, BaseBot):
     ):
         """Repite el emote midiendo cada intervalo desde el inicio del envío."""
         loop = asyncio.get_running_loop()
-        # Ajustes individuales: Jumpscared 3 usa 70% y Solo Pumpkindance Left 94%; los demás usan 95%.
+        # Ajustes individuales: Jumpscared 3 usa 70% y Solo Pumpkindance Left 93%; los demás usan 95%.
         if emote_id == "emote-jumpscared3":
             repeat_ratio = 0.70
         elif emote_id == "emote-solo-pumpkindance-left":
-            repeat_ratio = 0.94
+            repeat_ratio = 0.93
         else:
             repeat_ratio = 0.95
         interval = max(float(duration) * repeat_ratio, 0.1)
