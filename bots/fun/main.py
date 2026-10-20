@@ -354,9 +354,9 @@ class Bot(BotRuntimeMixin, BaseBot):
                 return
             help_sections = [
                 "🎮 JUEGOS",
-                "🎲 DADOS 21\\n• !dados21 100 — Entrar apostando (10 a 100 G)\\n• !tirar — Lanzar un dado\\n• !doble — Lanzar dos dados\\n• !plantarse — Terminar tu turno\\n• !salir — Salir antes de iniciar\\n• !saldo — Consultar tu saldo\\n• !retirar 50 — Retirar ganancias",
-                "🎭 VERDAD O RETO\\n• !jugarvd\\n• !entrarvd\\n• !iniciarvd\\n• !verdad / !reto",
-                "⚔️ RPS\\n• !rps — Contra BotJuegos\\n• !rps @usuario — Contra jugador\\n• !rps @usuario 10|50|100|500 — Con apuesta",
+                "🎲 DADOS 21\n• !dados21 100 — Entrar apostando (10 a 100 G)\n• !tirar — Lanzar un dado\n• !doble — Lanzar dos dados\n• !plantarse — Terminar tu turno\n• !salir — Salir antes de iniciar\n• !saldo — Consultar tu saldo\n• !retirar 50 — Retirar ganancias",
+                "🎭 VERDAD O RETO\n• !jugarvd\n• !entrarvd\n• !iniciarvd\n• !verdad / !reto",
+                "⚔️ RPS\n• !rps — Contra BotJuegos\n• !rps @usuario — Contra jugador\n• !rps @usuario 10|50|100|500 — Con apuesta",
             ]
             for section in help_sections:
                 await self.highrise.send_message(conversation_id, section)
