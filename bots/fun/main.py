@@ -6,7 +6,7 @@ import sys
 from json import load
 from pathlib import Path
 
-from highrise import BaseBot, CurrencyItem, Item, SessionMetadata, User, __main__
+from highrise import BaseBot, CurrencyItem, GetMessagesRequest, Item, SessionMetadata, User, __main__
 from highrise.__main__ import BotDefinition
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
@@ -340,6 +340,28 @@ class Bot(BotRuntimeMixin, BaseBot):
             response = await self.dance_manager.start_bot_emote(matched["emote"])
             await self.highrise.send_whisper(user.id, response)
             return
+
+    async def on_message(
+        self, user_id: str, conversation_id: str, is_new_conversation: bool
+    ) -> None:
+        """Responde !help en el buzón privado de Highrise."""
+        try:
+            response = await self.highrise.get_messages(conversation_id)
+            if not isinstance(response, GetMessagesRequest.GetMessagesResponse) or not response.messages:
+                return
+            message = response.messages[-1].content.strip().lower()
+            if message != "!help":
+                return
+            help_sections = [
+                "🎮 JUEGOS",
+                "🎲 DADOS 21\\n• !dados21 100 — Entrar apostando (10 a 100 G)\\n• !tirar — Lanzar un dado\\n• !doble — Lanzar dos dados\\n• !plantarse — Terminar tu turno\\n• !salir — Salir antes de iniciar\\n• !saldo — Consultar tu saldo\\n• !retirar 50 — Retirar ganancias",
+                "🎭 VERDAD O RETO\\n• !jugarvd\\n• !entrarvd\\n• !iniciarvd\\n• !verdad / !reto",
+                "⚔️ RPS\\n• !rps — Contra BotJuegos\\n• !rps @usuario — Contra jugador\\n• !rps @usuario 10|50|100|500 — Con apuesta",
+            ]
+            for section in help_sections:
+                await self.highrise.send_message(conversation_id, section)
+        except Exception as error:
+            print(f"[FUN INBOX HELP] Error procesando !help: {error}")
 
     async def on_whisper(self, user: User, message: str) -> None:
         # En privado, !help muestra la ayuda de juegos; !help game en sala sigue igual.
