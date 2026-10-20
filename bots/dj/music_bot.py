@@ -561,7 +561,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             message = response.messages[-1].content.strip().lower()
             if message != "!help":
                 return
-            help_text = "\\n".join([
+            help_text = "\n".join([
                 "🎵 COMANDOS DE MÚSICA",
                 "• !play canción — Solicitar una canción (usa 1 ticket)",
                 "• !q — Ver la cola actual",
