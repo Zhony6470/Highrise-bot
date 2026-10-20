@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Awaitable, Callable
 
 from highrise import Position, User
+from common.bot_filter import is_known_bot
 
 
 TRUTH_CATEGORIES = {
@@ -597,7 +598,7 @@ class TruthOrDareGame:
                 room_user
                 for room_user, _ in response.content
                 if room_user.id != exclude_user_id
-                and room_user.id != getattr(self.bot, "bot_id", None)
+                and not is_known_bot(self.bot, room_user.id, room_user.username)
             ]
             if not candidates:
                 return None
@@ -657,6 +658,8 @@ class TruthOrDareGame:
 
 
     async def start_group(self, user: User) -> None:
+        if is_known_bot(self.bot, user.id, user.username):
+            return
         if self.active:
             await self._chat(
                 "<#FFCC66>🎲 Ya hay una partida de Verdad o Reto activa."
@@ -675,6 +678,8 @@ class TruthOrDareGame:
         )
 
     async def join_group(self, user: User) -> None:
+        if is_known_bot(self.bot, user.id, user.username):
+            return
         if self.state != "waiting":
             await self._chat(
                 "<#FFCC66>⚠️ La partida ya comenzó o no existe."
@@ -935,6 +940,17 @@ class TruthOrDareGame:
             await self._start_current_turn()
 
     async def handle(self, user: User, command: str) -> bool:
+        normalized_command = command.strip().split(maxsplit=1)[0].lower() if command.strip() else ""
+        game_commands = {
+            "!setcastigo", "!castigo", "!vd", "!verdad", "!reto",
+            "!jugarvd", "!entrarvd", "!salirvd", "!iniciarvd", "!listo",
+            "!terminarvd", "!cancelarvd",
+        }
+        if normalized_command in game_commands and is_known_bot(
+            self.bot, user.id, user.username
+        ):
+            return True
+
         if command.startswith("!setcastigo"):
             if user.id != self.bot.owner_id and not await self.is_mod(user.id):
                 await self._chat(f"<#FF6666>🔒 @{user.username}, solo el dueño o moderadores pueden configurar el tubo.")
