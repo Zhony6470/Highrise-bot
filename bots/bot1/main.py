@@ -1153,6 +1153,11 @@ class Bot(BotRuntimeMixin, BaseBot):
 
         return role
 
+    async def on_whisper(self, user: User, message: str) -> None:
+        # En privado, !help muestra la ayuda de Zeta. En la sala no cambia nada.
+        if message.strip().lower() == "!help":
+            await self.on_chat(user, "!help")
+
     async def on_user_join(
         self, user: User, position: Position | AnchorPosition
     ) -> None:
