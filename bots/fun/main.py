@@ -24,6 +24,7 @@ from commands.set_position import handle_set_position
 from common.avatar import AvatarManager
 from common.bot_manager import should_handle_for_bot
 from common.bot_runtime import BotRuntimeMixin
+from services.message_pacing import install_message_pacing
 from common.bot_state import BotStateManager
 from common.dance import DanceManager
 from services.emotes import EmotesManager
@@ -135,6 +136,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         await self.restart_process()
 
     async def on_start(self, session_metadata: SessionMetadata) -> None:
+        install_message_pacing(self.highrise)
         self.bot_id = session_metadata.user_id
         self.owner_id = session_metadata.room_info.owner_id
 
