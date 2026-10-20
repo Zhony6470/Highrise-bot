@@ -6,7 +6,7 @@ if ROOT_DIR not in sys.path:
 from pathlib import Path
 from urllib.request import Request,urlopen
 from urllib.error import HTTPError,URLError
-from highrise import BaseBot, CurrencyItem, SessionMetadata, User, __main__
+from highrise import BaseBot, CurrencyItem, GetMessagesRequest, SessionMetadata, User, __main__
 from highrise.__main__ import BotDefinition
 from bots.dj.services.youtube import search_youtube, YouTubeSearchError
 from commands.dispatcher import CommandDispatcher
@@ -551,6 +551,27 @@ class Bot(BotRuntimeMixin, BaseBot):
                 action="añadida a" if path.endswith("add") else "eliminada de"
                 await self.highrise.chat(f"<#66FF99>🎵 «{v['title']}» {action} la playlist.")
             except (YouTubeSearchError,RuntimeError) as e:await self.highrise.send_whisper(user.id,f"<#FF6666>⚠️ {e}")
+
+    async def on_message(self, user_id: str, conversation_id: str, is_new_conversation: bool) -> None:
+        """Responde !help en el buzón privado de Highrise."""
+        try:
+            response = await self.highrise.get_messages(conversation_id)
+            if not isinstance(response, GetMessagesRequest.GetMessagesResponse) or not response.messages:
+                return
+            message = response.messages[-1].content.strip().lower()
+            if message != "!help":
+                return
+            help_text = "\\n".join([
+                "🎵 COMANDOS DE MÚSICA",
+                "• !play canción — Solicitar una canción (usa 1 ticket)",
+                "• !q — Ver la cola actual",
+                "• !review / !r — Ver la canción que está sonando",
+                "• !ticket — Ver tickets por cada 10 G",
+                "• !wallet — Ver el oro de Dj.Z",
+            ])
+            await self.highrise.send_message(conversation_id, help_text)
+        except Exception as error:
+            print(f"[MUSIC INBOX HELP] Error procesando !help: {error}")
 
     async def on_whisper(self,user:User,message:str):
         # En privado, !help muestra la ayuda de música; !help music en sala sigue igual.
