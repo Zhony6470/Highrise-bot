@@ -1153,6 +1153,36 @@ class Bot(BotRuntimeMixin, BaseBot):
 
         return role
 
+    async def on_message(
+        self, user_id: str, conversation_id: str, is_new_conversation: bool
+    ) -> None:
+        """Responde !help en el buzón privado de Highrise."""
+        try:
+            response = await self.highrise.get_messages(conversation_id)
+            if not isinstance(response, GetMessagesRequest.GetMessagesResponse) or not response.messages:
+                return
+            message = response.messages[-1].content.strip().lower()
+            if message != "!help":
+                return
+            username = ""
+            try:
+                user_response = await self.webapi.get_user(user_id)
+                username = user_response.user.username
+            except Exception as error:
+                print(f"[INBOX HELP] No se pudo cargar el usuario: {error}")
+            user = User(user_id, username)
+            help_text = await self.command_dispatcher.handle(self, user, "!help")
+            if isinstance(help_text, list):
+                for section in help_text:
+                    if section:
+                        await self.highrise.send_message(conversation_id, section)
+            elif help_text:
+                await self.highrise.send_message(conversation_id, help_text)
+            else:
+                await self.highrise.send_message(conversation_id, "🤖 Ayuda de Zeta: escribe !help en la sala para ver los comandos disponibles.")
+        except Exception as error:
+            print(f"[INBOX HELP] Error procesando !help: {error}")
+
     async def on_whisper(self, user: User, message: str) -> None:
         # En privado, !help muestra la ayuda de Zeta. En la sala no cambia nada.
         if message.strip().lower() == "!help":
