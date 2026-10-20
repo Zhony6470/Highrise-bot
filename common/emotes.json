@@ -1604,13 +1604,13 @@
   {
     "command": "Jumpscared 1",
     "emote": "emote-jumpscared1",
-    "duration": 5,
+    "duration": 6,
     "auth": "public"
   },
   {
     "command": "Jumpscared 2",
     "emote": "emote-jumpscared2",
-    "duration": 5,
+    "duration": 6,
     "auth": "public"
   },
   {
@@ -1622,7 +1622,7 @@
   {
     "command": "Summoning",
     "emote": "emote-summoning",
-    "duration": 5,
+    "duration": 6,
     "auth": "public"
   },
   {
