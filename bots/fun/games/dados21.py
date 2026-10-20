@@ -5,6 +5,7 @@ import random
 from pathlib import Path
 
 from highrise import CurrencyItem, Item, User
+from bots.fun.games.chat_queue import send_game_chat
 from services.storage import load_json, save_json
 
 LOBBY_SECONDS = 15
@@ -46,7 +47,7 @@ class Dados21Game:
             print(f"[DADOS21] Error enviando privado: {error}")
 
     async def _chat(self, message: str):
-        await self.bot.highrise.chat(message)
+        await send_game_chat(self.bot.highrise, message)
 
     async def handle(self, user: User, message: str, private: bool = False) -> bool:
         parts = message.strip().split()
