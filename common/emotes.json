@@ -1626,6 +1626,12 @@
     "auth": "public"
   },
   {
+    "command": "Solo Pumpkindance Left",
+    "emote": "emote-solo-pumpkindance-left",
+    "duration": 8.26,
+    "auth": "public"
+  },
+  {
     "command": "Rest",
     "emote": "sit-idle-cute",
     "duration": 17.1,
