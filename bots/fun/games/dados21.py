@@ -214,6 +214,8 @@ class Dados21Game:
             self.active = False
             self.current = None
             self.players = []
+            self.turn_index = 0
+            self.task = None
             await self._chat("🎲 Dados 21 ha terminado. Ya se puede iniciar otra partida.")
             return
         self.current = self.players[self.turn_index]
