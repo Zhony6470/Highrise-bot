@@ -376,21 +376,19 @@ class Bot(BotRuntimeMixin, BaseBot):
         if previous_task:
             previous_task.cancel()
 
-        # Jumpscared 3 debe ejecutarse una sola vez; no crear la tarea de repetición.
-        if emote_id != "emote-jumpscared3":
-            self.emote_tasks[target_id] = asyncio.create_task(
-                self.emote_loop(
-                    target_id,
-                    emote_id,
-                    duration,
-                    first_already_sent=True,
-                    first_sent_at=first_send_at,
-                )
+        # Repetir el emote; !stop cancela la repetición para ese objetivo.
+        self.emote_tasks[target_id] = asyncio.create_task(
+            self.emote_loop(
+                target_id,
+                emote_id,
+                duration,
+                first_already_sent=True,
+                first_sent_at=first_send_at,
             )
+        )
         await self.highrise.send_whisper(
             requester_id,
-            f"<#66FF99>✨ Emote activado: {command}."
-            + ("" if emote_id == "emote-jumpscared3" else " Escribe !stop para detenerlo.")
+            f"<#66FF99>✨ Emote activado: {command}. Escribe !stop para detenerlo."
         )
         return True
 
