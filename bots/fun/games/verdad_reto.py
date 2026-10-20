@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Awaitable, Callable
 
 from highrise import Position, User
+from bots.fun.games.chat_queue import send_game_chat
 from common.bot_filter import is_known_bot
 
 
@@ -516,7 +517,7 @@ class TruthOrDareGame:
 
     async def _chat(self, message: str) -> None:
         try:
-            await self.bot.highrise.chat(message)
+            await send_game_chat(self.bot.highrise, message)
         except Exception as error:
             print(f"[FUN GAME] Error enviando mensaje: {error}")
 
