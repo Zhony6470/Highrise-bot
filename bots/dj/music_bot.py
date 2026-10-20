@@ -554,11 +554,17 @@ class Bot(BotRuntimeMixin, BaseBot):
 
     async def on_message(self, user_id: str, conversation_id: str, is_new_conversation: bool) -> None:
         """Responde !help en el buzón privado de Highrise."""
+        print(f"[INBOX DEBUG] on_message recibido en bots/dj/music_bot.py user_id={user_id} conversation_id={conversation_id} new={is_new_conversation}")
         try:
             response = await self.highrise.get_messages(conversation_id)
-            if not isinstance(response, GetMessagesRequest.GetMessagesResponse) or not response.messages:
+            if not isinstance(response, GetMessagesRequest.GetMessagesResponse):
+                print(f"[INBOX DEBUG] Tipo de respuesta inesperado: {type(response).__name__}")
+                return
+            if not response.messages:
+                print("[INBOX DEBUG] La conversación no contiene mensajes")
                 return
             message = response.messages[-1].content.strip().lower()
+            print(f"[INBOX DEBUG] Último mensaje recibido: {message!r}")
             if message != "!help":
                 return
             help_text = "\n".join([
