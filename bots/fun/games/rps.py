@@ -5,6 +5,7 @@ import secrets
 from dataclasses import dataclass, field
 
 from highrise import CurrencyItem, Item, User
+from common.bot_filter import is_known_bot
 
 
 CHOICE_SECONDS = 40
@@ -106,6 +107,11 @@ class RpsGame:
 
         command = parts[0].lower()
 
+        if is_known_bot(self.bot, user.id, user.username) and (
+            command == "!rps" or command in CHOICES
+        ):
+            return True
+
         if command == "!rps":
             await self.start_command(user, parts)
             return True
@@ -185,6 +191,13 @@ class RpsGame:
             await self._whisper(
                 user.id,
                 "<#FFCC66>⚠️ Ese jugador debe estar en la sala para jugar RPS.",
+            )
+            return
+
+        if is_known_bot(self.bot, target_user.id, target_user.username):
+            await self._whisper(
+                user.id,
+                "<#FFCC66>🤖 Los bots no pueden participar como jugadores. Elige a una persona.",
             )
             return
 
