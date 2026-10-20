@@ -343,9 +343,11 @@ class Bot(BotRuntimeMixin, BaseBot):
         self, sender: User, receiver: User, tip: CurrencyItem | Item
     ) -> None:
         try:
-            if await self.dados21.handle_tip(sender, receiver, tip):
-                return
+            # RPS debe procesar primero sus apuestas para que no se registren
+            # también como depósitos de la cartera de Dados 21.
             if await self.rps.handle_tip(sender, receiver, tip):
+                return
+            if await self.dados21.handle_tip(sender, receiver, tip):
                 return
             await self.tip_manager.handle_tip(
                 self.highrise, self.bot_id, sender, receiver, tip
