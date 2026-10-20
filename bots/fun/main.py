@@ -342,6 +342,10 @@ class Bot(BotRuntimeMixin, BaseBot):
             return
 
     async def on_whisper(self, user: User, message: str) -> None:
+        # En privado, !help muestra la ayuda de juegos; !help game en sala sigue igual.
+        if message.strip().lower() == "!help":
+            await self.on_chat(user, "!help game")
+            return
         if await self.dados21.handle(user, message.strip(), private=True):
             return
         if await self.rps.handle(user, message.strip(), private=True):
