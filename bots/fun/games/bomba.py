@@ -99,6 +99,9 @@ class BombaGame:
         if msg.startswith("!"):
             return False
         if self.phase == "round" and user.id in self.players:
+            # Quien se inscribe a mitad de ronda espera hasta la siguiente.
+            if user.id not in self.round_players:
+                return True
             await self.submit_answer(user, msg)
             return True
         return False
