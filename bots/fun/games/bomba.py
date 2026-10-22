@@ -11,7 +11,8 @@ from highrise import User
 from bots.fun.games.chat_queue import send_game_chat
 
 LOBBY_SECONDS = 20
-ROUND_SECONDS = 20
+ROUND_SECONDS = 30
+RETURN_SECONDS = 8
 DICTIONARY_FILE = Path(__file__).resolve().parents[1] / "data" / "bomba_dictionary.json"
 CATEGORIES = (
     "Animales",
@@ -50,6 +51,7 @@ class BombaGame:
         self.task: asyncio.Task | None = None
         self.lock = asyncio.Lock()
         self.game_id = 0
+        self.last_teleport_keys: set[tuple] = set()
 
     def _load_dictionary(self) -> dict[str, set[str]]:
         try:
@@ -217,7 +219,8 @@ class BombaGame:
                     await self._punish_players(failed)
                 else:
                     await self._chat("🎉 ¡Todos respondieron a tiempo! La bomba pasa a la siguiente ronda.")
-                await asyncio.sleep(2)
+                # Dar tiempo para que los jugadores regresen a su sitio antes de la próxima ronda.
+                await asyncio.sleep(RETURN_SECONDS)
         except asyncio.CancelledError:
             pass
         except Exception as error:
@@ -248,6 +251,24 @@ class BombaGame:
                     position for room_user, position in room_users.content
                     if room_user.id != self.bot.bot_id and position is not None
                 ]
+            # Deduplicar destinos, barajarlos y evitar reutilizar los destinos de la ronda anterior
+            # cuando existan otras posiciones disponibles.
+            unique_positions = {}
+            for position in positions:
+                key = (getattr(position, "x", None), getattr(position, "y", None),
+                       getattr(position, "z", None), getattr(position, "facing", None))
+                unique_positions[key] = position
+            positions = list(unique_positions.values())
+            fresh_positions = [
+                position for position in positions
+                if (getattr(position, "x", None), getattr(position, "y", None),
+                    getattr(position, "z", None), getattr(position, "facing", None))
+                not in self.last_teleport_keys
+            ]
+            if fresh_positions:
+                positions = fresh_positions
+            random.shuffle(positions)
+            self.last_teleport_keys = set()
         except Exception as error:
             print(f"[BOMBA] No pude leer posiciones de la sala: {error}")
             positions = []
@@ -269,12 +290,16 @@ class BombaGame:
             await self.bot.highrise.send_emote(explosion_emote, self.bot.bot_id)
         except Exception as error:
             print(f"[BOMBA] No pude ejecutar el emote de explosión del bot: {error}")
-        for player in players:
+        for index, player in enumerate(players):
             if player.id not in self.players:
                 continue
             if positions:
+                destination = positions[index % len(positions)]
+                destination_key = (getattr(destination, "x", None), getattr(destination, "y", None),
+                                   getattr(destination, "z", None), getattr(destination, "facing", None))
+                self.last_teleport_keys.add(destination_key)
                 try:
-                    await self.bot.highrise.teleport(player.id, random.choice(positions))
+                    await self.bot.highrise.teleport(player.id, destination)
                 except Exception as error:
                     print(f"[BOMBA] No pude teletransportar a @{player.username}: {error}")
             if emote_ids:
