@@ -7,7 +7,7 @@ import re
 import unicodedata
 from pathlib import Path
 
-from highrise import Position, User
+from highrise import User
 from bots.fun.games.chat_queue import send_game_chat
 
 LOBBY_SECONDS = 20
@@ -24,9 +24,6 @@ CATEGORIES = (
 )
 # La ubicación se elige entre posiciones reales ocupadas en la sala, para evitar
 # coordenadas arbitrarias que puedan dejar al usuario bajo el mapa o fuera del área.
-FALLBACK_EMOTES = ("emote-superpunch", "emote-kicking", "emoji-crying", "emote-dance-tiktok")
-
-
 def normalize(text: str) -> str:
     value = unicodedata.normalize("NFD", text.casefold().strip())
     value = "".join(ch for ch in value if unicodedata.category(ch) != "Mn")
@@ -236,10 +233,18 @@ class BombaGame:
     async def _punish_players(self, players: list[User]):
         try:
             room_users = await self.bot.highrise.get_room_users()
+            failed_ids = {player.id for player in players}
             positions = [
                 position for room_user, position in room_users.content
-                if room_user.id != self.bot.bot_id and position is not None
+                if room_user.id != self.bot.bot_id
+                and room_user.id not in failed_ids
+                and position is not None
             ]
+            if not positions:
+                positions = [
+                    position for room_user, position in room_users.content
+                    if room_user.id != self.bot.bot_id and position is not None
+                ]
         except Exception as error:
             print(f"[BOMBA] No pude leer posiciones de la sala: {error}")
             positions = []
