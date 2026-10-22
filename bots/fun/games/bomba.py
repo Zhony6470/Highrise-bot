@@ -68,13 +68,13 @@ class BombaGame:
 
     async def _chat(self, message: str):
         try:
-            await send_game_chat(self.bot.highrise, message)
+            await send_game_chat(self.bot.highrise, message if "<#" in message else f"<#FF4D6D>✨ {message}")
         except Exception as error:
             print(f"[BOMBA] Error enviando mensaje: {error}")
 
     async def _whisper(self, user_id: str, message: str):
         try:
-            await self.bot.highrise.send_whisper(user_id, message)
+            await self.bot.highrise.send_whisper(user_id, message if "<#" in message else f"<#FF4D6D>✨ {message}")
         except Exception as error:
             print(f"[BOMBA] Error enviando privado: {error}")
 
@@ -193,7 +193,7 @@ class BombaGame:
                 await self.stop("💣 La partida terminó: no hubo participantes.")
                 return
             self.phase = "round"
-            await self._chat(f"🚨 ¡Se cerró la inscripción! Participantes: {len(self.players)}. ¡Comienza Bomba!")
+            await self._chat(f"<#FFCC66>🚨 ¡INSCRIPCIÓN CERRADA! <#FFFFFF>👥 Participantes: {len(self.players)}\\n<#FF4D6D>💣 ¡Que comience la explosión!")
             while game_id == self.game_id and self.phase != "idle":
                 prompt = self._choose_prompt()
                 if not prompt:
@@ -214,10 +214,10 @@ class BombaGame:
                 failed = [player for player_id, player in list(self.round_players.items()) if player_id in self.players and player_id not in self.answers]
                 if failed:
                     names = ", ".join(f"@{player.username}" for player in failed)
-                    await self._chat(f"💥 ¡BOOM! No respondieron correctamente a tiempo: {names}. Siguen en el juego.")
+                    await self._chat(f"<#FF4D6D>💥 ¡BOOOOM! 💣 <#FFFFFF>Sin respuesta correcta: {names}\\n<#66CCFF>✨ ¡Siguen en el juego! Prepárense para la próxima ronda.")
                     await self._punish_players(failed)
                 else:
-                    await self._chat("🎉 ¡Todos respondieron a tiempo! La bomba pasa a la siguiente ronda.")
+                    await self._chat("<#66FF99>🎉 ¡RONDA PERFECTA! <#FFFFFF>Todos respondieron a tiempo.\\n<#FFCC66>💣 La bomba sigue en juego...")
                 # Dar tiempo para que los jugadores regresen a su sitio antes de la próxima ronda.
                 await asyncio.sleep(RETURN_SECONDS)
         except asyncio.CancelledError:
