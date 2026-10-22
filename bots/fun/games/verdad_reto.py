@@ -719,7 +719,10 @@ class TruthOrDareGame:
         if user.id in self.individual_choices:
             await self.individual_choice(user, mode)
             return
-        await self._send_prompt(user.username, mode, individual=True)
+        # Pasar el ID del jugador para que nunca sea elegido como su propio objetivo.
+        await self._send_prompt(
+            user.username, mode, individual=True, user_id=user.id
+        )
 
     async def _individual_action_timeout(self, user_id: str, username: str) -> None:
         try:
