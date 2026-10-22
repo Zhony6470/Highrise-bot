@@ -42,12 +42,12 @@ class Dados21Game:
 
     async def _whisper(self, user_id: str, message: str):
         try:
-            await self.bot.highrise.send_whisper(user_id, message)
+            await self.bot.highrise.send_whisper(user_id, message if "<#" in message else f"<#FFCC66>✨ {message}")
         except Exception as error:
             print(f"[DADOS21] Error enviando privado: {error}")
 
     async def _chat(self, message: str):
-        await send_game_chat(self.bot.highrise, message)
+        await send_game_chat(self.bot.highrise, message if "<#" in message else f"<#FFCC66>✨ {message}")
 
     async def handle(self, user: User, message: str, private: bool = False) -> bool:
         parts = message.strip().split()
