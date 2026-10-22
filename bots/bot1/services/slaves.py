@@ -5,8 +5,48 @@ from highrise import Position
 
 ALLOWED_ROLES = {"vip", "mod", "owner", "designer"}
 ORDER_EMOTES = {
-    "!sentado": ("idle-loop-sitfloor", "Sit"),
-    "!duerme": ("idle-floorsleeping", "Cozy Nap"),
+    "sentado": ("idle-loop-sitfloor", "Sit"),
+    "duerme": ("idle-floorsleeping", "Cozy Nap"),
+}
+SLAP_EMOTE = {"emote": "emote-slap", "command": "Slap", "duration": 2.7, "auth": "public"}
+# Entrada 56 del catálogo actual (numeración desde 1).
+RELEASE_EMOTE = {"emote": "emote-jumpb", "command": "Jump", "duration": 3.6, "auth": "public"}
+SLAVE_MESSAGES = {
+    "enslave": [
+        "⛓️ @{owner} ha esclavizado a @{slave}. ¡Que empiece la aventura! 😈",
+        "📣 ¡Atención! @{slave} ahora sigue las órdenes de @{owner}. ¡A portarse bien! 😂",
+        "🔗 @{owner} ha reclamado a @{slave} como su ayudante personal. ¡Suerte a ambos! 😜",
+    ],
+    "release": [
+        "🔓 @{slave} ha sido liberado/a por @{owner}. ¡Se acabó el servicio! 😄",
+        "🎉 ¡Buenas noticias! @{slave} vuelve a ser libre. @{owner} le ha soltado las cadenas.",
+        "🕊️ @{owner} ha liberado a @{slave}. ¡A disfrutar de la libertad!",
+    ],
+    "escape": [
+        "🏃💨 ¡@{slave} se ha escapado de @{owner}! ¡La libertad triunfa! 🎉",
+        "🚨 ¡Fuga exitosa! @{slave} ha dejado atrás a @{owner}. ¡Corre! 😂",
+        "🕊️ ¡@{slave} rompió las cadenas y escapó de @{owner}!",
+    ],
+    "whip": [
+        "🐎 ¡@{owner} ha usado el látigo! @{slave}, ¡a obedecer! 😈",
+        "⚡ ¡Chas! @{owner} le ha dado un latigazo teatral a @{slave}.",
+        "🎭 @{owner} hace sonar el látigo y @{slave} recibe el susto de su vida.",
+    ],
+    "sit": [
+        "🪑 @{owner} ordena sentarse. ¡@{slave}, a descansar!",
+        "📢 ¡Asiento inmediato para @{slave}! Orden de @{owner}.",
+        "😌 @{slave} se sienta; @{owner} ha hablado.",
+    ],
+    "dance": [
+        "💃 ¡@{owner} ordena bailar y @{slave} mueve el esqueleto!",
+        "🎶 ¡Que suene la música! @{slave} baila por orden de @{owner}.",
+        "🕺 @{slave} demuestra sus pasos. ¡Orden de @{owner} cumplida!",
+    ],
+    "sleep": [
+        "😴 @{owner} manda a dormir a @{slave}. ¡Buenas noches!",
+        "🌙 Se acabó la fiesta para @{slave}: orden de dormir de @{owner}.",
+        "💤 @{slave} se va a dormir por orden de @{owner}.",
+    ],
 }
 
 
@@ -15,6 +55,18 @@ def _state(bot):
         bot.slave_links = {}
     if not hasattr(bot, "slave_monitor_task"):
         bot.slave_monitor_task = None
+
+
+async def _play_once(bot, target_id, emote):
+    """Ejecuta un emote una sola vez, sin cambiar la lógica global de emotes."""
+    task = getattr(bot, "emote_tasks", {}).pop(target_id, None)
+    if task:
+        task.cancel()
+    await bot.highrise.send_emote(emote["emote"], target_id)
+
+
+def _random_message(kind, owner, slave):
+    return random.choice(SLAVE_MESSAGES[kind]).format(owner=owner, slave=slave)
 
 
 async def _announce(bot, text):
@@ -79,18 +131,12 @@ async def _release(bot, slave_id, escaped=False):
         task.cancel()
     slave_name = link.get("slave_username", "el esclavo")
     owner_name = link.get("owner_username", "su amo")
-    if escaped:
-        await _announce(
-            bot,
-            f"<#FFCC66>🏃💨 ¡@{slave_name} se ha escapado de @{owner_name}! "
-            "¡La libertad triunfa! 🎉",
-        )
-    else:
-        await _announce(
-            bot,
-            f"<#66FF99>🔓 @{slave_name} ha sido liberado/a por @{owner_name}. "
-            "¡Se acabó el servicio! 😄",
-        )
+    try:
+        await _play_once(bot, slave_id, RELEASE_EMOTE)
+    except Exception as error:
+        print(f"[SLAVE] No se pudo ejecutar el emote 56 al liberar: {error}")
+    kind = "escape" if escaped else "release"
+    await _announce(bot, "<#66FF99>" + _random_message(kind, owner_name, slave_name))
     return True
 
 
@@ -131,11 +177,12 @@ async def _order_slave(bot, owner, slave_id, command):
     if not link or link["owner_id"] != owner.id:
         await bot.highrise.send_whisper(owner.id, "🔎 No tienes un esclavo activo al que darle órdenes.")
         return
-    if command == "!baila":
+    if command == "baila":
         choices = [
             item for item in bot.emotes_list
-            if "dance" in str(item.get("command", "")).casefold()
-            or "dance" in str(item.get("emote", "")).casefold()
+            if not item.get("disabled")
+            and ("dance" in str(item.get("command", "")).casefold()
+                 or "dance" in str(item.get("emote", "")).casefold())
         ]
         if not choices:
             await bot.highrise.send_whisper(owner.id, "🎭 No encontré emotes de baile en el catálogo.")
@@ -144,13 +191,16 @@ async def _order_slave(bot, owner, slave_id, command):
     else:
         emote_id, emote_name = ORDER_EMOTES[command]
         emote = next(
-            (item for item in bot.emotes_list if item.get("emote") == emote_id),
+            (item for item in bot.emotes_list if item.get("emote") == emote_id and not item.get("disabled")),
             {"emote": emote_id, "command": emote_name, "duration": 15, "auth": "public"},
         )
-    success = await bot._activate_emote(owner.id, slave_id, emote)
-    if success:
-        labels = {"!sentado": "🪑 ¡A sentarse!", "!baila": "💃 ¡A bailar!", "!duerme": "😴 ¡A dormir!"}
-        await _announce(bot, f"<#CC99FF>{labels[command]} @{link['slave_username']} obedece la orden de @{owner.username}.")
+    try:
+        await _play_once(bot, slave_id, emote)
+        kind = {"sentado": "sit", "baila": "dance", "duerme": "sleep"}[command]
+        await _announce(bot, "<#CC99FF>" + _random_message(kind, owner.username, link["slave_username"]))
+    except Exception as error:
+        print(f"[SLAVE] No se pudo ejecutar la orden {command}: {error}")
+        await bot.highrise.send_whisper(owner.id, "⚠️ No pude ejecutar esa orden sobre el esclavo.")
 
 
 async def handle_slave_command(bot, user, message):
@@ -158,9 +208,9 @@ async def handle_slave_command(bot, user, message):
     msg = message.strip()
     lower = msg.casefold()
     parts = msg.split()
-    command = parts[0].casefold() if parts else ""
+    command = parts[0].casefold().lstrip("!") if parts else ""
 
-    if command == "!esclavizar":
+    if command == "esclavizar":
         if not await _is_allowed(bot, user):
             await bot.highrise.send_whisper(user.id, "🔒 Solo VIP, moderadores, owner y designer pueden usar este comando.")
             return True
@@ -207,18 +257,18 @@ async def handle_slave_command(bot, user, message):
             bot.slave_links.pop(target_id, None)
             await bot.highrise.send_whisper(user.id, f"⚠️ No pude traer al usuario cerca de ti: {error}")
             return True
-        await _announce(bot, f"<#CC99FF>⛓️ @{user.username} ha esclavizado a @{target_display}. ¡Que empiece la aventura! 😈")
+        await _announce(bot, "<#CC99FF>" + _random_message("enslave", user.username, target_display))
         await _start_monitor(bot)
         return True
 
-    if lower == "!escapar":
+    if command == "escapar":
         if user.id in bot.slave_links:
             await _release(bot, user.id, escaped=True)
         else:
             await bot.highrise.send_whisper(user.id, "🔎 No tienes un amo del que escapar.")
         return True
 
-    if lower == "!liberar esclavo":
+    if lower in {"!liberar esclavo", "liberar esclavo"}:
         owned = next((sid for sid, link in bot.slave_links.items() if link["owner_id"] == user.id), None)
         if owned is None:
             await bot.highrise.send_whisper(user.id, "🔎 No tienes ningún esclavo que liberar.")
@@ -226,12 +276,13 @@ async def handle_slave_command(bot, user, message):
             await _release(bot, owned)
         return True
 
-    if command in {"!sentado", "!baila", "!duerme"}:
+    if command in {"sentado", "sientado", "baila", "duerme"}:
         slave_id = next((sid for sid, link in bot.slave_links.items() if link["owner_id"] == user.id), None)
         if slave_id is None:
             await bot.highrise.send_whisper(user.id, "🔎 Primero usa !esclavizar @usuario para tener un esclavo.")
             return True
-        await _order_slave(bot, user, slave_id, command)
+        normalized = "sentado" if command in {"sentado", "sientado"} else command
+        await _order_slave(bot, user, slave_id, normalized)
         return True
 
     return False
