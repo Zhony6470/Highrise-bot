@@ -281,7 +281,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             ])
 
         if role in {"vip", "mod", "owner", "designer"}:
-            sections.append("\\n".join([
+            sections.append("\n".join([
                 "<#CC99FF>⛓️ ESCLAVOS (ZETA)",
                 "<#FFFFFF>• !esclavizar @usuario - Esclavizar a un usuario",
                 "<#FFFFFF>• !sentado - Ordenar que se siente",
