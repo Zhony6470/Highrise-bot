@@ -49,6 +49,7 @@ class BombaGame:
         self.category = ""
         self.round_words: set[str] = set()
         self.answers: dict[str, str] = {}
+        self.round_players: dict[str, User] = {}
         self.task: asyncio.Task | None = None
         self.lock = asyncio.Lock()
         self.game_id = 0
@@ -98,6 +99,8 @@ class BombaGame:
                 await self.stop(f"🛑 @{user.username} terminó la partida de Bomba.")
                 return True
             return self.phase != "idle" and user.id in self.players
+        if msg.startswith("!"):
+            return False
         if self.phase == "round" and user.id in self.players:
             await self.submit_answer(user, msg)
             return True
@@ -147,6 +150,9 @@ class BombaGame:
 
     async def submit_answer(self, user: User, message: str):
         word = normalize(message)
+        if user.id not in self.round_players:
+            await self._whisper(user.id, "Ya estás inscrito, pero comienzas a responder desde la próxima ronda.")
+            return
         if not word or user.id in self.answers:
             return
         if not word.startswith(normalize(self.letter)[:1]):
@@ -196,6 +202,7 @@ class BombaGame:
                 self.round_number += 1
                 self.round_words = set()
                 self.answers = {}
+                self.round_players = dict(self.players)
                 await self._chat(
                     f"💣 RONDA {self.round_number} | Categoría: {self.category} | "
                     f"Letra: {self.letter}. Tienen {ROUND_SECONDS} segundos para responder."
@@ -203,7 +210,7 @@ class BombaGame:
                 await asyncio.sleep(ROUND_SECONDS)
                 if game_id != self.game_id or self.phase == "idle":
                     return
-                failed = [player for player_id, player in list(self.players.items()) if player_id not in self.answers]
+                failed = [player for player_id, player in list(self.round_players.items()) if player_id in self.players and player_id not in self.answers]
                 if failed:
                     names = ", ".join(f"@{player.username}" for player in failed)
                     await self._chat(f"💥 ¡BOOM! No respondieron correctamente a tiempo: {names}. Siguen en el juego.")
@@ -250,13 +257,13 @@ class BombaGame:
             ).casefold() for token in ("bomb", "explos", "boom"))
         ]
         explosion_emote = random.choice(bomb_emotes) if bomb_emotes else "emote-superpunch"
+        try:
+            await self.bot.highrise.send_emote(explosion_emote, self.bot.bot_id)
+        except Exception as error:
+            print(f"[BOMBA] No pude ejecutar el emote de explosión del bot: {error}")
         for player in players:
             if player.id not in self.players:
                 continue
-            try:
-                await self.bot.highrise.send_emote(explosion_emote, player.id)
-            except Exception as error:
-                print(f"[BOMBA] No pude ejecutar emote de explosión sobre @{player.username}: {error}")
             if positions:
                 try:
                     await self.bot.highrise.teleport(player.id, random.choice(positions))
@@ -278,6 +285,7 @@ class BombaGame:
         self.players.clear()
         self.answers.clear()
         self.round_words.clear()
+        self.round_players.clear()
         self.task = None
         if task and task is not asyncio.current_task():
             task.cancel()
