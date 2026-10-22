@@ -41,8 +41,13 @@ async def _is_bot_target(bot, target_id, target_username):
         os.getenv("FUN_BOT_USERNAME", "Fun_Bot").casefold(),
         os.getenv("GHOST_WAVE_USERNAME", "Ghost_Wave").casefold(),
         os.getenv("GHOST_BOT_USERNAME", "Ghost_Wave").casefold(),
-        "zeta_bot", "dj.z", "ghost_wave", "ghost wave", "fun_bot", "games_bot",
+        os.getenv("BOT3_USERNAME", "BotJuegos").casefold(),
+        os.getenv("BOT1_USERNAME", "Zeta_Bot").casefold(),
+        "zeta_bot", "dj.z", "ghost_wave", "ghost wave", "fun_bot", "games_bot", "botjuegos",
     }
+    for key, value in os.environ.items():
+        if "USERNAME" in key.upper() and any(tag in key.upper() for tag in ("BOT", "GHOST", "DJ")) and value.strip():
+            known_names.add(value.strip().casefold())
     if target_id == getattr(bot, "bot_id", None) or username in known_names:
         return True
     # Protección adicional para bots con nombres identificables.
@@ -224,7 +229,8 @@ async def handle_slave_command(bot, user, message):
     if command in {"!sentado", "!baila", "!duerme"}:
         slave_id = next((sid for sid, link in bot.slave_links.items() if link["owner_id"] == user.id), None)
         if slave_id is None:
-            return False
+            await bot.highrise.send_whisper(user.id, "🔎 Primero usa !esclavizar @usuario para tener un esclavo.")
+            return True
         await _order_slave(bot, user, slave_id, command)
         return True
 
