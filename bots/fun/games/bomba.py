@@ -124,8 +124,10 @@ class BombaGame:
             self.round_number = 0
             self.task = asyncio.create_task(self._run(game_id))
         await self._chat(
-            f"💣 ¡@{user.username} inició BOMBA! Inscripción abierta durante {LOBBY_SECONDS} segundos. "
-            "Escribe jugar para participar. Para salir: salir. Solo el creador puede cancelar con terminar."
+            f"<#FF4D6D>💣━━━━ ¡BOMBA ACTIVADA! ━━━━\n"
+            f"<#FFFFFF>👑 @{user.username} abrió la partida.\n"
+            f"<#66CCFF>👥 Inscripción: {LOBBY_SECONDS} s — escribe jugar.\n"
+            "<#FFCC66>🚪 salir para abandonar · 🛑 terminar (solo creador)"
         )
 
     async def join(self, user: User):
@@ -205,8 +207,10 @@ class BombaGame:
                 self.answers = {}
                 self.round_players = dict(self.players)
                 await self._chat(
-                    f"💣 RONDA {self.round_number} | Categoría: {self.category} | "
-                    f"Letra: {self.letter}. Tienen {ROUND_SECONDS} segundos para responder."
+                    f"<#FF4D6D>💣━━━━ RONDA {self.round_number} ━━━━\n"
+                    f"<#66CCFF>📚 Categoría: {self.category}\n"
+                    f"<#FFCC66>🔤 LETRA: {self.letter}\n"
+                    f"<#FFFFFF>⏱️ ¡Tienen {ROUND_SECONDS} segundos para responder!"
                 )
                 await asyncio.sleep(ROUND_SECONDS)
                 if game_id != self.game_id or self.phase == "idle":
