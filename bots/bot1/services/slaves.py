@@ -276,6 +276,27 @@ async def handle_slave_command(bot, user, message):
             await _release(bot, owned)
         return True
 
+    if command == "latigo":
+        slave_id = next((sid for sid, link in bot.slave_links.items() if link["owner_id"] == user.id), None)
+        if slave_id is None:
+            await bot.highrise.send_whisper(user.id, "🔎 Primero esclaviza a alguien con !esclavizar @usuario.")
+            return True
+        link = bot.slave_links[slave_id]
+        reactions = [
+            item for item in bot.emotes_list
+            if not item.get("disabled")
+            and item.get("emote") in {"emote-jumpscared1", "emote-jumpscared2", "emote-sad", "emoji-scared"}
+        ]
+        reaction = random.choice(reactions) if reactions else {"emote": "emote-sad", "command": "Sad", "duration": 3, "auth": "public"}
+        try:
+            await _play_once(bot, user.id, SLAP_EMOTE)
+            await _play_once(bot, slave_id, reaction)
+            await _announce(bot, "<#CC99FF>" + _random_message("whip", user.username, link["slave_username"]))
+        except Exception as error:
+            print(f"[SLAVE] Error ejecutando !latigo: {error}")
+            await bot.highrise.send_whisper(user.id, "⚠️ No pude ejecutar la acción del látigo.")
+        return True
+
     if command in {"sentado", "sientado", "baila", "duerme"}:
         slave_id = next((sid for sid, link in bot.slave_links.items() if link["owner_id"] == user.id), None)
         if slave_id is None:
