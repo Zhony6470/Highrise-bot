@@ -7,7 +7,7 @@ import re
 import unicodedata
 from pathlib import Path
 
-from highrise import User
+from highrise import Position, User
 from bots.fun.games.chat_queue import send_game_chat
 
 LOBBY_SECONDS = 20
@@ -23,8 +23,8 @@ CATEGORIES = (
     "Nombres propios",
     "Colores",
 )
-# La ubicación se elige entre posiciones reales ocupadas en la sala, para evitar
-# coordenadas arbitrarias que puedan dejar al usuario bajo el mapa o fuera del área.
+# Los destinos de Bomba se generan con coordenadas aleatorias alrededor del jugador,
+# nunca reutilizando directamente la posición de otro usuario o bot.
 def normalize(text: str) -> str:
     value = unicodedata.normalize("NFD", text.casefold().strip())
     value = "".join(ch for ch in value if unicodedata.category(ch) != "Mn")
@@ -51,7 +51,6 @@ class BombaGame:
         self.task: asyncio.Task | None = None
         self.lock = asyncio.Lock()
         self.game_id = 0
-        self.last_teleport_keys: set[tuple] = set()
 
     def _load_dictionary(self) -> dict[str, set[str]]:
         try:
@@ -237,42 +236,21 @@ class BombaGame:
                 self.task = None
 
     async def _punish_players(self, players: list[User]):
+        # Solo consultamos la posición actual de cada jugador afectado como centro
+        # para generar un destino NUEVO; nunca usamos posiciones de otros usuarios/bots.
+        current_positions = {}
         try:
             room_users = await self.bot.highrise.get_room_users()
             failed_ids = {player.id for player in players}
-            positions = [
-                position for room_user, position in room_users.content
-                if room_user.id != self.bot.bot_id
-                and room_user.id not in failed_ids
-                and position is not None
-            ]
-            if not positions:
-                positions = [
-                    position for room_user, position in room_users.content
-                    if room_user.id != self.bot.bot_id and position is not None
-                ]
-            # Deduplicar destinos, barajarlos y evitar reutilizar los destinos de la ronda anterior
-            # cuando existan otras posiciones disponibles.
-            unique_positions = {}
-            for position in positions:
-                key = (getattr(position, "x", None), getattr(position, "y", None),
-                       getattr(position, "z", None), getattr(position, "facing", None))
-                unique_positions[key] = position
-            positions = list(unique_positions.values())
-            fresh_positions = [
-                position for position in positions
-                if (getattr(position, "x", None), getattr(position, "y", None),
-                    getattr(position, "z", None), getattr(position, "facing", None))
-                not in self.last_teleport_keys
-            ]
-            if fresh_positions:
-                positions = fresh_positions
-            random.shuffle(positions)
-            self.last_teleport_keys = set()
+            current_positions = {
+                room_user.id: position
+                for room_user, position in room_users.content
+                if room_user.id in failed_ids and position is not None
+            }
         except Exception as error:
-            print(f"[BOMBA] No pude leer posiciones de la sala: {error}")
-            positions = []
+            print(f"[BOMBA] No pude leer la posición actual de los jugadores: {error}")
         emote_ids = [
+
             str(item.get("emote", "")).strip()
             for item in getattr(self.bot, "emotes_list", [])
             if item.get("emote")
@@ -293,15 +271,26 @@ class BombaGame:
         for index, player in enumerate(players):
             if player.id not in self.players:
                 continue
-            if positions:
-                destination = positions[index % len(positions)]
-                destination_key = (getattr(destination, "x", None), getattr(destination, "y", None),
-                                   getattr(destination, "z", None), getattr(destination, "facing", None))
-                self.last_teleport_keys.add(destination_key)
+            current = current_positions.get(player.id)
+            if current is not None:
+                # Mantener la altura actual (Y) evita mandar al jugador bajo el suelo
+                # o dejarlo suspendido; X y Z se sortean para crear una posición nueva.
+                destination = Position(
+                    round(float(current.x) + random.uniform(-5.0, 5.0), 2),
+                    float(current.y),
+                    round(float(current.z) + random.uniform(-5.0, 5.0), 2),
+                    getattr(current, "facing", "FrontRight"),
+                )
                 try:
                     await self.bot.highrise.teleport(player.id, destination)
+                    print(
+                        f"[BOMBA] Teletransporte aleatorio de @{player.username} "
+                        f"a x={destination.x}, y={destination.y}, z={destination.z}"
+                    )
                 except Exception as error:
                     print(f"[BOMBA] No pude teletransportar a @{player.username}: {error}")
+            else:
+                print(f"[BOMBA] No hay posición actual para @{player.username}; se omite el teletransporte.")
             if emote_ids:
                 try:
                     await self.bot.highrise.send_emote(random.choice(emote_ids), player.id)
