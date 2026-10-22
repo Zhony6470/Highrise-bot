@@ -26,6 +26,7 @@ from services.positions import PositionManager
 from services.roles import RoleManager
 from services.emotes import EmotesManager
 from bots.bot1.services.track import handle_track_command, start_track_monitor
+from bots.bot1.services.slaves import handle_slave_command
 from services.storage import load_json
 from bots.bot1.services.tips import TipManager
 from bots.bot1.services.anuncios import announcement_loop
@@ -547,6 +548,10 @@ class Bot(BotRuntimeMixin, BaseBot):
     async def on_chat(self, user: User, message: str) -> None:
         msg = message.strip()
         msg_lower = msg.lower()
+
+        # Sistema de esclavos: comandos exclusivos de Zeta.
+        if await handle_slave_command(self, user, msg):
+            return
 
         # !mtip* pertenece exclusivamente a Dj.Z.
         # Este bloqueo va al inicio de on_chat para impedir que Zeta lo
