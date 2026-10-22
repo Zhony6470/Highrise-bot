@@ -86,11 +86,11 @@ class RpsGame:
         self.counter = 0
 
     async def _chat(self, message: str) -> None:
-        await send_game_chat(self.bot.highrise, message)
+        await send_game_chat(self.bot.highrise, message if "<#" in message else f"<#66CCFF>✨ {message}")
 
     async def _whisper(self, user_id: str, message: str) -> None:
         try:
-            await self.bot.highrise.send_whisper(user_id, message)
+            await self.bot.highrise.send_whisper(user_id, message if "<#" in message else f"<#66CCFF>✨ {message}")
         except Exception as error:
             print(f"[RPS] Error enviando privado: {error}")
 
