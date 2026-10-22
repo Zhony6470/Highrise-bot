@@ -273,15 +273,21 @@ class Bot(BotRuntimeMixin, BaseBot):
         }
         requested_help = msg.casefold()
         if requested_help in help_aliases:
-            for line in help_sections[help_aliases[requested_help]]:
-                await self.highrise.send_whisper(user.id, line)
+            section = help_sections[help_aliases[requested_help]]
+            await self.highrise.send_whisper(user.id, "\\n".join(section))
             return
         if requested_help in {"!help game", "!help"}:
-            await self.highrise.send_whisper(user.id, "<#66CCFF>🎮━━━━ GUÍA DE JUEGOS ━━━━")
-            await self.highrise.send_whisper(user.id, "<#FFFFFF>💡 Ayuda por juego: !help bomba · !help dados · !help rps · !help verdad")
-            for game in ("bomba", "dados", "rps", "verdad"):
-                for line in help_sections[game]:
-                    await self.highrise.send_whisper(user.id, line)
+            await self.highrise.send_whisper(
+                user.id,
+                "<#66CCFF>🎮━━━━ GUÍA DE JUEGOS ━━━━\\n"
+                "<#FFFFFF>💡 Comandos organizados por juego. También puedes usar: "
+                "!help bomba · !help dados · !help rps · !help verdad"
+            )
+            for game in ("verdad", "rps", "dados", "bomba"):
+                await self.highrise.send_whisper(
+                    user.id,
+                    "\\n".join(help_sections[game])
+                )
             return
 
         if command == "!home":
