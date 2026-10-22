@@ -517,7 +517,7 @@ class TruthOrDareGame:
 
     async def _chat(self, message: str) -> None:
         try:
-            await send_game_chat(self.bot.highrise, message)
+            await send_game_chat(self.bot.highrise, message if "<#" in message else f"<#CC99FF>✨ {message}")
         except Exception as error:
             print(f"[FUN GAME] Error enviando mensaje: {error}")
 
