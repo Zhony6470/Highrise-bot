@@ -33,6 +33,7 @@ from bots.bot1.services.tips import TipManager
 from bots.fun.games.verdad_reto import TruthOrDareGame
 from bots.fun.games.rps import RpsGame
 from bots.fun.games.dados21 import Dados21Game
+from bots.fun.games.bomba import BombaGame
 
 
 DATA_FILE = str(ROOT_DIR / "bots" / "fun" / "data" / "data.json")
@@ -63,6 +64,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         self.truth_or_dare = TruthOrDareGame(self, self.is_mod)
         self.rps = RpsGame(self)
         self.dados21 = Dados21Game(self)
+        self.bomba = BombaGame(self)
 
     def load_emotes_data(self):
         try:
@@ -193,6 +195,12 @@ class Bot(BotRuntimeMixin, BaseBot):
             await self.highrise.send_whisper(
                 user.id,
                 "\n".join([
+                    "<#FFFFFF>💣 BOMBA",
+                    "<#FFFFFF>• !bomba — Crear una partida (inscripción 20 s)",
+                    "<#FFFFFF>• jugar — Entrar; si empezó, desde la siguiente ronda",
+                    "<#FFFFFF>• escribir una palabra válida — Responder en 20 s",
+                    "<#FFFFFF>• salir — Salir de la partida",
+                    "<#FFFFFF>• terminar — El creador termina la partida",
                     "<#FFFFFF>🎲 DADOS 21",
                     "<#FFFFFF>• !dados21 100 — Entrar apostando (10 a 100 G)",
                     "<#FFFFFF>• !tirar — Lanzar un dado",
@@ -251,6 +259,10 @@ class Bot(BotRuntimeMixin, BaseBot):
                 await self.restart_with_message()
             else:
                 await handle_reset(self, user, msg)
+            return
+
+        # 💣 Bomba
+        if await self.bomba.handle(user, msg):
             return
 
         # 🎲 Dados 21
