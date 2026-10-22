@@ -48,6 +48,7 @@ class BombaGame:
         self.round_words: set[str] = set()
         self.answers: dict[str, str] = {}
         self.round_players: dict[str, User] = {}
+        self.round_done = asyncio.Event()
         self.task: asyncio.Task | None = None
         self.lock = asyncio.Lock()
         self.game_id = 0
@@ -147,6 +148,8 @@ class BombaGame:
     async def leave(self, user: User):
         self.players.pop(user.id, None)
         self.answers.pop(user.id, None)
+        if self.phase == "round" and self._all_round_players_answered():
+            self.round_done.set()
         await self._chat(f"🚪 @{user.username} salió de la partida de Bomba.")
         if not self.players and self.phase != "idle":
             await self.stop("💣 La partida de Bomba terminó porque no quedan participantes.")
@@ -170,6 +173,12 @@ class BombaGame:
         self.answers[user.id] = word
         self.round_words.add(word)
         await self._chat(f"✅ @{user.username} respondió a tiempo.")
+        if self._all_round_players_answered():
+            self.round_done.set()
+
+    def _all_round_players_answered(self) -> bool:
+        active_ids = set(self.round_players).intersection(self.players)
+        return bool(active_ids) and active_ids.issubset(self.answers)
 
     def _choose_prompt(self):
         options = []
@@ -206,13 +215,17 @@ class BombaGame:
                 self.round_words = set()
                 self.answers = {}
                 self.round_players = dict(self.players)
+                self.round_done = asyncio.Event()
                 await self._chat(
                     f"<#FF4D6D>💣━━━━ RONDA {self.round_number} ━━━━\n"
                     f"<#66CCFF>📚 Categoría: {self.category}\n"
                     f"<#FFCC66>🔤 LETRA: {self.letter}\n"
                     f"<#FFFFFF>⏱️ ¡Tienen {ROUND_SECONDS} segundos para responder!"
                 )
-                await asyncio.sleep(ROUND_SECONDS)
+                try:
+                    await asyncio.wait_for(self.round_done.wait(), timeout=ROUND_SECONDS)
+                except asyncio.TimeoutError:
+                    pass
                 if game_id != self.game_id or self.phase == "idle":
                     return
                 failed = [player for player_id, player in list(self.round_players.items()) if player_id in self.players and player_id not in self.answers]
@@ -221,7 +234,7 @@ class BombaGame:
                     await self._chat(f"<#FF4D6D>💥 ¡BOOOOM! 💣 <#FFFFFF>Sin respuesta correcta: {names}\\n<#66CCFF>✨ ¡Siguen en el juego! Prepárense para la próxima ronda.")
                     await self._punish_players(failed)
                 else:
-                    await self._chat("<#66FF99>🎉 ¡RONDA PERFECTA! <#FFFFFF>Todos respondieron a tiempo.\\n<#FFCC66>💣 La bomba sigue en juego...")
+                    await self._chat("<#66FF99>🎉 ¡RONDA PERFECTA! <#FFFFFF>Todos respondieron. La ronda terminó automáticamente.\\n<#FFCC66>💣 La bomba sigue en juego...")
                 # Dar tiempo para que los jugadores regresen a su sitio antes de la próxima ronda.
                 await asyncio.sleep(RETURN_SECONDS)
         except asyncio.CancelledError:
@@ -240,8 +253,8 @@ class BombaGame:
                 self.task = None
 
     async def _punish_players(self, players: list[User]):
-        # Coordenadas nuevas totalmente aleatorias, independientes de la posición
-        # de jugadores o bots. El rango amplio permite destinos cercanos o lejanos.
+        # El teletransporte se limita a unos pocos bloques de la posición actual.
+        # Si no se puede obtener la posición, se omite el teletransporte.
         emote_ids = [
 
             str(item.get("emote", "")).strip()
@@ -264,20 +277,27 @@ class BombaGame:
         for index, player in enumerate(players):
             if player.id not in self.players:
                 continue
-            # Sortear X y Z en un rango amplio y Y entre alturas habituales de sala.
-            # Son coordenadas generadas desde cero, no posiciones copiadas de otros avatares.
-            destination = Position(
-                round(random.uniform(-100.0, 100.0), 2),
-                round(random.uniform(0.0, 10.0), 2),
-                round(random.uniform(-100.0, 100.0), 2),
-                random.choice(("FrontRight", "FrontLeft", "BackRight", "BackLeft")),
-            )
             try:
-                await self.bot.highrise.teleport(player.id, destination)
-                print(
-                    f"[BOMBA] Teletransporte aleatorio de @{player.username} "
-                    f"a x={destination.x}, y={destination.y}, z={destination.z}"
+                room_users = await self.bot.highrise.get_room_users()
+                current_position = next(
+                    (position for room_user, position in room_users.content
+                     if room_user.id == player.id and isinstance(position, Position)),
+                    None,
                 )
+                if current_position is None:
+                    print(f"[BOMBA] No se encontró la posición de @{player.username}; se omite el teletransporte.")
+                else:
+                    destination = Position(
+                        round(current_position.x + random.uniform(-3.0, 3.0), 2),
+                        current_position.y,
+                        round(current_position.z + random.uniform(-3.0, 3.0), 2),
+                        random.choice(("FrontRight", "FrontLeft", "BackRight", "BackLeft")),
+                    )
+                    await self.bot.highrise.teleport(player.id, destination)
+                    print(
+                        f"[BOMBA] Teletransporte cercano de @{player.username} "
+                        f"a x={destination.x}, y={destination.y}, z={destination.z}"
+                    )
             except Exception as error:
                 print(f"[BOMBA] No pude teletransportar a @{player.username}: {error}")
             if emote_ids:
