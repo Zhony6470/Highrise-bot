@@ -284,9 +284,10 @@ class Bot(BotRuntimeMixin, BaseBot):
             sections.append("\n".join([
                 "<#CC99FF>⛓️ ESCLAVOS (ZETA)",
                 "<#FFFFFF>• !esclavizar @usuario - Esclavizar a un usuario",
-                "<#FFFFFF>• !sentado - Ordenar que se siente",
-                "<#FFFFFF>• !baila - Ordenar que baile",
-                "<#FFFFFF>• !duerme - Ordenar que duerma",
+                "<#FFFFFF>• !sentado / sentado - Ordenar que se siente",
+                "<#FFFFFF>• !baila / baila - Ordenar que baile",
+                "<#FFFFFF>• !duerme / duerme - Ordenar que duerma",
+                "<#FFFFFF>• !latigo - Látigo teatral y reacción",
                 "<#FFFFFF>• !liberar esclavo - Liberar a tu esclavo",
                 "<#FFFFFF>• !escapar - Escapar y quedar libre",
             ]))
