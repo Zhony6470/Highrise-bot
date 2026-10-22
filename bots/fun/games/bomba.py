@@ -23,8 +23,7 @@ CATEGORIES = (
     "Nombres propios",
     "Colores",
 )
-# Los destinos de Bomba se generan con coordenadas aleatorias alrededor del jugador,
-# nunca reutilizando directamente la posición de otro usuario o bot.
+# Los destinos de Bomba se generan dentro de los límites de la sala: X 0-20, Y 0-35, Z 0-30.
 def normalize(text: str) -> str:
     value = unicodedata.normalize("NFD", text.casefold().strip())
     value = "".join(ch for ch in value if unicodedata.category(ch) != "Mn")
@@ -279,25 +278,18 @@ class BombaGame:
                 continue
             try:
                 room_users = await self.bot.highrise.get_room_users()
-                current_position = next(
-                    (position for room_user, position in room_users.content
-                     if room_user.id == player.id and isinstance(position, Position)),
-                    None,
+                destination = Position(
+                    round(random.uniform(0.0, 20.0), 2),
+                    round(random.uniform(0.0, 35.0), 2),
+                    round(random.uniform(0.0, 30.0), 2),
+                    random.choice(("FrontRight", "FrontLeft", "BackRight", "BackLeft")),
                 )
-                if current_position is None:
-                    print(f"[BOMBA] No se encontró la posición de @{player.username}; se omite el teletransporte.")
-                else:
-                    destination = Position(
-                        round(current_position.x + random.uniform(-3.0, 3.0), 2),
-                        current_position.y,
-                        round(current_position.z + random.uniform(-3.0, 3.0), 2),
-                        random.choice(("FrontRight", "FrontLeft", "BackRight", "BackLeft")),
-                    )
-                    await self.bot.highrise.teleport(player.id, destination)
-                    print(
-                        f"[BOMBA] Teletransporte cercano de @{player.username} "
-                        f"a x={destination.x}, y={destination.y}, z={destination.z}"
-                    )
+                await self.bot.highrise.teleport(player.id, destination)
+                print(
+                    f"[BOMBA] Teletransporte de @{player.username} "
+                    f"dentro de los límites de la sala: "
+                    f"x={destination.x}, y={destination.y}, z={destination.z}"
+                )
             except Exception as error:
                 print(f"[BOMBA] No pude teletransportar a @{player.username}: {error}")
             if emote_ids:
