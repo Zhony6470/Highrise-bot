@@ -3,4 +3,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl unzip && curl -fsSL https://deno.land/install.sh | sh -s v2.3.0 && ln -s /root/.deno/bin/deno /usr/local/bin/deno && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir --upgrade "yt-dlp[default]" yt-dlp-ejs
+COPY infra/patch_highrise_sdk.py /tmp/patch_highrise_sdk.py
+RUN python /tmp/patch_highrise_sdk.py && rm /tmp/patch_highrise_sdk.py
 COPY . .
