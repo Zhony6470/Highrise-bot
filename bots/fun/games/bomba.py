@@ -236,19 +236,8 @@ class BombaGame:
                 self.task = None
 
     async def _punish_players(self, players: list[User]):
-        # Solo consultamos la posición actual de cada jugador afectado como centro
-        # para generar un destino NUEVO; nunca usamos posiciones de otros usuarios/bots.
-        current_positions = {}
-        try:
-            room_users = await self.bot.highrise.get_room_users()
-            failed_ids = {player.id for player in players}
-            current_positions = {
-                room_user.id: position
-                for room_user, position in room_users.content
-                if room_user.id in failed_ids and position is not None
-            }
-        except Exception as error:
-            print(f"[BOMBA] No pude leer la posición actual de los jugadores: {error}")
+        # Coordenadas nuevas totalmente aleatorias, independientes de la posición
+        # de jugadores o bots. El rango amplio permite destinos cercanos o lejanos.
         emote_ids = [
 
             str(item.get("emote", "")).strip()
@@ -271,26 +260,22 @@ class BombaGame:
         for index, player in enumerate(players):
             if player.id not in self.players:
                 continue
-            current = current_positions.get(player.id)
-            if current is not None:
-                # Mantener la altura actual (Y) evita mandar al jugador bajo el suelo
-                # o dejarlo suspendido; X y Z se sortean para crear una posición nueva.
-                destination = Position(
-                    round(float(current.x) + random.uniform(-5.0, 5.0), 2),
-                    float(current.y),
-                    round(float(current.z) + random.uniform(-5.0, 5.0), 2),
-                    getattr(current, "facing", "FrontRight"),
+            # Sortear X y Z en un rango amplio y Y entre alturas habituales de sala.
+            # Son coordenadas generadas desde cero, no posiciones copiadas de otros avatares.
+            destination = Position(
+                round(random.uniform(-100.0, 100.0), 2),
+                round(random.uniform(0.0, 10.0), 2),
+                round(random.uniform(-100.0, 100.0), 2),
+                random.choice(("FrontRight", "FrontLeft", "BackRight", "BackLeft")),
+            )
+            try:
+                await self.bot.highrise.teleport(player.id, destination)
+                print(
+                    f"[BOMBA] Teletransporte aleatorio de @{player.username} "
+                    f"a x={destination.x}, y={destination.y}, z={destination.z}"
                 )
-                try:
-                    await self.bot.highrise.teleport(player.id, destination)
-                    print(
-                        f"[BOMBA] Teletransporte aleatorio de @{player.username} "
-                        f"a x={destination.x}, y={destination.y}, z={destination.z}"
-                    )
-                except Exception as error:
-                    print(f"[BOMBA] No pude teletransportar a @{player.username}: {error}")
-            else:
-                print(f"[BOMBA] No hay posición actual para @{player.username}; se omite el teletransporte.")
+            except Exception as error:
+                print(f"[BOMBA] No pude teletransportar a @{player.username}: {error}")
             if emote_ids:
                 try:
                     await self.bot.highrise.send_emote(random.choice(emote_ids), player.id)
