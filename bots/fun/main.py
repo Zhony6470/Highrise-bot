@@ -388,11 +388,11 @@ class Bot(BotRuntimeMixin, BaseBot):
             if message != "!help":
                 return
             help_sections = [
-                "🎮 GUÍA DE JUEGOS\\nAyuda por juego: !help bomba · !help dados · !help rps · !help verdad",
-                "💣 BOMBA\\n• !bomba — Crear partida (inscripción 20 s)\\n• jugar — Entrar\\n• Responde con una palabra válida en 30 s\\n• salir — Abandonar\\n• terminar — Solo el creador",
-                "🎲 DADOS 21\\n• !dados21 100 — Entrar apostando (10–100 G)\\n• !tirar — Un dado\\n• !doble — Dos dados\\n• !plantarse — Terminar turno\\n• !saldo — Consultar saldo\\n• !retirar 50 — Retirar ganancias",
-                "⚔️ PIEDRA, PAPEL O TIJERA\\n• !rps — Contra BotJuegos\\n• !rps @usuario — Contra jugador\\n• !piedra / !papel / !tijera",
-                "🎭 VERDAD O RETO\\n• !vd — Individual\\n• !jugarvd · !entrarvd · !iniciarvd\\n• !verdad / !reto · !listo · !salirvd",
+                "🎮 GUÍA DE JUEGOS\nAyuda por juego: !help bomba · !help dados · !help rps · !help verdad",
+                "💣 BOMBA\n• !bomba — Crear partida (inscripción 20 s)\n• jugar — Entrar\n• Responde con una palabra válida en 30 s\n• salir — Abandonar\n• terminar — Solo el creador",
+                "🎲 DADOS 21\n• !dados21 100 — Entrar apostando (10–100 G)\n• !tirar — Un dado\n• !doble — Dos dados\n• !plantarse — Terminar turno\n• !saldo — Consultar saldo\n• !retirar 50 — Retirar ganancias",
+                "⚔️ PIEDRA, PAPEL O TIJERA\n• !rps — Contra BotJuegos\n• !rps @usuario — Contra jugador\n• !piedra / !papel / !tijera",
+                "🎭 VERDAD O RETO\n• !vd — Individual\n• !jugarvd · !entrarvd · !iniciarvd\n• !verdad / !reto · !listo · !salirvd",
             ]
             for section in help_sections:
                 await self.highrise.send_message(conversation_id, section)
