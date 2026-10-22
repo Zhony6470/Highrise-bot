@@ -280,6 +280,17 @@ class Bot(BotRuntimeMixin, BaseBot):
                 ]),
             ])
 
+        if role in {"vip", "mod", "owner", "designer"}:
+            sections.append("\\n".join([
+                "<#CC99FF>⛓️ ESCLAVOS (ZETA)",
+                "<#FFFFFF>• !esclavizar @usuario - Esclavizar a un usuario",
+                "<#FFFFFF>• !sentado - Ordenar que se siente",
+                "<#FFFFFF>• !baila - Ordenar que baile",
+                "<#FFFFFF>• !duerme - Ordenar que duerma",
+                "<#FFFFFF>• !liberar esclavo - Liberar a tu esclavo",
+                "<#FFFFFF>• !escapar - Escapar y quedar libre",
+            ]))
+
         return sections
 
     async def send_saved_roles_to_inbox(self, user: User) -> str:
