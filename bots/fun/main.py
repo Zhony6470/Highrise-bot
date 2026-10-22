@@ -113,6 +113,40 @@ class Bot(BotRuntimeMixin, BaseBot):
             f"@{self.bot_username}"
         )
 
+    async def _game_promo_loop(self) -> None:
+        """Publica invitaciones ocasionales a los juegos sin saturar el chat."""
+        promos = [
+            "<#CC99FF>🎭 ¿Aburrido/a? ¡Juguemos VERDAD O RETO! "
+            "<#FFFFFF>Usa !vd para una ronda o !jugarvd para crear una partida grupal.",
+            "<#FF4D6D>💣 ¡Cuidado, que la bomba no espera! "
+            "<#FFFFFF>Escribe !bomba para iniciar y escribe jugar para entrar.",
+            "<#FFCC66>🎲 ¿Te atreves a llegar a 21? "
+            "<#FFFFFF>Prueba DADOS 21 con !dados21 100 y tira con !tirar.",
+            "<#66CCFF>✊📄✂️ ¡Desafía a alguien a PIEDRA, PAPEL O TIJERA! "
+            "<#FFFFFF>Usa !rps o !rps @usuario.",
+            "<#CC99FF>💘 ¿Quién se atreve con una verdad incómoda o un reto atrevido? "
+            "<#FFFFFF>Usa !verdad o !reto cuando te toque.",
+            "<#FF4D6D>🔥 ¡La sala necesita un poco de emoción! "
+            "<#FFFFFF>Reúne a tus amigos y empieza una partida con !jugarvd o !bomba.",
+            "<#FFCC66>🏆 ¿Suerte, estrategia o valentía? "
+            "<#FFFFFF>Elige tu juego: !help bomba · !help dados · !help rps · !help verdad.",
+            "<#66FF99>🎮 ¡Hay juegos para todos! "
+            "<#FFFFFF>Dados 21: !dados21 100 · RPS: !rps · Verdad o Reto: !vd · Bomba: !bomba.",
+        ]
+        # Espera inicial para no mandar la promoción inmediatamente al conectar.
+        await asyncio.sleep(180)
+        index = 0
+        while True:
+            try:
+                await self.highrise.chat(promos[index % len(promos)])
+                index += 1
+            except asyncio.CancelledError:
+                raise
+            except Exception as error:
+                print(f"[FUN PROMO] Error enviando invitación a juegos: {error}")
+            # Un anuncio cada 8 minutos para no saturar el chat.
+            await asyncio.sleep(480)
+
     async def restore_position(self):
         # Highrise necesita unos segundos después de on_start para que
         # el bot esté completamente presente en la sala antes del teleport.
@@ -159,6 +193,7 @@ class Bot(BotRuntimeMixin, BaseBot):
 
         await self.dance_manager.restore()
         asyncio.create_task(self.restore_position())
+        self._game_promo_task = asyncio.create_task(self._game_promo_loop())
 
         await self.highrise.chat(
             f"<#66FF99>🎮 @{self.bot_username} está conectado. "
