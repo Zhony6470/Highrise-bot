@@ -223,13 +223,13 @@ async def track_monitor_loop(bot) -> None:
                     state["current_emote"] = selected["emote"]
                     duration = float(selected.get("duration", 3))
                     # Porcentajes exclusivos de los emotes de la pista:
-                    # Jumpscared 3 al 70%, Solo Pumpkindance Left al 93%,
+                    # Jumpscared 3 al 70%, Solo Pumpkindance Left al 92%,
                     # y el resto al 95%. No modifica !botdance ni !random.
                     emote_id = str(selected.get("emote", "")).strip()
                     if emote_id == "emote-jumpscared3":
                         repeat_ratio = 0.70
                     elif emote_id == "emote-solo-pumpkindance-left":
-                        repeat_ratio = 0.93
+                        repeat_ratio = 0.92
                     else:
                         repeat_ratio = 0.95
                     state["next_emote_at"] = now + max(duration * repeat_ratio, 0.1)
