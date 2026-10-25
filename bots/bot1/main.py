@@ -420,7 +420,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         if emote_id == "emote-jumpscared3":
             repeat_ratio = 0.70
         elif emote_id == "emote-solo-pumpkindance-left":
-            repeat_ratio = 0.93
+            repeat_ratio = 0.92
         else:
             repeat_ratio = 0.95
         interval = max(float(duration) * repeat_ratio, 0.1)
