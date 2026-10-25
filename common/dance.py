@@ -101,8 +101,8 @@ class DanceManager:
             1,
         )), 0.1)
         # Reenviar antes de la fase de recuperación/levantarse del avatar.
-        # Ajuste individual para Solo Pumpkindance Left al 93%; los demás conservan 95%.
-        repeat_ratio = 0.92 if emote_id == "emote-solo-pumpkindance-left" else 0.95
+        # Solo Pumpkindance Left se mantiene al 92%; los demás emotes usan 94%.
+        repeat_ratio = 0.92 if emote_id == "emote-solo-pumpkindance-left" else 0.94
         interval = max(duration * repeat_ratio, 0.1)
         loop = asyncio.get_running_loop()
         next_send_at = loop.time()
