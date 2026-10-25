@@ -12,7 +12,7 @@ from bots.fun.games.chat_queue import send_game_chat
 
 LOBBY_SECONDS = 20
 ROUND_SECONDS = 30
-RETURN_SECONDS = 8
+RETURN_SECONDS = 15
 DICTIONARY_FILE = Path(__file__).resolve().parents[1] / "data" / "bomba_dictionary.json"
 CATEGORIES = (
     "Animales",
