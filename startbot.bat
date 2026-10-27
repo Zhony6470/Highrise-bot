@@ -6,7 +6,7 @@ call .venv\Scripts\activate
 
 echo Iniciando el bot de Highrise...
 :loop
-python main.py
+python bots\bot1\main.py
 echo El bot se ha detenido. Reiniciando en 5 segundos...
 timeout /t 5 /nobreak >nul
 goto loop
