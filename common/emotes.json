@@ -369,7 +369,10 @@
     "command": "Headball",
     "emote": "emote-headball",
     "duration": 10.1,
-    "auth": "public"
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 62,
+    "disabled_reason": "Bloqueado en Highrise; desactivado a petición del usuario."
   },
   {
     "command": "Harlem Shake",
