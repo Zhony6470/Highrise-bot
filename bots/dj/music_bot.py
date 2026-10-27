@@ -328,27 +328,13 @@ class Bot(BotRuntimeMixin, BaseBot):
                     print(f"[MUSIC HELP] Error leyendo roles de @{user.username}: {error}")
 
             sections = [
-                "<#66CCFF>🎵 COMANDOS DE MÚSICA",
-                "<#FFFFFF>• !play canción - Solicitar una canción (usa 1 ticket).",
-                "<#FFFFFF>• !q - Ver la cola actual.",
-                "<#FFFFFF>• !review / !r - Ver la canción que está sonando.",
-                "<#FFFFFF>• !ticket - Ver cuántos tickets entrega el bot por 10g.",
-                "<#FFFFFF>• !wallet - Ver el oro de Dj.Z.",
+                "<#66CCFF>🎵 MÚSICA — COMANDOS PRINCIPALES",
+                "<#FFFFFF>• !play canción — Solicitar una canción.",
+                "<#FFFFFF>• !q — Ver la cola.",
+                "<#FFFFFF>• !review / !r — Ver la canción actual.",
+                "<#FFFFFF>• !ticket — Consultar tickets.",
+                "<#FFFFFF>📨 Escribe !help en el buzón de Dj.Z para ver todos los comandos.",
             ]
-            if role in {"owner", "mod"}:
-                sections.extend([
-                    "<#FFFFFF>• !skip - Saltar la canción actual.",
-                    "<#FFFFFF>• !ap canción - Agregar una canción a la playlist.",
-                    "<#FFFFFF>• !rp canción - Quitar una canción de la playlist.",
-                    "<#FFFFFF>• !addticket numero @usuario - Regalar tickets.",
-                    "<#FFFFFF>• !at numero @usuario - Alias para regalar tickets.",
-                    "<#FFFFFF>• !ticket for numero - Configurar tickets por cada 10g.",
-                    "<#FFFFFF>• !mtipme cantidad - Enviarte oro desde Dj.Z.",
-                    "<#FFFFFF>• !mtip @usuario cantidad - Enviar oro desde Dj.Z.",
-                    "<#FFFFFF>• !mtipall cantidad - Enviar oro desde Dj.Z a todos.",
-                ])
-            elif role == "designer":
-                sections.append("<#FFFFFF>• !skip - Saltar la canción actual.")
             await self.highrise.send_whisper(user.id, "\n".join(sections))
             return
 
@@ -567,13 +553,27 @@ class Bot(BotRuntimeMixin, BaseBot):
             print(f"[INBOX DEBUG] Primer mensaje de la conversación: {message!r}")
             if message != "!help":
                 return
-            help_text = "\n".join([
-                "🎵 COMANDOS DE MÚSICA",
-                "• !play canción — Solicitar una canción (usa 1 ticket)",
-                "• !q — Ver la cola actual",
+            help_text = "\\n".join([
+                "🎵 COMANDOS COMPLETOS DE DJ.Z",
+                "SOLICITUDES Y REPRODUCCIÓN",
+                "• !play canción — Solicitar una canción (usa 1 ticket si corresponde)",
+                "• !q / !queue — Ver la cola actual",
                 "• !review / !r — Ver la canción que está sonando",
                 "• !ticket — Ver tickets por cada 10 G",
-                "• !wallet — Ver el oro de Dj.Z",
+                "• !wallet — Consultar la billetera de Dj.Z (dueño/moderadores)",
+                "",
+                "GESTIÓN DE MÚSICA (solo dueño/moderadores, salvo donde se indique)",
+                "• !skip — Saltar la canción actual",
+                "• !ap canción / !addplay canción — Añadir canción a la playlist",
+                "• !rp canción / !removeplay canción — Quitar canción de la playlist",
+                "• !addticket número @usuario / !at número @usuario — Regalar tickets",
+                "• !ticket for número — Configurar tickets por cada 10 G",
+                "• !mtipme cantidad — Enviar oro desde Dj.Z a ti",
+                "• !mtip @usuario cantidad — Enviar oro desde Dj.Z a un usuario",
+                "• !mtipall cantidad — Enviar oro desde Dj.Z a todos",
+                "• !restart — Reiniciar Dj.Z (dueño/moderadores)",
+                "",
+                "Los comandos administrativos requieren los permisos correspondientes."
             ])
             await self.highrise.send_message(conversation_id, help_text)
         except Exception as error:
