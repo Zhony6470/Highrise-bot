@@ -298,7 +298,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                 ],
             ]
             for section in public_sections:
-                await self.highrise.chat("\\n".join(section))
+                await self.highrise.chat("\n".join(section))
             return
 
         if command == "!home":
