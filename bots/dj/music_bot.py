@@ -329,10 +329,14 @@ class Bot(BotRuntimeMixin, BaseBot):
 
             rate = self.ticket_manager.get_rate()
             for section in [
-                "<#66CCFF>🎧 ¡LA MÚSICA NO PARA! 🎶\n<#FFFFFF>🎵 !play canción <#66FF99>— Pedir una canción",
-                "<#CC99FF>📜 !q / !queue <#FFFFFF>— Ver la cola musical\n<#66CCFF>🎶 !review / !r <#FFFFFF>— Ver la canción actual",
-                f"<#FFCC66>🎟️ !ticket <#FFFFFF>— Consultar tus tickets\n<#66FF99>💰 10g por {rate} tickets",
-                "<#CC99FF>👑 Creador: @Zhony6470\n<#FF6666>🐛 Cualquier bug, comunícate con él.",
+                "<#00E5FF>🎧 ¡LA MÚSICA NO PARA! 🎶",
+                "<#66FF99>🎵 !play canción <#FFFFFF>— Pedir una canción",
+                "<#FFD54F>📜 !q / !queue <#FFFFFF>— Ver la cola musical",
+                "<#FF80AB>🎶 !review / !r <#FFFFFF>— Ver la canción actual",
+                f"<#B388FF>🎟️ !ticket <#FFFFFF>— Consultar tus tickets",
+                f"<#66FF99>💰 10g por {rate} tickets",
+                "<#FFD54F>👑 Creador: @Zhony6470",
+                "<#FF5252>🐛 Cualquier bug, comunícate con él.",
             ]:
                 await self.highrise.chat(section)
             return
@@ -562,18 +566,34 @@ class Bot(BotRuntimeMixin, BaseBot):
 
             rate = self.ticket_manager.get_rate()
             public_sections = [
-                "<#66CCFF>🎧 ¡LA MÚSICA NO PARA! 🎶\n<#FFFFFF>🎵 !play canción — Pedir una canción y añadirla a la cola.",
-                "<#CC99FF>📜 !q / !queue — Ver las canciones pendientes.\n<#66CCFF>🎶 !review / !r — Consultar qué canción está sonando y su progreso.",
-                f"<#FFCC66>🎟️ !ticket — Consultar cuántos tickets tienes.\n<#66FF99>💰 Cada 10g recibes {rate} tickets para pedir canciones.",
-                "<#CC99FF>👑 Creador: @Zhony6470\n<#FF6666>🐛 Cualquier bug, comunícate con él.",
+                "<#00E5FF>🎧 ¡LA MÚSICA NO PARA! 🎶",
+                "<#66FF99>🎵 !play canción — Pedir una canción y añadirla a la cola.",
+                "<#FFD54F>📜 !q / !queue — Ver las canciones pendientes.",
+                "<#FF80AB>🎶 !review / !r — Consultar qué canción está sonando y su progreso.",
+                f"<#B388FF>🎟️ !ticket — Consultar cuántos tickets tienes.",
+                f"<#66FF99>💰 Cada 10g recibes {rate} tickets para pedir canciones.",
+                "<#FFD54F>👑 Creador: @Zhony6470",
+                "<#FF5252>🐛 Cualquier bug, comunícate con él.",
             ]
             for section in public_sections:
                 await self.highrise.send_message(conversation_id, section)
 
             if role in {"owner", "mod"}:
                 for section in [
-                    "<#66CCFF>🛠️ ADMINISTRACIÓN\n<#FFFFFF>• !skip — Saltar la canción actual.\n• !ap canción / !addplay canción — Añadir una canción a la playlist predeterminada.\n• !rp canción / !removeplay canción — Quitar una canción de esa playlist.",
-                    "<#FFCC66>🎟️ TICKETS Y ECONOMÍA\n<#FFFFFF>• !addticket número @usuario / !at número @usuario — Regalar tickets a un usuario.\n• !ticket for número — Configurar cuántos tickets se entregan por cada 10g.\n• !wallet — Consultar la billetera de oro.\n• !mtipme cantidad — Enviarte oro.\n• !mtip @usuario cantidad — Enviar oro a un usuario.\n• !mtipall cantidad — Enviar oro a todos.\n• !restart — Reiniciar Dj.Z.\n<#CC99FF>👑 Creador: @Zhony6470\n<#FF6666>🐛 Cualquier bug, comunícate con él.",
+                    "<#00E5FF>🛠️ ADMINISTRACIÓN",
+                    "<#66FF99>• !skip — Saltar la canción actual.",
+                    "<#FFD54F>• !ap canción / !addplay canción — Añadir una canción a la playlist predeterminada.",
+                    "<#FF80AB>• !rp canción / !removeplay canción — Quitar una canción de esa playlist.",
+                    "<#B388FF>🎟️ TICKETS Y ECONOMÍA",
+                    "<#66FF99>• !addticket número @usuario / !at número @usuario — Regalar tickets a un usuario.",
+                    "<#FFD54F>• !ticket for número — Configurar cuántos tickets se entregan por cada 10g.",
+                    "<#FF80AB>• !wallet — Consultar la billetera de oro.",
+                    "<#66FF99>• !mtipme cantidad — Enviarte oro.",
+                    "<#FFD54F>• !mtip @usuario cantidad — Enviar oro a un usuario.",
+                    "<#FF80AB>• !mtipall cantidad — Enviar oro a todos.",
+                    "<#66FF99>• !restart — Reiniciar Dj.Z.",
+                    "<#FFD54F>👑 Creador: @Zhony6470",
+                    "<#FF5252>🐛 Cualquier bug, comunícate con él.",
                 ]:
                     await self.highrise.send_message(conversation_id, section)
         except Exception as error:
