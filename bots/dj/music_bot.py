@@ -327,16 +327,15 @@ class Bot(BotRuntimeMixin, BaseBot):
                 except Exception as error:
                     print(f"[MUSIC HELP] Error leyendo roles de @{user.username}: {error}")
 
-            rate = self.ticket_manager.get_rate()
             for section in [
                 "<#00E5FF>🎧 ¡LA MÚSICA NO PARA! 🎶",
                 "<#66FF99>🎵 !play canción <#FFFFFF>— Pedir una canción",
-                "<#FFD54F>📜 !q / !queue <#FFFFFF>— Ver la cola musical",
-                "<#FF80AB>🎶 !review / !r <#FFFFFF>— Ver la canción actual",
-                f"<#B388FF>🎟️ !ticket <#FFFFFF>— Consultar tus tickets",
-                f"<#66FF99>💰 10g por {rate} tickets",
+                "<#FFD54F>📜 !q <#FFFFFF>— Ver la cola musical",
+                "<#FF80AB>🎶 !review o !r <#FFFFFF>— Ver la canción actual",
+                "<#B388FF>🎟️ !ticket <#FFFFFF>— Consultar tus tickets",
+                "<#66FF99>💰 10g por 4 tickets",
                 "<#FFD54F>👑 Creador: @Zhony6470",
-                "<#FF5252>🐛 Cualquier bug, comunícate con él.",
+                "<#FF5252>🐛 Cualquier bug, comunícate con él",
             ]:
                 await self.highrise.chat(section)
             return
@@ -564,16 +563,15 @@ class Bot(BotRuntimeMixin, BaseBot):
                 except Exception as error:
                     print(f"[MUSIC INBOX HELP] No pude comprobar el rol: {error}")
 
-            rate = self.ticket_manager.get_rate()
             public_sections = [
                 "<#00E5FF>🎧 ¡LA MÚSICA NO PARA! 🎶",
-                "<#66FF99>🎵 !play canción — Pedir una canción y añadirla a la cola.",
-                "<#FFD54F>📜 !q / !queue — Ver las canciones pendientes.",
-                "<#FF80AB>🎶 !review / !r — Consultar qué canción está sonando y su progreso.",
-                f"<#B388FF>🎟️ !ticket — Consultar cuántos tickets tienes.",
-                f"<#66FF99>💰 Cada 10g recibes {rate} tickets para pedir canciones.",
+                "<#66FF99>🎵 !play canción <#FFFFFF>— Pedir una canción",
+                "<#FFD54F>📜 !q <#FFFFFF>— Ver la cola musical",
+                "<#FF80AB>🎶 !review o !r <#FFFFFF>— Ver la canción actual",
+                "<#B388FF>🎟️ !ticket <#FFFFFF>— Consultar tus tickets",
+                "<#66FF99>💰 10g por 4 tickets",
                 "<#FFD54F>👑 Creador: @Zhony6470",
-                "<#FF5252>🐛 Cualquier bug, comunícate con él.",
+                "<#FF5252>🐛 Cualquier bug, comunícate con él",
             ]
             for section in public_sections:
                 await self.highrise.send_message(conversation_id, section)
