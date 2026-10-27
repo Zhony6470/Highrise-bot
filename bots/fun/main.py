@@ -225,13 +225,13 @@ class Bot(BotRuntimeMixin, BaseBot):
                 if not await self._is_targeted_for_me(msg):
                     return
 
-        # Ayuda segmentada: cada juego tiene su propia sección.
+        # Ayuda segmentada: el resumen se muestra en la sala y la guía completa va al buzón.
         help_sections = {
             "bomba": [
                 "<#FF4D6D>💣━━━━━━ BOMBA ━━━━━━",
                 "<#FFFFFF>🚀 !bomba — Crear partida (inscripción: 20 s)",
                 "<#66CCFF>👥 jugar — Unirte a la partida",
-                "<#FFFFFF>🔤 Responde con una palabra válida de la categoría y letra indicadas",
+                "<#FFFFFF>🔤 Escribe una palabra válida según la categoría y letra indicadas",
                 "<#FFCC66>⏱️ Tienes 30 s por ronda",
                 "<#FFFFFF>🚪 salir — Abandonar la partida",
                 "<#FF6666>🛑 terminar — Finalizarla (solo el creador)",
@@ -249,7 +249,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                 "<#FFCC66>⏱️ ¡Acércate a 21 sin pasarte!"
             ],
             "rps": [
-                "<#66CCFF>⚔️━━ PIEDRA, PAPEL O TIJERA ━━",
+                "<#66CCFF>⚔️━━━━ PIEDRA, PAPEL O TIJERA ━━━━",
                 "<#FFFFFF>🤖 !rps — Desafiar a BotJuegos",
                 "<#66CCFF>👤 !rps @usuario — Desafiar a otro jugador",
                 "<#FFFFFF>💰 !rps @usuario 10|50|100|500 — Jugar con apuesta",
@@ -277,14 +277,28 @@ class Bot(BotRuntimeMixin, BaseBot):
             await self.highrise.send_whisper(user.id, "\n".join(section))
             return
         if requested_help == "!help game":
-            await self.highrise.send_whisper(
-                user.id,
-                "<#66CCFF>🎮 JUEGOS DISPONIBLES\n"
-                "<#FFFFFF>• !help verdad — Verdad o Reto\n"
-                "• !help rps — Piedra, Papel o Tijera\n"
-                "• !help dados — Dados 21\n"
-                "• !help bomba — Bomba"
-            )
+            public_sections = [
+                [
+                    "<#66CCFF>🎮 ¡BIENVENIDO A LA ZONA DE JUEGOS! 🔥",
+                    "<#FF4D6D>💣 BOMBA: !bomba · jugar · salir",
+                ],
+                [
+                    "<#FFCC66>🎲 DADOS 21: !dados21 100 · !tirar · !doble · !plantarse · !saldo · !retirar 50",
+                ],
+                [
+                    "<#66CCFF>⚔️ RPS: !rps · !rps @usuario · !piedra · !papel · !tijera",
+                ],
+                [
+                    "<#CC99FF>🎭 VERDAD O RETO: !vd · !jugarvd · !entrarvd · !iniciarvd · !verdad · !reto · !listo · !salirvd",
+                ],
+                [
+                    "<#FFFFFF>📜 !help bomba · !help dados · !help rps · !help verdad",
+                    "<#FFCC66>👑 Creador: @Zhony6470",
+                    "<#FF6666>🐛 Cualquier bug, comunícate con él.",
+                ],
+            ]
+            for section in public_sections:
+                await self.highrise.chat("\\n".join(section))
             return
 
         if command == "!home":
@@ -425,14 +439,16 @@ class Bot(BotRuntimeMixin, BaseBot):
             print(f"[INBOX DEBUG] Primer mensaje de la conversación: {message!r}")
             if message != "!help game":
                 return
-            await self.highrise.send_message(
-                conversation_id,
-                "🎮 JUEGOS DISPONIBLES\n"
-                "• !help verdad — Verdad o Reto\n"
-                "• !help rps — Piedra, Papel o Tijera\n"
-                "• !help dados — Dados 21\n"
-                "• !help bomba — Bomba"
-            )
+            inbox_sections = [
+                "<#66CCFF>🎮 ¡BIENVENIDO A LA ZONA DE JUEGOS! 🔥\\n<#FFFFFF>Esta es la guía de comandos de BotJuegos.",
+                "<#FF4D6D>💣 BOMBA\\n<#FFFFFF>!bomba — Crear partida (inscripción: 20 s).\\n<#66CCFF>jugar — Unirte. Escribe una palabra válida según la categoría y la letra indicadas; tienes 30 s por ronda.\\n<#FFFFFF>salir — Abandonar.\\n<#FF6666>terminar — Finalizar la partida (solo el creador).",
+                "<#FFCC66>🎲 DADOS 21\\n<#FFFFFF>!dados21 100 — Entrar apostando (10–100 G, múltiplos de 10).\\n<#66CCFF>!tirar — Lanzar un dado.\\n<#FFFFFF>!doble — Lanzar dos dados.\\n<#66FF99>!plantarse — Terminar tu turno.\\n<#FFFFFF>!salir — Salir antes de comenzar.\\n<#FFCC66>!saldo — Consultar tu saldo.\\n<#FFFFFF>!retirar 50 — Retirar ganancias disponibles (mínimo 50 G). Objetivo: acercarte a 21 sin pasarte.",
+                "<#66CCFF>⚔️ PIEDRA, PAPEL O TIJERA (RPS)\\n<#FFFFFF>!rps — Desafiar a BotJuegos.\\n<#66CCFF>!rps @usuario — Desafiar a otro jugador.\\n<#FFFFFF>!rps @usuario 10|50|100|500 — Jugar con apuesta.\\n<#FFCC66>!piedra · !papel · !tijera — Elegir tu jugada.",
+                "<#CC99FF>🎭 VERDAD O RETO\\n<#FFFFFF>!vd — Jugar una ronda individual.\\n<#66CCFF>!jugarvd — Crear una partida grupal.\\n<#FFFFFF>!entrarvd — Unirte a la partida.\\n<#66FF99>!iniciarvd — Comenzar (mínimo 2 jugadores).\\n<#FFFFFF>!verdad / !reto — Elegir tu opción.\\n<#FFCC66>!listo — Terminar tu turno.\\n<#FFFFFF>!salirvd — Salir de la partida.",
+                "<#FFFFFF>📜 Ayudas individuales: !help bomba · !help dados · !help rps · !help verdad\\n<#FFCC66>👑 Creador: @Zhony6470\\n<#FF6666>🐛 Cualquier bug, comunícate con él."
+            ]
+            for section in inbox_sections:
+                await self.highrise.send_message(conversation_id, section)
         except Exception as error:
             print(f"[FUN INBOX HELP] Error procesando !help: {error}")
 
