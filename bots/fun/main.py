@@ -440,12 +440,12 @@ class Bot(BotRuntimeMixin, BaseBot):
             if message != "!help game":
                 return
             inbox_sections = [
-                "<#66CCFF>🎮 ¡BIENVENIDO A LA ZONA DE JUEGOS! 🔥\\n<#FFFFFF>Esta es la guía de comandos de BotJuegos.",
-                "<#FF4D6D>💣 BOMBA\\n<#FFFFFF>!bomba — Crear partida (inscripción: 20 s).\\n<#66CCFF>jugar — Unirte. Escribe una palabra válida según la categoría y la letra indicadas; tienes 30 s por ronda.\\n<#FFFFFF>salir — Abandonar.\\n<#FF6666>terminar — Finalizar la partida (solo el creador).",
-                "<#FFCC66>🎲 DADOS 21\\n<#FFFFFF>!dados21 100 — Entrar apostando (10–100 G, múltiplos de 10).\\n<#66CCFF>!tirar — Lanzar un dado.\\n<#FFFFFF>!doble — Lanzar dos dados.\\n<#66FF99>!plantarse — Terminar tu turno.\\n<#FFFFFF>!salir — Salir antes de comenzar.\\n<#FFCC66>!saldo — Consultar tu saldo.\\n<#FFFFFF>!retirar 50 — Retirar ganancias disponibles (mínimo 50 G). Objetivo: acercarte a 21 sin pasarte.",
-                "<#66CCFF>⚔️ PIEDRA, PAPEL O TIJERA (RPS)\\n<#FFFFFF>!rps — Desafiar a BotJuegos.\\n<#66CCFF>!rps @usuario — Desafiar a otro jugador.\\n<#FFFFFF>!rps @usuario 10|50|100|500 — Jugar con apuesta.\\n<#FFCC66>!piedra · !papel · !tijera — Elegir tu jugada.",
-                "<#CC99FF>🎭 VERDAD O RETO\\n<#FFFFFF>!vd — Jugar una ronda individual.\\n<#66CCFF>!jugarvd — Crear una partida grupal.\\n<#FFFFFF>!entrarvd — Unirte a la partida.\\n<#66FF99>!iniciarvd — Comenzar (mínimo 2 jugadores).\\n<#FFFFFF>!verdad / !reto — Elegir tu opción.\\n<#FFCC66>!listo — Terminar tu turno.\\n<#FFFFFF>!salirvd — Salir de la partida.",
-                "<#FFFFFF>📜 Ayudas individuales: !help bomba · !help dados · !help rps · !help verdad\\n<#FFCC66>👑 Creador: @Zhony6470\\n<#FF6666>🐛 Cualquier bug, comunícate con él."
+                "<#66CCFF>🎮 ¡BIENVENIDO A LA ZONA DE JUEGOS! 🔥\n<#FFFFFF>Esta es la guía de comandos de BotJuegos.",
+                "<#FF4D6D>💣 BOMBA\n<#FFFFFF>!bomba — Crear partida (inscripción: 20 s).\n<#66CCFF>jugar — Unirte. Escribe una palabra válida según la categoría y la letra indicadas; tienes 30 s por ronda.\n<#FFFFFF>salir — Abandonar.\n<#FF6666>terminar — Finalizar la partida (solo el creador).",
+                "<#FFCC66>🎲 DADOS 21\n<#FFFFFF>!dados21 100 — Entrar apostando (10–100 G, múltiplos de 10).\n<#66CCFF>!tirar — Lanzar un dado.\n<#FFFFFF>!doble — Lanzar dos dados.\n<#66FF99>!plantarse — Terminar tu turno.\n<#FFFFFF>!salir — Salir antes de comenzar.\n<#FFCC66>!saldo — Consultar tu saldo.\n<#FFFFFF>!retirar 50 — Retirar ganancias disponibles (mínimo 50 G). Objetivo: acercarte a 21 sin pasarte.",
+                "<#66CCFF>⚔️ PIEDRA, PAPEL O TIJERA (RPS)\n<#FFFFFF>!rps — Desafiar a BotJuegos.\n<#66CCFF>!rps @usuario — Desafiar a otro jugador.\n<#FFFFFF>!rps @usuario 10|50|100|500 — Jugar con apuesta.\n<#FFCC66>!piedra · !papel · !tijera — Elegir tu jugada.",
+                "<#CC99FF>🎭 VERDAD O RETO\n<#FFFFFF>!vd — Jugar una ronda individual.\n<#66CCFF>!jugarvd — Crear una partida grupal.\n<#FFFFFF>!entrarvd — Unirte a la partida.\n<#66FF99>!iniciarvd — Comenzar (mínimo 2 jugadores).\n<#FFFFFF>!verdad / !reto — Elegir tu opción.\n<#FFCC66>!listo — Terminar tu turno.\n<#FFFFFF>!salirvd — Salir de la partida.",
+                "<#FFFFFF>📜 Ayudas individuales: !help bomba · !help dados · !help rps · !help verdad\n<#FFCC66>👑 Creador: @Zhony6470\n<#FF6666>🐛 Cualquier bug, comunícate con él."
             ]
             for section in inbox_sections:
                 await self.highrise.send_message(conversation_id, section)
