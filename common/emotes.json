@@ -750,7 +750,10 @@
     "command": "Floss",
     "emote": "dance-floss",
     "duration": 20.5,
-    "auth": "public"
+    "auth": "public",
+    "disabled": true,
+    "disabled_original_index": 124,
+    "disabled_reason": "Desactivado por solicitud del usuario."
   },
   {
     "command": "Duck Walk",
