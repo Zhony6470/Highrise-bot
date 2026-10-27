@@ -274,15 +274,15 @@ class Bot(BotRuntimeMixin, BaseBot):
         requested_help = msg.casefold()
         if requested_help in help_aliases:
             section = help_sections[help_aliases[requested_help]]
-            await self.highrise.send_whisper(user.id, "\\n".join(section))
+            await self.highrise.send_whisper(user.id, "\n".join(section))
             return
         if requested_help == "!help game":
             await self.highrise.send_whisper(
                 user.id,
-                "<#66CCFF>🎮 JUEGOS DISPONIBLES\\n"
-                "<#FFFFFF>• !help verdad — Verdad o Reto\\n"
-                "• !help rps — Piedra, Papel o Tijera\\n"
-                "• !help dados — Dados 21\\n"
+                "<#66CCFF>🎮 JUEGOS DISPONIBLES\n"
+                "<#FFFFFF>• !help verdad — Verdad o Reto\n"
+                "• !help rps — Piedra, Papel o Tijera\n"
+                "• !help dados — Dados 21\n"
                 "• !help bomba — Bomba"
             )
             return
@@ -427,10 +427,10 @@ class Bot(BotRuntimeMixin, BaseBot):
                 return
             await self.highrise.send_message(
                 conversation_id,
-                "🎮 JUEGOS DISPONIBLES\\n"
-                "• !help verdad — Verdad o Reto\\n"
-                "• !help rps — Piedra, Papel o Tijera\\n"
-                "• !help dados — Dados 21\\n"
+                "🎮 JUEGOS DISPONIBLES\n"
+                "• !help verdad — Verdad o Reto\n"
+                "• !help rps — Piedra, Papel o Tijera\n"
+                "• !help dados — Dados 21\n"
                 "• !help bomba — Bomba"
             )
         except Exception as error:
