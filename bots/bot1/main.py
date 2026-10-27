@@ -182,11 +182,27 @@ class Bot(BotRuntimeMixin, BaseBot):
         role = await self.role_manager.get_user_role(self, user)
         return role in {"vip", "mod", "owner"}
 
-    async def get_command_help(self, user: User) -> list[str]:
+    async def get_command_help(self, user: User, full: bool = False) -> list[str]:
         role = await self.role_manager.get_user_role(self, user)
         has_advanced_permission = (
             user.id == self.owner_id or self.role_manager.has_permission(user.id)
         )
+        if not full:
+            return [
+                "\\n".join([
+                    "<#66CCFF>🤖 ZETA — COMANDOS PRINCIPALES",
+                    "<#FFFFFF>• !random — Emote aleatorio",
+                    "<#FFFFFF>• !stop — Detener emote",
+                    "<#FFFFFF>• !fight @usuario — Pelear con emotes",
+                    "<#FFFFFF>• !kiss / !heart / !love @usuario — Diversión",
+                    "<#FFFFFF>• !tele @usuario — Ir junto a alguien",
+                    "<#FFFFFF>• !follow / !stopfollow — Seguir o dejar de seguir",
+                    "<#FFFFFF>• !top — Ranking de propinas",
+                    "<#FFFFFF>• !userinfo [@usuario] — Ver información",
+                    "<#FFFFFF>• !help music — Ayuda básica de música",
+                    "<#FFFFFF>📨 Escríbeme !help por el buzón para ver todos los comandos."
+                ])
+            ]
         sections = [
             "\n".join([
                 "<#66CCFF>🎭 EMOTES",
@@ -1194,7 +1210,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             except Exception as error:
                 print(f"[INBOX HELP] No se pudo cargar el usuario: {error}")
             user = User(user_id, username)
-            help_text = await self.get_command_help(user)
+            help_text = await self.get_command_help(user, full=True)
             if isinstance(help_text, list):
                 for section in help_text:
                     if section:
