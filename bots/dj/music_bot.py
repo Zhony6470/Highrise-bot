@@ -327,15 +327,12 @@ class Bot(BotRuntimeMixin, BaseBot):
                 except Exception as error:
                     print(f"[MUSIC HELP] Error leyendo roles de @{user.username}: {error}")
 
-            sections = [
-                "<#66CCFF>🎵 MÚSICA — COMANDOS PRINCIPALES",
-                "<#FFFFFF>• !play canción — Solicitar una canción.",
-                "<#FFFFFF>• !q — Ver la cola.",
-                "<#FFFFFF>• !review / !r — Ver la canción actual.",
-                "<#FFFFFF>• !ticket — Consultar tickets.",
-                "<#FFFFFF>📨 Escribe !help en el buzón de Dj.Z para ver todos los comandos.",
-            ]
-            await self.highrise.send_whisper(user.id, "\n".join(sections))
+            for section in [
+                "🎧 ¡LA MÚSICA NO PARA! 🎶\\n\\n🎵 !play canción — Pedir una canción\\n📜 !q — Ver la cola musical",
+                "🎶 !review o !r — Ver la canción actual\\n🎟️ !ticket — Consultar tus tickets\\n💰 10g por 4 tickets",
+                "👑 Creador: @Zhony6470\\n🐛 Cualquier bug, comunícate con él.",
+            ]:
+                await self.highrise.send_whisper(user.id, section)
             return
 
         # Solo estos comandos compartidos pertenecen también al bot de música.
@@ -553,29 +550,12 @@ class Bot(BotRuntimeMixin, BaseBot):
             print(f"[INBOX DEBUG] Primer mensaje de la conversación: {message!r}")
             if message != "!help":
                 return
-            help_text = "\n".join([
-                "🎵 COMANDOS COMPLETOS DE DJ.Z",
-                "SOLICITUDES Y REPRODUCCIÓN",
-                "• !play canción — Solicitar una canción (usa 1 ticket si corresponde)",
-                "• !q / !queue — Ver la cola actual",
-                "• !review / !r — Ver la canción que está sonando",
-                "• !ticket — Ver tickets por cada 10 G",
-                "• !wallet — Consultar la billetera de Dj.Z (dueño/moderadores)",
-                "",
-                "GESTIÓN DE MÚSICA (solo dueño/moderadores, salvo donde se indique)",
-                "• !skip — Saltar la canción actual",
-                "• !ap canción / !addplay canción — Añadir canción a la playlist",
-                "• !rp canción / !removeplay canción — Quitar canción de la playlist",
-                "• !addticket número @usuario / !at número @usuario — Regalar tickets",
-                "• !ticket for número — Configurar tickets por cada 10 G",
-                "• !mtipme cantidad — Enviar oro desde Dj.Z a ti",
-                "• !mtip @usuario cantidad — Enviar oro desde Dj.Z a un usuario",
-                "• !mtipall cantidad — Enviar oro desde Dj.Z a todos",
-                "• !restart — Reiniciar Dj.Z (dueño/moderadores)",
-                "",
-                "Los comandos administrativos requieren los permisos correspondientes."
-            ])
-            await self.highrise.send_message(conversation_id, help_text)
+            for section in [
+                "🎧 ¡LA MÚSICA NO PARA! 🎶\\n\\n🎵 !play canción — Pedir una canción\\n📜 !q / !queue — Ver la cola musical\\n🎶 !review / !r — Ver la canción actual\\n🎟️ !ticket — Consultar tus tickets\\n💰 10g por 4 tickets",
+                "🛠️ ADMINISTRACIÓN (dueño/moderadores)\\n• !skip — Saltar canción\\n• !ap canción / !addplay canción — Añadir a la playlist\\n• !rp canción / !removeplay canción — Quitar de la playlist\\n• !addticket número @usuario / !at número @usuario — Regalar tickets\\n• !ticket for número — Configurar tickets por cada 10g",
+                "💰 ECONOMÍA (dueño/moderadores)\\n• !wallet — Consultar billetera\\n• !mtipme cantidad — Enviar oro a ti\\n• !mtip @usuario cantidad — Enviar oro a alguien\\n• !mtipall cantidad — Enviar oro a todos\\n• !restart — Reiniciar Dj.Z\\n👑 Creador: @Zhony6470\\n🐛 Cualquier bug, comunícate con él.",
+            ]:
+                await self.highrise.send_message(conversation_id, section)
         except Exception as error:
             print(f"[MUSIC INBOX HELP] Error procesando !help: {error}")
 
