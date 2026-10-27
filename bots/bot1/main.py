@@ -189,7 +189,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         )
         if not full:
             return [
-                "\\n".join([
+                "\n".join([
                     "<#66CCFF>🤖 ZETA — COMANDOS PRINCIPALES",
                     "<#FFFFFF>• !random — Emote aleatorio",
                     "<#FFFFFF>• !stop — Detener emote",
