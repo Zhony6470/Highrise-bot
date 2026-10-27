@@ -328,9 +328,9 @@ class Bot(BotRuntimeMixin, BaseBot):
                     print(f"[MUSIC HELP] Error leyendo roles de @{user.username}: {error}")
 
             for section in [
-                "🎧 ¡LA MÚSICA NO PARA! 🎶\\n\\n🎵 !play canción — Pedir una canción\\n📜 !q — Ver la cola musical",
-                "🎶 !review o !r — Ver la canción actual\\n🎟️ !ticket — Consultar tus tickets\\n💰 10g por 4 tickets",
-                "👑 Creador: @Zhony6470\\n🐛 Cualquier bug, comunícate con él.",
+                "🎧 ¡LA MÚSICA NO PARA! 🎶\n\n🎵 !play canción — Pedir una canción\n📜 !q — Ver la cola musical",
+                "🎶 !review o !r — Ver la canción actual\n🎟️ !ticket — Consultar tus tickets\n💰 10g por 4 tickets",
+                "👑 Creador: @Zhony6470\n🐛 Cualquier bug, comunícate con él.",
             ]:
                 await self.highrise.send_whisper(user.id, section)
             return
@@ -559,15 +559,15 @@ class Bot(BotRuntimeMixin, BaseBot):
                     print(f"[MUSIC INBOX HELP] No pude comprobar el rol: {error}")
 
             public_sections = [
-                "🎧 ¡LA MÚSICA NO PARA! 🎶\\n\\n🎵 !play canción — Pedir una canción\\n📜 !q / !queue — Ver la cola musical\\n🎶 !review / !r — Ver la canción actual\\n🎟️ !ticket — Consultar tus tickets\\n💰 10g por 4 tickets",
+                "🎧 ¡LA MÚSICA NO PARA! 🎶\n\n🎵 !play canción — Pedir una canción\n📜 !q / !queue — Ver la cola musical\n🎶 !review / !r — Ver la canción actual\n🎟️ !ticket — Consultar tus tickets\n💰 10g por 4 tickets",
             ]
             for section in public_sections:
                 await self.highrise.send_message(conversation_id, section)
 
             if role in {"owner", "mod"}:
                 for section in [
-                    "🛠️ ADMINISTRACIÓN\\n• !skip — Saltar canción\\n• !ap canción / !addplay canción — Añadir a la playlist\\n• !rp canción / !removeplay canción — Quitar de la playlist",
-                    "🎟️ TICKETS Y ECONOMÍA\\n• !addticket número @usuario / !at número @usuario — Regalar tickets\\n• !ticket for número — Configurar tickets por cada 10g\\n• !wallet — Consultar billetera\\n• !mtipme cantidad — Enviar oro a ti\\n• !mtip @usuario cantidad — Enviar oro a alguien\\n• !mtipall cantidad — Enviar oro a todos\\n• !restart — Reiniciar Dj.Z\\n👑 Creador: @Zhony6470\\n🐛 Cualquier bug, comunícate con él.",
+                    "🛠️ ADMINISTRACIÓN\n• !skip — Saltar canción\n• !ap canción / !addplay canción — Añadir a la playlist\n• !rp canción / !removeplay canción — Quitar de la playlist",
+                    "🎟️ TICKETS Y ECONOMÍA\n• !addticket número @usuario / !at número @usuario — Regalar tickets\n• !ticket for número — Configurar tickets por cada 10g\n• !wallet — Consultar billetera\n• !mtipme cantidad — Enviar oro a ti\n• !mtip @usuario cantidad — Enviar oro a alguien\n• !mtipall cantidad — Enviar oro a todos\n• !restart — Reiniciar Dj.Z\n👑 Creador: @Zhony6470\n🐛 Cualquier bug, comunícate con él.",
                 ]:
                     await self.highrise.send_message(conversation_id, section)
         except Exception as error:
