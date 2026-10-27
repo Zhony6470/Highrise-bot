@@ -197,7 +197,7 @@ class Bot(BotRuntimeMixin, BaseBot):
 
         await self.highrise.chat(
             f"<#66FF99>🎮 @{self.bot_username} está conectado. "
-            "Escribe !help para ver los comandos."
+            "Escribe !help game para ver los juegos."
         )
 
     async def on_chat(self, user: User, message: str) -> None:
@@ -276,18 +276,15 @@ class Bot(BotRuntimeMixin, BaseBot):
             section = help_sections[help_aliases[requested_help]]
             await self.highrise.send_whisper(user.id, "\\n".join(section))
             return
-        if requested_help in {"!help game", "!help"}:
+        if requested_help == "!help game":
             await self.highrise.send_whisper(
                 user.id,
-                "<#66CCFF>🎮━━━━ GUÍA DE JUEGOS ━━━━\\n"
-                "<#FFFFFF>💡 Comandos organizados por juego. También puedes usar: "
-                "!help bomba · !help dados · !help rps · !help verdad"
+                "<#66CCFF>🎮 JUEGOS DISPONIBLES\\n"
+                "<#FFFFFF>• !help verdad — Verdad o Reto\\n"
+                "• !help rps — Piedra, Papel o Tijera\\n"
+                "• !help dados — Dados 21\\n"
+                "• !help bomba — Bomba"
             )
-            for game in ("verdad", "rps", "dados", "bomba"):
-                await self.highrise.send_whisper(
-                    user.id,
-                    "\\n".join(help_sections[game])
-                )
             return
 
         if command == "!home":
@@ -426,28 +423,27 @@ class Bot(BotRuntimeMixin, BaseBot):
                 return
             message = response.messages[0].content.strip().lower()
             print(f"[INBOX DEBUG] Primer mensaje de la conversación: {message!r}")
-            if message != "!help":
+            if message != "!help game":
                 return
-            help_sections = [
-                "🎮 GUÍA DE JUEGOS\nAyuda por juego: !help bomba · !help dados · !help rps · !help verdad",
-                "💣 BOMBA\n• !bomba — Crear partida (inscripción 20 s)\n• jugar — Entrar\n• Responde con una palabra válida en 30 s\n• salir — Abandonar\n• terminar — Solo el creador",
-                "🎲 DADOS 21\n• !dados21 100 — Entrar apostando (10–100 G)\n• !tirar — Un dado\n• !doble — Dos dados\n• !plantarse — Terminar turno\n• !saldo — Consultar saldo\n• !retirar 50 — Retirar ganancias",
-                "⚔️ PIEDRA, PAPEL O TIJERA\n• !rps — Contra BotJuegos\n• !rps @usuario — Contra jugador\n• !piedra / !papel / !tijera",
-                "🎭 VERDAD O RETO\n• !vd — Individual\n• !jugarvd · !entrarvd · !iniciarvd\n• !verdad / !reto · !listo · !salirvd",
-            ]
-            for section in help_sections:
-                await self.highrise.send_message(conversation_id, section)
+            await self.highrise.send_message(
+                conversation_id,
+                "🎮 JUEGOS DISPONIBLES\\n"
+                "• !help verdad — Verdad o Reto\\n"
+                "• !help rps — Piedra, Papel o Tijera\\n"
+                "• !help dados — Dados 21\\n"
+                "• !help bomba — Bomba"
+            )
         except Exception as error:
             print(f"[FUN INBOX HELP] Error procesando !help: {error}")
 
     async def on_whisper(self, user: User, message: str) -> None:
-        # En privado, !help muestra la ayuda de juegos; !help game en sala sigue igual.
-        if message.strip().lower().startswith("!help"):
-            await self.on_chat(user, message.strip())
-            return
-        if await self.dados21.handle(user, message.strip(), private=True):
-            return
-        if await self.rps.handle(user, message.strip(), private=True):
+        # BotJuegos solo responde a !help game y a las ayudas específicas.
+        help_command = message.strip().lower()
+        if help_command == "!help game" or help_command in {
+            "!help bomba", "!help dados", "!help dados21",
+            "!help rps", "!help verdad", "!help vd",
+        }:
+            await self.on_chat(user, help_command)
             return
 
     async def on_user_move(self, user: User, position) -> None:
