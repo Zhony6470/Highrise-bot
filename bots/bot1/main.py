@@ -184,130 +184,86 @@ class Bot(BotRuntimeMixin, BaseBot):
 
     async def get_command_help(self, user: User, full: bool = False) -> list[str]:
         role = await self.role_manager.get_user_role(self, user)
-        has_advanced_permission = (
-            user.id == self.owner_id or self.role_manager.has_permission(user.id)
-        )
-        if not full:
-            return [
-                "\n".join([
-                    "<#66CCFF>🤖 ZETA — COMANDOS PRINCIPALES",
-                    "<#FFFFFF>• !random — Emote aleatorio",
-                    "<#FFFFFF>• !stop — Detener emote",
-                    "<#FFFFFF>• !fight @usuario — Pelear con emotes",
-                    "<#FFFFFF>• !kiss / !heart / !love @usuario — Diversión",
-                    "<#FFFFFF>• !tele @usuario — Ir junto a alguien",
-                    "<#FFFFFF>• !follow / !stopfollow — Seguir o dejar de seguir",
-                    "<#FFFFFF>• !top — Ranking de propinas",
-                    "<#FFFFFF>• !userinfo [@usuario] — Ver información",
-                    "<#FFFFFF>• !help music — Ayuda básica de música",
-                    "<#FFFFFF>📨 Escríbeme !help por el buzón para ver todos los comandos."
-                ])
-            ]
+        if user.id == self.owner_id:
+            role = "owner"
+        elif role not in {"vip", "mod", "designer", "owner"}:
+            role = "user"
+
         sections = [
-            "\n".join([
-                "<#66CCFF>🎭 EMOTES",
-                "<#FFFFFF>• !random - Emotes aleatorios para ti",
-                "<#FFFFFF>• !stop - Detener tu emote",
-                "<#FFFFFF>• !help - Mostrar esta ayuda",
+            "\\n".join([
+                "🤖 ZETA | EMOTES, DIVERSIÓN Y MÁS 🎭",
+                "🎲 !random — Emotes aleatorios",
+                "🛑 !stop — Detener emotes",
+                "🥊 !fight @usuario — Pelear",
+                "💋 !kiss @usuario — Enviar un beso",
+                "💖 !heart @usuario — Enviar un corazón",
+                "💕 !love @usuario — Compatibilidad",
+                "📌 !ubi — Ver ubicaciones",
+                "👤 !userinfo [@usuario] — Ver información",
+                "📜 !help — Ayuda",
             ]),
-            "\n".join([
-                "<#66CCFF>🎉 DIVERSIÓN",
-                "<#FFFFFF>• !fight @usuario - Pelear con emotes",
-                "<#FFFFFF>• !kiss @usuario - Enviar un beso",
-                "<#FFFFFF>• !heart @usuario - Enviar un corazón",
-                "<#FFFFFF>• !love @usuario - Calcular compatibilidad",
-                "<#FFFFFF>• !superpunch @usuario - Lanzar un superpunch",
-            ]),
-            "\n".join([
-                "<#66FF99>📍 MOVIMIENTO",
-                "<#FFFFFF>• !tele @usuario - Ir junto a un usuario",
-                "<#FFFFFF>• !follow - Seguir al dueño",
-                "<#FFFFFF>• !stopfollow - Dejar de seguir al dueño",
-                "<#FFFFFF>• !ubi - Ver las ubicaciones guardadas",
-            ]),
-            "\n".join([
-                "<#FFCC66>💰 PROPINAS",
-                "<#FFFFFF>• !top - Ranking de propinas",
-                "<#FFFFFF>• !get @usuario - Ver sus propinas",
-            ]),
-            "\n".join([                "<#CC99FF>👤 INFORMACIÓN",
-                    "<#FFFFFF>• !userinfo - Ver tu información",
-                "<#FFFFFF>• !userinfo @usuario - Ver información de otro usuario",
-                "<#FFFFFF>• !help - Mostrar la ayuda disponible",
-                "<#FFFFFF>• !help music - Ver los comandos del bot de música",
+            "\\n".join([
+                "💎 ZETA VIP 💎",
+                "📍 !tele @usuario — Teletransportarte hasta alguien",
+                "🌀 !summon @usuario — Invocar a un usuario",
+                "🎭 emote @usuario — Aplicar un emote a otro usuario",
+                "💥 !superpunch @usuario — Superpunch",
+                "⛓️ !esclavizar @usuario — Esclavizar",
+                "🪑 sentado — Ordenar sentarse",
+                "💃 baila — Ordenar bailar",
+                "😴 duerme — Ordenar dormir",
+                "🗡️ latigo — Usar el látigo",
+                "🔓 !liberar — Liberar",
+                "🏃 !escapar — Intentar escapar",
             ]),
         ]
 
-        if role in ("owner", "mod"):
-            sections.append("\n".join([
-                "<#FF66CC>🛡️ MODERACIÓN",
-                "<#FFFFFF>• !home - Volver a la posición guardada",
-                "<#FFFFFF>• !tp @usuario x y z - Teletransportar un usuario",
-                "<#FFFFFF>• !dancebot @Zeta_Bot - Activar baile aleatorio",
-                "<#FFFFFF>• !stopdance @Zeta_Bot - Detener baile aleatorio",
-                "<#FFFFFF>• !emote @Zeta_Bot rest - Emote persistente del bot",
-                "<#FFFFFF>• !emote @Zeta_Bot stop - Detener emote del bot",
-                "<#FFFFFF>• rest @usuario - Emote para un usuario",
-                "<#FFFFFF>• !randomall - Activar emotes para todos",
+        if role in {"mod", "owner"}:
+            sections.append("\\n".join([
+                "🛡️ MODERACIÓN",
+                "• !home — Volver a la posición guardada",
+                "• !tp @usuario x y z — Teletransportar un usuario",
+                "• !dancebot / !stopdance — Controlar baile del bot",
+                "• !emote @Zeta_Bot rest|stop — Controlar emote del bot",
+                "• rest @usuario — Aplicar emote a un usuario",
+                "• !randomall — Activar emotes para todos",
             ]))
 
-        if has_advanced_permission:
-            sections.append("\n".join([
-                "<#FFCC66>🔐 PERMISOS AVANZADOS",
-                "<#FFFFFF>• !kick @usuario - Expulsar un usuario",
-                "<#FFFFFF>• !tipme cantidad - Enviarte oro",
-                "<#FFFFFF>• !tip @usuario cantidad - Enviar oro",
-                "<#FFFFFF>• !tipall cantidad - Enviar a todos",
-                "<#FFFFFF>• !wallet - Ver la billetera del bot",
-                "<#FFFFFF>• !role @usuario mod|vip|designer - Gestionar roles",
-                "<#FFFFFF>• !set @Zeta_Bot / @Dj.Z - Ajustar posición del bot",
-                "<#FFFFFF>• !equip / !remove / !color / !getoutfit - Gestionar vestuario",
+        if role == "designer":
+            sections.append("\\n".join([
+                "🎨 DISEÑADOR",
+                "• !color categoría número — Cambiar color",
+                "• !equip nombre, ID o URL — Equipar una prenda",
+                "• !remove categoría — Quitar una categoría",
+                "• !getoutfit — Ver vestuario",
             ]))
 
-        if role == "designer" and has_advanced_permission:
-            sections.append(
-                "\n".join([
-                    "<#CC99FF>🎨 DISEÑADOR",
-                    "<#FFFFFF>• !color categoría número - Cambiar color",
-                    "<#FFFFFF>• !equip nombre, ID o URL - Equipar una prenda",
-                    "<#FFFFFF>• !remove categoría - Quitar una categoría",
-                    "<#FFFFFF>• !getoutfit - Ver el vestuario",
-                ])
-            )
+        if role in {"mod", "owner"} or user.id == self.owner_id or self.role_manager.has_permission(user.id):
+            sections.append("\\n".join([
+                "🔐 PERMISOS AVANZADOS",
+                "• !kick @usuario — Expulsar un usuario",
+                "• !tipme cantidad — Enviarte oro",
+                "• !tip @usuario cantidad — Enviar oro",
+                "• !tipall cantidad — Enviar oro a todos",
+                "• !wallet — Ver la billetera del bot",
+                "• !role @usuario mod|vip|designer — Gestionar roles",
+                "• !set @Zeta_Bot / @Dj.Z — Ajustar posición",
+                "• !equip / !remove / !color / !getoutfit — Gestionar vestuario",
+            ]))
 
         if role == "owner":
-            sections.extend([
-                "\n".join([
-                    "<#CC99FF>⚙️ ADMINISTRACIÓN",
-                    "<#FFFFFF>• !set @Zeta_Bot - Guardar la posición del bot",
-                    "<#FFFFFF>• !home [@Bot] - Volver a la posición guardada",
-                    "<#FFFFFF>• !reset [@Bot] - Reiniciar el bot",
-                    "<#FFFFFF>• !role @usuario mod|vip|designer - Agregar un rol",
-                    "<#FFFFFF>• !role @usuario delete [rol] - Quitar uno o todos los roles",
-                    "<#FFFFFF>• !perm @usuario - Otorgar permiso avanzado",
-                    "<#FFFFFF>• !rperm @usuario - Retirar permiso avanzado",
-                ]),
-                "\n".join([
-                    "<#FFFFFF>👕 VESTUARIO",
-                    "<#FFFFFF>• !color categoría número - Cambiar color",
-                    "<#FFFFFF>• !equip nombre, ID o URL - Equipar una prenda",
-                    "<#FFFFFF>• !remove categoría - Quitar una categoría",
-                    "<#FFFFFF>• !getoutfit - Ver el vestuario",
-                ]),
-            ])
-
-        if role in {"vip", "mod", "owner", "designer"}:
-            sections.append("\n".join([
-                "<#CC99FF>⛓️ ESCLAVOS (ZETA)",
-                "<#FFFFFF>• !esclavizar @usuario - Esclavizar a un usuario",
-                "<#FFFFFF>• !sentado / sentado - Ordenar que se siente",
-                "<#FFFFFF>• !baila / baila - Ordenar que baile",
-                "<#FFFFFF>• !duerme / duerme - Ordenar que duerma",
-                "<#FFFFFF>• !latigo - Látigo teatral y reacción",
-                "<#FFFFFF>• !liberar esclavo - Liberar a tu esclavo",
-                "<#FFFFFF>• !escapar - Escapar y quedar libre",
+            sections.append("\\n".join([
+                "👑 OWNER | ADMINISTRACIÓN",
+                "• !reset [@Bot] — Reiniciar un bot",
+                "• !role @usuario delete [rol] — Quitar roles",
+                "• !perm @usuario / !rperm @usuario — Gestionar permisos avanzados",
+                "• !removeubi nombre — Eliminar una ubicación",
             ]))
 
+        if full:
+            sections.append("👑 Creador: @Zhony6470\\n🐛 Cualquier bug, comunícate con él.")
+        else:
+            sections.append("📨 Para ver todos los comandos disponibles para tu rol, escríbeme !help por el buzón.")
         return sections
 
     async def send_saved_roles_to_inbox(self, user: User) -> str:
