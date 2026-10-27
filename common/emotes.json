@@ -2379,13 +2379,10 @@
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
   },
   {
-    "command": "Smooch",
+    "command": "smooch2",
     "emote": "emote-kissing-bound",
     "duration": 5.8,
-    "auth": "public",
-    "disabled": true,
-    "disabled_original_index": 338,
-    "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+    "auth": "public"
   },
   {
     "command": "Knock Knock",
@@ -2602,5 +2599,35 @@
     "disabled": true,
     "disabled_original_index": 253,
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "nova",
+    "emote": "emote-tune-accept",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "confused2",
+    "emote": "emote-confused2",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "allexpression",
+    "emote": "emote-theatrical-test",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "SoftDance",
+    "emote": "emote-sicklycute-sing-slow",
+    "duration": 5,
+    "auth": "public"
+  },
+  {
+    "command": "sicklycute sing",
+    "emote": "emote-sicklycute-sing-fast",
+    "duration": 5,
+    "auth": "public"
   }
 ]
