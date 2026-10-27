@@ -550,12 +550,26 @@ class Bot(BotRuntimeMixin, BaseBot):
             print(f"[INBOX DEBUG] Primer mensaje de la conversación: {message!r}")
             if message != "!help":
                 return
-            for section in [
+            role = "owner" if user_id == self.owner_id else "user"
+            if role != "owner":
+                try:
+                    if await self.is_mod(user_id):
+                        role = "mod"
+                except Exception as error:
+                    print(f"[MUSIC INBOX HELP] No pude comprobar el rol: {error}")
+
+            public_sections = [
                 "🎧 ¡LA MÚSICA NO PARA! 🎶\\n\\n🎵 !play canción — Pedir una canción\\n📜 !q / !queue — Ver la cola musical\\n🎶 !review / !r — Ver la canción actual\\n🎟️ !ticket — Consultar tus tickets\\n💰 10g por 4 tickets",
-                "🛠️ ADMINISTRACIÓN (dueño/moderadores)\\n• !skip — Saltar canción\\n• !ap canción / !addplay canción — Añadir a la playlist\\n• !rp canción / !removeplay canción — Quitar de la playlist\\n• !addticket número @usuario / !at número @usuario — Regalar tickets\\n• !ticket for número — Configurar tickets por cada 10g",
-                "💰 ECONOMÍA (dueño/moderadores)\\n• !wallet — Consultar billetera\\n• !mtipme cantidad — Enviar oro a ti\\n• !mtip @usuario cantidad — Enviar oro a alguien\\n• !mtipall cantidad — Enviar oro a todos\\n• !restart — Reiniciar Dj.Z\\n👑 Creador: @Zhony6470\\n🐛 Cualquier bug, comunícate con él.",
-            ]:
+            ]
+            for section in public_sections:
                 await self.highrise.send_message(conversation_id, section)
+
+            if role in {"owner", "mod"}:
+                for section in [
+                    "🛠️ ADMINISTRACIÓN\\n• !skip — Saltar canción\\n• !ap canción / !addplay canción — Añadir a la playlist\\n• !rp canción / !removeplay canción — Quitar de la playlist",
+                    "🎟️ TICKETS Y ECONOMÍA\\n• !addticket número @usuario / !at número @usuario — Regalar tickets\\n• !ticket for número — Configurar tickets por cada 10g\\n• !wallet — Consultar billetera\\n• !mtipme cantidad — Enviar oro a ti\\n• !mtip @usuario cantidad — Enviar oro a alguien\\n• !mtipall cantidad — Enviar oro a todos\\n• !restart — Reiniciar Dj.Z\\n👑 Creador: @Zhony6470\\n🐛 Cualquier bug, comunícate con él.",
+                ]:
+                    await self.highrise.send_message(conversation_id, section)
         except Exception as error:
             print(f"[MUSIC INBOX HELP] Error procesando !help: {error}")
 
