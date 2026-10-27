@@ -425,14 +425,14 @@ class Bot(BotRuntimeMixin, BaseBot):
             print(f"[INBOX DEBUG] Primer mensaje de la conversación: {message!r}")
             if message != "!help":
                 return
-            await self.highrise.send_message(
-                conversation_id,
-                "🎮 JUEGOS DISPONIBLES\\n"
-                "• !help verdad — Verdad o Reto\\n"
-                "• !help rps — Piedra, Papel o Tijera\\n"
-                "• !help dados — Dados 21\\n"
-                "• !help bomba — Bomba"
-            )
+            for section in [
+                "🎮 ¡BIENVENIDO A LA ZONA DE JUEGOS! 🔥\\n\\n💣 BOMBA: !bomba · jugar · salir",
+                "🎲 DADOS 21: !dados21 100 · !tirar · !doble · !plantarse · !saldo · !retirar 50",
+                "⚔️ RPS: !rps · !rps @usuario · !piedra · !papel · !tijera",
+                "🎭 VERDAD O RETO: !vd · !jugarvd · !entrarvd · !iniciarvd · !verdad · !reto · !listo · !salirvd",
+                "📜 !help bomba · !help dados · !help rps · !help verdad\\n👑 Creador: @Zhony6470\\n🐛 Cualquier bug, comunícate con él.",
+            ]:
+                await self.highrise.send_message(conversation_id, section)
         except Exception as error:
             print(f"[FUN INBOX HELP] Error procesando !help: {error}")
 
