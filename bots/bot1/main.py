@@ -190,7 +190,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             role = "user"
 
         sections = [
-            "\\n".join([
+            "\n".join([
                 "🤖 ZETA | EMOTES, DIVERSIÓN Y MÁS 🎭",
                 "🎲 !random — Emotes aleatorios",
                 "🛑 !stop — Detener emotes",
@@ -202,7 +202,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                 "👤 !userinfo [@usuario] — Ver información",
                 "📜 !help — Ayuda",
             ]),
-            "\\n".join([
+            "\n".join([
                 "💎 ZETA VIP 💎",
                 "📍 !tele @usuario — Teletransportarte hasta alguien",
                 "🌀 !summon @usuario — Invocar a un usuario",
@@ -219,7 +219,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         ]
 
         if role in {"mod", "owner"}:
-            sections.append("\\n".join([
+            sections.append("\n".join([
                 "🛡️ MODERACIÓN",
                 "• !home — Volver a la posición guardada",
                 "• !tp @usuario x y z — Teletransportar un usuario",
@@ -230,7 +230,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             ]))
 
         if role == "designer":
-            sections.append("\\n".join([
+            sections.append("\n".join([
                 "🎨 DISEÑADOR",
                 "• !color categoría número — Cambiar color",
                 "• !equip nombre, ID o URL — Equipar una prenda",
@@ -239,7 +239,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             ]))
 
         if role in {"mod", "owner"} or user.id == self.owner_id or self.role_manager.has_permission(user.id):
-            sections.append("\\n".join([
+            sections.append("\n".join([
                 "🔐 PERMISOS AVANZADOS",
                 "• !kick @usuario — Expulsar un usuario",
                 "• !tipme cantidad — Enviarte oro",
@@ -252,7 +252,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             ]))
 
         if role == "owner":
-            sections.append("\\n".join([
+            sections.append("\n".join([
                 "👑 OWNER | ADMINISTRACIÓN",
                 "• !reset [@Bot] — Reiniciar un bot",
                 "• !role @usuario delete [rol] — Quitar roles",
@@ -261,7 +261,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             ]))
 
         if full:
-            sections.append("👑 Creador: @Zhony6470\\n🐛 Cualquier bug, comunícate con él.")
+            sections.append("👑 Creador: @Zhony6470\n🐛 Cualquier bug, comunícate con él.")
         else:
             sections.append("📨 Para ver todos los comandos disponibles para tu rol, escríbeme !help por el buzón.")
         return sections
