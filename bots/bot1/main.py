@@ -189,81 +189,85 @@ class Bot(BotRuntimeMixin, BaseBot):
         elif role not in {"vip", "mod", "designer", "owner"}:
             role = "user"
 
+        # La ayuda pública de Zeta solo muestra los comandos generales y VIP.
+        # La ayuda completa con comandos por rol se mantiene en el buzón.
         sections = [
-            "\n".join([
-                "🤖 ZETA | EMOTES, DIVERSIÓN Y MÁS 🎭",
-                "🎲 !random — Emotes aleatorios",
-                "🛑 !stop — Detener emotes",
-                "🥊 !fight @usuario — Pelear",
-                "💋 !kiss @usuario — Enviar un beso",
-                "💖 !heart @usuario — Enviar un corazón",
-                "💕 !love @usuario — Compatibilidad",
-                "📌 !ubi — Ver ubicaciones",
-                "👤 !userinfo [@usuario] — Ver información",
-                "📜 !help — Ayuda",
+            "\\n".join([
+                "<#66CCFF>🤖 ZETA | EMOTES, DIVERSIÓN Y MÁS 🎭",
+                "<#FFFFFF>🎲 !random — Emotes aleatorios",
+                "<#FFFFFF>🛑 !stop — Detener emotes",
+                "<#FFFFFF>🥊 !fight @usuario — Pelear",
+                "<#FFFFFF>💋 !kiss @usuario — Enviar un beso",
+                "<#FFFFFF>💖 !heart @usuario — Enviar un corazón",
+                "<#FFFFFF>💕 !love @usuario — Compatibilidad",
+                "<#FFFFFF>📌 !ubi — Ver ubicaciones",
+                "<#FFFFFF>👤 !userinfo — Ver información",
+                "<#FFFFFF>📜 !help — Ayuda",
             ]),
-            "\n".join([
-                "💎 ZETA VIP 💎",
-                "📍 !tele @usuario — Teletransportarte hasta alguien",
-                "🌀 !summon @usuario — Invocar a un usuario",
-                "🎭 emote @usuario — Aplicar un emote a otro usuario",
-                "💥 !superpunch @usuario — Superpunch",
-                "⛓️ !esclavizar @usuario — Esclavizar",
-                "🪑 sentado — Ordenar sentarse",
-                "💃 baila — Ordenar bailar",
-                "😴 duerme — Ordenar dormir",
-                "🗡️ latigo — Usar el látigo",
-                "🔓 !liberar — Liberar",
-                "🏃 !escapar — Intentar escapar",
+            "\\n".join([
+                "<#FF66CC>💎 ZETA VIP 💎",
+                "<#FFFFFF>📍 !tele @usuario — Teletransportarte hasta alguien",
+                "<#FFFFFF>🌀 !summon @usuario — Invocar a un usuario",
+                "<#FFFFFF>🎭 emote @usuario — Aplicar un emote a otro usuario",
+                "<#FFFFFF>💥 !superpunch @usuario — Superpunch",
+                "<#FFCC66>⛓️ ESCLAVOS",
+                "<#FFFFFF>⛓️ !esclavizar @usuario — Esclavizar",
+                "<#FFFFFF>🪑 sentado — Ordenar sentarse",
+                "<#FFFFFF>💃 baila — Ordenar bailar",
+                "<#FFFFFF>😴 duerme — Ordenar dormir",
+                "<#FFFFFF>🗡️ latigo — Usar el látigo",
+                "<#FFFFFF>🔓 !liberar — Liberar",
+                "<#FFFFFF>🏃 !escapar — Intentar escapar",
             ]),
         ]
 
+        if not full:
+            sections.append("<#FFCC66>👑 Creador: @Zhony6470\\n<#FF6666>🐛 Cualquier bug, comunícate con él.")
+            return sections
+
         if role in {"mod", "owner"}:
-            sections.append("\n".join([
-                "🛡️ MODERACIÓN",
-                "• !home — Volver a la posición guardada",
-                "• !tp @usuario x y z — Teletransportar un usuario",
-                "• !dancebot / !stopdance — Controlar baile del bot",
-                "• !emote @Zeta_Bot rest|stop — Controlar emote del bot",
-                "• rest @usuario — Aplicar emote a un usuario",
-                "• !randomall — Activar emotes para todos",
+            sections.append("\\n".join([
+                "<#66CCFF>🛡️ MODERACIÓN",
+                "<#FFFFFF>• !home — Volver a la posición guardada",
+                "<#FFFFFF>• !tp @usuario x y z — Teletransportar un usuario",
+                "<#FFFFFF>• !dancebot / !stopdance — Controlar baile del bot",
+                "<#FFFFFF>• !emote @Zeta_Bot rest|stop — Controlar emote del bot",
+                "<#FFFFFF>• rest @usuario — Aplicar emote a un usuario",
+                "<#FFFFFF>• !randomall — Activar emotes para todos",
             ]))
 
         if role == "designer":
-            sections.append("\n".join([
-                "🎨 DISEÑADOR",
-                "• !color categoría número — Cambiar color",
-                "• !equip nombre, ID o URL — Equipar una prenda",
-                "• !remove categoría — Quitar una categoría",
-                "• !getoutfit — Ver vestuario",
+            sections.append("\\n".join([
+                "<#66CCFF>🎨 DISEÑADOR",
+                "<#FFFFFF>• !color categoría número — Cambiar color",
+                "<#FFFFFF>• !equip nombre, ID o URL — Equipar una prenda",
+                "<#FFFFFF>• !remove categoría — Quitar una categoría",
+                "<#FFFFFF>• !getoutfit — Ver vestuario",
             ]))
 
         if role in {"mod", "owner"} or user.id == self.owner_id or self.role_manager.has_permission(user.id):
-            sections.append("\n".join([
-                "🔐 PERMISOS AVANZADOS",
-                "• !kick @usuario — Expulsar un usuario",
-                "• !tipme cantidad — Enviarte oro",
-                "• !tip @usuario cantidad — Enviar oro",
-                "• !tipall cantidad — Enviar oro a todos",
-                "• !wallet — Ver la billetera del bot",
-                "• !role @usuario mod|vip|designer — Gestionar roles",
-                "• !set @Zeta_Bot / @Dj.Z — Ajustar posición",
-                "• !equip / !remove / !color / !getoutfit — Gestionar vestuario",
+            sections.append("\\n".join([
+                "<#FFCC66>🔐 PERMISOS AVANZADOS",
+                "<#FFFFFF>• !kick @usuario — Expulsar un usuario",
+                "<#FFFFFF>• !tipme cantidad — Enviarte oro",
+                "<#FFFFFF>• !tip @usuario cantidad — Enviar oro",
+                "<#FFFFFF>• !tipall cantidad — Enviar oro a todos",
+                "<#FFFFFF>• !wallet — Ver la billetera del bot",
+                "<#FFFFFF>• !role @usuario mod|vip|designer — Gestionar roles",
+                "<#FFFFFF>• !set @Zeta_Bot / @Dj.Z — Ajustar posición",
+                "<#FFFFFF>• !equip / !remove / !color / !getoutfit — Gestionar vestuario",
             ]))
 
         if role == "owner":
-            sections.append("\n".join([
-                "👑 OWNER | ADMINISTRACIÓN",
-                "• !reset [@Bot] — Reiniciar un bot",
-                "• !role @usuario delete [rol] — Quitar roles",
-                "• !perm @usuario / !rperm @usuario — Gestionar permisos avanzados",
-                "• !removeubi nombre — Eliminar una ubicación",
+            sections.append("\\n".join([
+                "<#FF66CC>👑 OWNER | ADMINISTRACIÓN",
+                "<#FFFFFF>• !reset [@Bot] — Reiniciar un bot",
+                "<#FFFFFF>• !role @usuario delete [rol] — Quitar roles",
+                "<#FFFFFF>• !perm @usuario / !rperm @usuario — Gestionar permisos avanzados",
+                "<#FFFFFF>• !removeubi nombre — Eliminar una ubicación",
             ]))
 
-        if full:
-            sections.append("👑 Creador: @Zhony6470\n🐛 Cualquier bug, comunícate con él.")
-        else:
-            sections.append("📨 Para ver todos los comandos disponibles para tu rol, escríbeme !help por el buzón.")
+        sections.append("<#FFCC66>👑 Creador: @Zhony6470\\n<#FF6666>🐛 Cualquier bug, comunícate con él.")
         return sections
 
     async def send_saved_roles_to_inbox(self, user: User) -> str:
@@ -626,9 +630,12 @@ class Bot(BotRuntimeMixin, BaseBot):
             response = await self.command_dispatcher.handle(self, user, msg)
             if isinstance(response, list):
                 for section in response:
-                    await self.highrise.send_whisper(user.id, section)
+                    if command_name == "!help":
+                        await self.highrise.chat(section)
+                    else:
+                        await self.highrise.send_whisper(user.id, section)
             elif response:
-                if command_name == "!userinfo":
+                if command_name in {"!userinfo", "!help"}:
                     await self.highrise.chat(response)
                 else:
                     await self.highrise.send_whisper(user.id, response)
