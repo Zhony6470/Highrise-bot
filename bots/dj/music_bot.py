@@ -553,7 +553,7 @@ class Bot(BotRuntimeMixin, BaseBot):
             print(f"[INBOX DEBUG] Primer mensaje de la conversación: {message!r}")
             if message != "!help":
                 return
-            help_text = "\\n".join([
+            help_text = "\n".join([
                 "🎵 COMANDOS COMPLETOS DE DJ.Z",
                 "SOLICITUDES Y REPRODUCCIÓN",
                 "• !play canción — Solicitar una canción (usa 1 ticket si corresponde)",
