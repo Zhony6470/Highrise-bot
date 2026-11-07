@@ -378,7 +378,7 @@ class Bot(BotRuntimeMixin, BaseBot):
         if cmd in ("!play","!p"):
             q=parts[1] if len(parts)==2 else ""
             if not q:
-                return await self.highrise.send_whisper(user.id,"<#FFCC66>🎵 Uso: !play canción")
+                return await self.highrise.send_whisper(user.id,"<#FFCC66>🎵 Uso: !play canción o !p canción")
 
             try:
                 role_requires_ticket = await self._requires_ticket(user)
@@ -565,7 +565,7 @@ class Bot(BotRuntimeMixin, BaseBot):
 
             public_sections = [
                 "<#00E5FF>🎧 ¡LA MÚSICA NO PARA! 🎶",
-                "<#66FF99>🎵 !play canción <#FFFFFF>— Pedir una canción",
+                "<#66FF99>🎵 !play / !p canción <#FFFFFF>— Pedir una canción",
                 "<#FFD54F>📜 !q <#FFFFFF>— Ver la cola musical",
                 "<#FF80AB>🎶 !review o !r <#FFFFFF>— Ver la canción actual",
                 "<#B388FF>🎟️ !ticket <#FFFFFF>— Consultar tus tickets",
