@@ -193,9 +193,9 @@ class Bot(BotRuntimeMixin, BaseBot):
 
     async def announcement_loop(self):
         messages = [
-            "<#66CCFF>🎵 ¿Quieres pedir una canción? Usa !play canción.",
+            "<#66CCFF>🎵 ¿Quieres pedir una canción? Usa !play o !p canción.",
             "<#FFCC66>🎟️ Cada 10g que das al bot te da tickets para pedir canciones.",
-            "<#66FF99>🎶 ¡Anímate y pide tu canción favorita con !play! Hagamos ambiente en la sala.",
+            "<#66FF99>🎶 ¡Anímate y pide tu canción favorita con !play o !p! Hagamos ambiente en la sala.",
             "<#CC99FF>💜 Dale vida a la sala: pide música, baila y disfruta con todos.",
         ]
         index = 0
@@ -329,7 +329,7 @@ class Bot(BotRuntimeMixin, BaseBot):
 
             for section in [
                 "<#00E5FF>🎧 ¡LA MÚSICA NO PARA! 🎶",
-                "<#66FF99>🎵 !play canción <#FFFFFF>— Pedir una canción",
+                "<#66FF99>🎵 !play / !p canción <#FFFFFF>— Pedir una canción",
                 "<#FFD54F>📜 !q <#FFFFFF>— Ver la cola musical",
                 "<#FF80AB>🎶 !review o !r <#FFFFFF>— Ver la canción actual",
                 "<#B388FF>🎟️ !ticket <#FFFFFF>— Consultar tus tickets",
@@ -375,7 +375,7 @@ class Bot(BotRuntimeMixin, BaseBot):
                     )
                 response = await self.dance_manager.start_bot_emote(matched["emote"])
             return await self.highrise.send_whisper(user.id, response)
-        if cmd=="!play":
+        if cmd in ("!play","!p"):
             q=parts[1] if len(parts)==2 else ""
             if not q:
                 return await self.highrise.send_whisper(user.id,"<#FFCC66>🎵 Uso: !play canción")
