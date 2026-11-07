@@ -2605,5 +2605,11 @@
     "disabled": true,
     "disabled_original_index": 253,
     "disabled_reason": "Actualmente no funciona; conservar para posible reactivación."
+  },
+  {
+    "command": "emote-jackinthebox",
+    "emote": "emote-jackinthebox",
+    "duration": 5.0,
+    "auth": "public"
   }
 ]
