@@ -31,20 +31,22 @@ No eliminar volúmenes durante el despliegue: evitar especialmente `docker compo
 
 ## Despliegue
 
-Validar primero el Compose y después reconstruir los servicios que comparten `infra/Dockerfile.bot`:
+Validar primero el Compose y reconstruir solo Zeta y BotJuegos, que son los servicios que necesitan la corrección de almacenamiento:
 
 ```bash
 docker compose config --quiet
-docker compose build main-bot fun-bot music-bot ghost-wave-bot
-docker compose up -d main-bot fun-bot music-bot ghost-wave-bot
+docker compose build main-bot fun-bot
+docker compose up -d main-bot fun-bot
 ```
+
+Esto evita reiniciar innecesariamente el bot de música y Ghost Wave. El cambio del comando de reinicio de Ghost Wave queda en el Compose y se aplicará cuando ese servicio se recree en una actualización posterior.
 
 Después comprobar:
 
 ```bash
 docker compose ps
-docker compose logs --tail=100 main-bot fun-bot music-bot ghost-wave-bot
-docker volume inspect $(docker volume ls -q --filter name=zeta_data)
+docker compose logs --tail=100 main-bot fun-bot
+docker volume ls | grep zeta_data
 ```
 
 La migración de cada archivo ocurre cuando el bot lo carga por primera vez después del despliegue. Los registros antiguos permanecen disponibles como recuperación.
