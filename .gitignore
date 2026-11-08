@@ -4,8 +4,12 @@ __pycache__/
 .env
 cookies.txt
 *.pem
+**/.env
+**/cookies.txt
+**/*.pem
 music_bot_data.local.json
 request_queue.json
 default_playlist.json
 
 backup-antes-sync/
+bots/ghost_wave/data/ghost_wave.json

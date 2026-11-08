@@ -1,84 +1,293 @@
-from json import dump, load
-from typing import Literal
+from __future__ import annotations
 
+from typing import Literal
 from highrise import User
+
 from services.storage import load_json, save_json
 
 
 Role = Literal["owner", "mod", "vip", "designer", "user"]
+ASSIGNABLE_ROLES = {"mod", "vip", "designer"}
+STORED_ROLES = ASSIGNABLE_ROLES
 
 
 class RoleManager:
-    def __init__(self, roles_file: str):
+    """Roles persistidos por ID; un usuario puede tener varios roles a la vez."""
+
+    def __init__(self, roles_file):
         self.roles_file = roles_file
-        self.roles = self._load_roles()
+        self.usernames = {}
+        self.roles = {}
+        self._legacy_vip_users = set()
+        self.permissions = {}
+        self._load_roles()
 
-    async def get_user_role(self, bot, user: User) -> Role:
+    @staticmethod
+    def _normalize_roles(value) -> list[str]:
+        if isinstance(value, str):
+            values = [value]
+        elif isinstance(value, (list, tuple, set)):
+            values = list(value)
+        else:
+            values = []
+
+        result = []
+        for role in values:
+            role = str(role).strip().lower()
+            if role in STORED_ROLES and role not in result:
+                result.append(role)
+        return result
+
+    def has_permission(self, user_id: str) -> bool:
+        return bool(user_id and user_id in self.permissions)
+
+    def grant_permission(self, user_id: str, username: str = "") -> None:
+        if not user_id:
+            return
+        self.permissions[user_id] = {"username": username}
+        self._save_roles()
+
+    def revoke_permission(self, user_id: str, username: str = "") -> None:
+        if not user_id:
+            return
+        self.permissions.pop(user_id, None)
+        self._save_roles()
+
+    def _find_username_key(self, username: str = "") -> str | None:
+        username_key = username.strip().lstrip("@").casefold()
+        if not username_key:
+            return None
+
+        matches = [
+            key
+            for key, saved_username in self.usernames.items()
+            if saved_username.strip().lstrip("@").casefold() == username_key
+        ]
+        return matches[0] if len(matches) == 1 else None
+
+    def _find_saved_role_key(
+        self, user_id: str = "", username: str = ""
+    ) -> str | None:
+        """Resolve saved roles by stable ID, with a safe username fallback."""
+        if user_id and user_id in self.roles:
+            return user_id
+
+        username_key = username.strip().lstrip("@").casefold()
+        if username_key in self.roles:
+            return username_key
+
+        username_id = self._find_username_key(username)
+        return username_id if username_id in self.roles else None
+
+    def get_saved_roles(self, user_id: str = "", username: str = "") -> list[str]:
+        key = self._find_saved_role_key(user_id, username)
+        return self._normalize_roles(self.roles.get(key)) if key else []
+
+    async def get_user_roles(self, bot, user: User) -> set[str]:
         if user.id == bot.owner_id:
-            return "owner"
+            return {"owner"}
 
-        saved_role = self.roles.get(user.username.lower())
-        if saved_role:
-            return saved_role
+        saved = self.get_saved_roles(user.id, user.username)
+        username_key = user.username.casefold()
+
+        # Si el rol estaba guardado por username, lo migramos al ID estable.
+        if user.id not in self.roles and username_key in self.roles:
+            self.roles[user.id] = saved
+            self.roles.pop(username_key, None)
+            self.usernames[user.id] = user.username
+            self._save_roles()
+
+        if saved:
+            return set(saved)
 
         try:
-            privileges = await bot.highrise.get_room_privilege(user.id)
+            privilege = await bot.highrise.get_room_privilege(user.id)
         except Exception as error:
-            print(f"Error obteniendo los privilegios de @{user.username}: {error}")
-            privileges = None
+            print(f"[ROLES] privilegios @{user.username}: {error}")
+            privilege = None
 
-        if privileges and getattr(privileges, "moderator", False):
-            return "mod"
-        if privileges and getattr(privileges, "designer", False):
-            return "designer"
+        result = set()
+        if privilege and getattr(privilege, "moderator", False):
+            result.add("mod")
+        if privilege and getattr(privilege, "designer", False):
+            result.add("designer")
         if user.id in self._legacy_vip_users:
+            result.add("vip")
+        return result
+
+    async def get_user_role(self, bot, user: User) -> Role:
+        roles = await self.get_user_roles(bot, user)
+        if "owner" in roles:
+            return "owner"
+        if "mod" in roles:
+            return "mod"
+        if "designer" in roles:
+            return "designer"
+        if "vip" in roles:
             return "vip"
         return "user"
 
+    async def _apply_room_privileges(self, bot, user_id: str, roles: set[str]) -> bool:
+        if not user_id:
+            return True
+
+        try:
+            privilege = await bot.highrise.get_room_privilege(user_id)
+            privilege.moderator = "mod" in roles
+            privilege.designer = "designer" in roles
+            await bot.highrise.change_room_privilege(user_id, privilege)
+            return True
+        except Exception as error:
+            print(
+                f"[ROLES] No se pudo sincronizar privilegios de sala "
+                f"para @{user_id}: {error}"
+            )
+            return False
+
     async def set_role(
-        self, bot, user_id: str | None, role: Role, username: str
-    ) -> None:
-        username = username.lower()
-        if role == "user":
-            self.roles.pop(username, None)
-        else:
-            self.roles[username] = role
+        self,
+        bot,
+        user_id,
+        role: Role,
+        username: str = "",
+        apply_privilege: bool = True,
+    ):
+        username_key = username.strip().lstrip("@").casefold()
+        if role not in ASSIGNABLE_ROLES:
+            return False
+
+        existing_key = self._find_saved_role_key(user_id, username)
+        key = user_id or existing_key or username_key
+        if not key:
+            return False
+
+        current = self.get_saved_roles(user_id, username)
+        if role not in current:
+            current.append(role)
+        if existing_key and existing_key != key:
+            self.roles.pop(existing_key, None)
+            self.usernames.pop(existing_key, None)
+        self.roles[key] = current
+
+        if username and user_id:
+            self.usernames[key] = username
+        elif not user_id:
+            self.usernames.pop(key, None)
+
         self._save_roles()
 
-        if not user_id:
-            return
+        if not user_id or not apply_privilege:
+            return True
 
-        permissions = await bot.highrise.get_room_privilege(user_id)
-        permissions.moderator = role == "mod"
-        permissions.designer = role == "designer"
-        await bot.highrise.change_room_privilege(user_id, permissions)
+        return await self._apply_room_privileges(bot, user_id, set(current))
 
-    async def apply_saved_role(self, bot, user: User) -> None:
-        role = self.roles.get(user.username.lower())
-        await self.set_role(bot, user.id, role, user.username)
+    async def delete_role(
+        self,
+        bot,
+        user_id,
+        username: str = "",
+        role: str | None = None,
+        apply_privilege: bool = True,
+    ) -> bool | None:
+        """Quita roles guardados; None indica fallo de sincronización tras borrarlos."""
+        username_key = username.strip().lstrip("@").casefold()
+        key = self._find_saved_role_key(user_id, username)
+        username_id = self._find_username_key(username)
+        legacy_keys = {key for key in (user_id, username_id, username_key) if key}
+        legacy_vip_found = bool(
+            role in {None, "user", "vip"}
+            and legacy_keys.intersection(self._legacy_vip_users)
+        )
 
-    def _load_roles(self) -> dict[str, Role]:
-        try:
-            data = load_json(self.roles_file)
-            self._legacy_vip_users = set(data.get("vip_users", []))
-            return {
-                username.lower(): role
-                for username, role in data.get("users", {}).items()
-                if role in ("mod", "vip", "designer", "user")
+        if key is None:
+            if not legacy_vip_found:
+                return False
+            self._legacy_vip_users.difference_update(legacy_keys)
+            self._save_roles()
+            if user_id and apply_privilege:
+                synced = await self._apply_room_privileges(bot, user_id, set())
+                return True if synced else None
+            return True
+
+        current = self.get_saved_roles(user_id, username)
+        if (
+            role not in {None, "user"}
+            and role not in current
+            and not (role == "vip" and legacy_vip_found)
+        ):
+            return False
+
+        remaining = (
+            []
+            if role in {None, "user"}
+            else [item for item in current if item != role]
+        )
+
+        if remaining:
+            self.roles[key] = remaining
+        else:
+            self.roles.pop(key, None)
+            self.usernames.pop(key, None)
+
+        if role in {None, "user", "vip"}:
+            self._legacy_vip_users.difference_update(legacy_keys)
+
+        self._save_roles()
+
+        if not user_id or not apply_privilege:
+            return True
+
+        synced = await self._apply_room_privileges(bot, user_id, set(remaining))
+        return True if synced else None
+
+    async def apply_saved_role(self, bot, user):
+        roles = set(self.get_saved_roles(user.id, user.username))
+        if roles:
+            await self._apply_room_privileges(bot, user.id, roles)
+
+    def _load_roles(self):
+        data = load_json(self.roles_file, default={})
+        if not isinstance(data, dict):
+            data = {}
+
+        self._legacy_vip_users = set(data.get("vip_users", []))
+        self.usernames = {
+            str(key): str(value)
+            for key, value in (data.get("usernames", {}) or {}).items()
+        }
+
+        raw_permissions = data.get("permissions", {})
+        if isinstance(raw_permissions, dict):
+            self.permissions = {
+                str(key): value if isinstance(value, dict) else {}
+                for key, value in raw_permissions.items()
             }
-        except (FileNotFoundError, KeyError, TypeError):
-            self._legacy_vip_users = set()
-            return {}
 
-    def _save_roles(self) -> None:
-        data = load_json(self.roles_file)
+        raw = data.get("users", {})
+        if isinstance(raw, dict):
+            for key, value in raw.items():
+                normalized = self._normalize_roles(value)
+                if normalized:
+                    self.roles[str(key)] = normalized
+
+    def _save_roles(self):
+        data = load_json(self.roles_file, default={})
+        data = data if isinstance(data, dict) else {}
         data["users"] = self.roles
+        data["usernames"] = self.usernames
+        data["vip_users"] = sorted(self._legacy_vip_users)
+        data["permissions"] = self.permissions
         save_json(self.roles_file, data)
 
 
-async def get_user_role(bot, user: User) -> Role:
+async def get_user_role(bot, user):
     return await bot.role_manager.get_user_role(bot, user)
 
 
-async def has_role(bot, user: User, allowed_roles: set[Role]) -> bool:
-    return await get_user_role(bot, user) in allowed_roles
+async def get_user_roles(bot, user):
+    return await bot.role_manager.get_user_roles(bot, user)
+
+
+async def has_role(bot, user, allowed_roles):
+    roles = await get_user_roles(bot, user)
+    return bool(roles.intersection(set(allowed_roles)))

@@ -5,4 +5,7 @@ __pycache__
 *.pyc
 .env
 cookies.txt
+**/.env
+**/cookies.txt
+**/*.pem
 *.log
