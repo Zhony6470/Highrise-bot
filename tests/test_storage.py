@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 from urllib.parse import unquote
 from unittest.mock import patch
+from urllib.error import URLError
 
 from services import storage
 
@@ -84,16 +85,21 @@ class StorageNamespaceTests(unittest.TestCase):
         roles = self.root / "roles.json"
         self.assertEqual(storage._storage_key(roles), "roles.json")
 
-    def test_save_writes_namespaced_supabase_record_and_local_mirror(self):
+    def test_save_writes_namespaced_supabase_record(self):
         target = self.root / "bots" / "fun" / "data" / "data.json"
         data = {"users": {"user-1": {"total_tips": 7}}}
 
         storage.save_json(target, data)
 
-        self.assertEqual(
-            self.remote["bots/fun/data/data.json"],
-            data,
-        )
+        self.assertEqual(self.remote["bots/fun/data/data.json"], data)
+        self.assertFalse(target.exists())
+
+    def test_save_uses_local_fallback_when_supabase_is_unavailable(self):
+        target = self.root / "bots" / "fun" / "data" / "data.json"
+        data = {"users": {"user-1": {"total_tips": 7}}}
+        with patch.object(storage, "_supabase_request", side_effect=URLError("offline")):
+            storage.save_json(target, data)
+
         self.assertEqual(
             __import__("json").loads(target.read_text(encoding="utf-8")),
             data,
