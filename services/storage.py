@@ -116,14 +116,7 @@ def load_json(file_path, default=None):
         try:
             rows = _get_supabase_file(storage_key)
             if rows:
-                data = rows[0]["content"]
-                # Keep the local copy current so a temporary Supabase outage
-                # does not force the bot to fall back to an old snapshot.
-                try:
-                    _write_local(path, data)
-                except OSError:
-                    pass
-                return data
+                return rows[0]["content"]
 
             legacy_key = _LEGACY_KEYS.get(storage_key)
             if legacy_key:
@@ -163,16 +156,20 @@ def save_json(file_path, data):
     path = Path(file_path)
     storage_key = _storage_key(path)
 
+    saved_remotely = False
     if SUPABASE_URL and SUPABASE_KEY:
         try:
             _supabase_request(
                 "POST",
                 "bot_files",
                 {"file_name": storage_key, "content": data},
-                params=f"?on_conflict=file_name",
+                params="?on_conflict=file_name",
             )
+            saved_remotely = True
         except (HTTPError, URLError, TimeoutError, OSError, ValueError):
             pass
 
-    # Always maintain a durable local mirror, whether or not Supabase worked.
-    _write_local(path, data)
+    # Preserve the existing local fallback behavior without writing every
+    # successful Supabase update into repository bind mounts.
+    if not saved_remotely:
+        _write_local(path, data)
