@@ -53,12 +53,28 @@ class RoleManager:
         self.permissions.pop(user_id, None)
         self._save_roles()
 
-    def get_saved_roles(self, user_id: str = "", username: str = "") -> list[str]:
+    def _find_saved_role_key(self, user_id: str = "", username: str = "") -> str | None:
+        """Resolve saved roles by stable ID, with a safe username fallback."""
+        if user_id and user_id in self.roles:
+            return user_id
+
         username_key = username.strip().lstrip("@").casefold()
-        value = self.roles.get(user_id) if user_id else None
-        if value is None and username_key:
-            value = self.roles.get(username_key)
-        return self._normalize_roles(value)
+        if not username_key:
+            return None
+        if username_key in self.roles:
+            return username_key
+
+        matches = [
+            key
+            for key, saved_username in self.usernames.items()
+            if key in self.roles
+            and saved_username.strip().lstrip("@").casefold() == username_key
+        ]
+        return matches[0] if len(matches) == 1 else None
+
+    def get_saved_roles(self, user_id: str = "", username: str = "") -> list[str]:
+        key = self._find_saved_role_key(user_id, username)
+        return self._normalize_roles(self.roles.get(key)) if key else []
 
     async def get_user_roles(self, bot, user: User) -> set[str]:
         if user.id == bot.owner_id:
@@ -140,9 +156,13 @@ class RoleManager:
         else:
             return False
 
+        existing_key = self._find_saved_role_key(user_id, username)
         current = self.get_saved_roles(user_id, username)
         if role not in current:
             current.append(role)
+        if existing_key and existing_key != key:
+            self.roles.pop(existing_key, None)
+            self.usernames.pop(existing_key, None)
         self.roles[key] = current
 
         if username and user_id:
@@ -163,19 +183,36 @@ class RoleManager:
         user_id,
         username: str = "",
         role: str | None = None,
+        apply_privilege: bool = True,
     ):
         """Quita un rol concreto o todos los roles si role es None."""
         username_key = username.strip().lstrip("@").casefold()
-        key = user_id or username_key
-        if not key:
-            return False
+        key = self._find_saved_role_key(user_id, username)
+        legacy_vip_found = bool(
+            role in {None, "user"}
+            and (
+                (user_id and user_id in self._legacy_vip_users)
+                or (username_key and username_key in self._legacy_vip_users)
+            )
+        )
+
+        if key is None:
+            if not legacy_vip_found:
+                return False
+            self._legacy_vip_users.discard(user_id)
+            self._legacy_vip_users.discard(username_key)
+            self._save_roles()
+            if user_id and apply_privilege:
+                return await self._apply_room_privileges(bot, user_id, set())
+            return True
 
         current = self.get_saved_roles(user_id, username)
+        if role not in {None, "user"} and role not in current:
+            return False
 
-        if role is None or role == "user":
-            remaining = []
-        else:
-            remaining = [item for item in current if item != role]
+        remaining = [] if role in {None, "user"} else [
+            item for item in current if item != role
+        ]
 
         if remaining:
             self.roles[key] = remaining
@@ -183,18 +220,13 @@ class RoleManager:
             self.roles.pop(key, None)
             self.usernames.pop(key, None)
 
-        if role is None or role == "user":
+        if role in {None, "user"}:
             self._legacy_vip_users.discard(user_id)
             self._legacy_vip_users.discard(username_key)
 
         self._save_roles()
 
-        if not user_id:
-            return True
-
-        # Si se elimina un rol concreto que no estaba guardado, no tocamos
-        # privilegios manuales que el usuario ya tuviera en la sala.
-        if role not in {None, "user"} and not current:
+        if not user_id or not apply_privilege:
             return True
 
         return await self._apply_room_privileges(bot, user_id, set(remaining))
