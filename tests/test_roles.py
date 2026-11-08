@@ -79,6 +79,31 @@ class RoleDeletionTests(unittest.TestCase):
         self.assertEqual(manager.roles, {"user-123": ["mod"]})
         save.assert_not_called()
 
+    def test_delete_legacy_vip_by_username_persists_removal(self):
+        data = {
+            "vip_users": ["user-123"],
+            "users": {},
+            "usernames": {"user-123": "TargetUser"},
+        }
+
+        with patch("services.roles.load_json", return_value=data), patch(
+            "services.roles.save_json"
+        ) as save:
+            manager = RoleManager("roles.json")
+            deleted = asyncio.run(
+                manager.delete_role(
+                    None,
+                    user_id=None,
+                    username="targetuser",
+                    role="vip",
+                    apply_privilege=False,
+                )
+            )
+
+        self.assertTrue(deleted)
+        self.assertNotIn("user-123", manager._legacy_vip_users)
+        self.assertEqual(save.call_args.args[1]["vip_users"], [])
+
     def test_role_command_removes_offline_user_by_username(self):
         data = {
             "users": {"user-123": ["vip"]},
