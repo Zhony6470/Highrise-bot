@@ -105,7 +105,7 @@ async def handle_role(bot: BaseBot, user: User, message: str) -> Optional[str]:
                     else "roles"
                 )
                 return (
-                    f"<#FFCC66>⚠️ No encontré {missing_item} guardado(s) "
+                    f"<#FFCC66>⚠️ No encontré {missing_item} "
                     f"para @{username}; no se eliminó ningún registro."
                 )
 
