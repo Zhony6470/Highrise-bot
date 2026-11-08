@@ -104,6 +104,70 @@ class RoleDeletionTests(unittest.TestCase):
         self.assertNotIn("user-123", manager._legacy_vip_users)
         self.assertEqual(save.call_args.args[1]["vip_users"], [])
 
+    def test_room_sync_failure_is_distinct_from_missing_role(self):
+        data = {
+            "users": {"user-123": ["mod"]},
+            "usernames": {"user-123": "TargetUser"},
+        }
+
+        class FakeHighrise:
+            async def get_room_privilege(self, user_id):
+                return SimpleNamespace(moderator=True, designer=False)
+
+            async def change_room_privilege(self, user_id, privilege):
+                raise RuntimeError("simulated API failure")
+
+        with patch("services.roles.load_json", return_value=data), patch(
+            "services.roles.save_json"
+        ):
+            manager = RoleManager("roles.json")
+            result = asyncio.run(
+                manager.delete_role(
+                    SimpleNamespace(highrise=FakeHighrise()),
+                    user_id="user-123",
+                    username="TargetUser",
+                    role="mod",
+                    apply_privilege=True,
+                )
+            )
+
+        self.assertIsNone(result)
+        self.assertNotIn("user-123", manager.roles)
+
+    def test_online_unknown_role_is_not_reported_as_deleted(self):
+        data = {"users": {}, "usernames": {}}
+
+        class FakeWebAPI:
+            async def get_users(self, username):
+                return SimpleNamespace(
+                    users=[SimpleNamespace(id="user-123", username=username)]
+                )
+
+        class FakeHighrise:
+            async def get_room_users(self):
+                return SimpleNamespace(
+                    content=[(SimpleNamespace(id="user-123", username="TargetUser"), None)]
+                )
+
+        bot = SimpleNamespace(
+            owner_id="owner-id",
+            role_manager=None,
+            webapi=FakeWebAPI(),
+            highrise=FakeHighrise(),
+        )
+        owner = SimpleNamespace(id="owner-id")
+
+        with patch("services.roles.load_json", return_value=data), patch(
+            "services.roles.save_json"
+        ):
+            bot.role_manager = RoleManager("roles.json")
+            response = asyncio.run(
+                handle_role(bot, owner, "!role @TargetUser delete")
+            )
+
+        self.assertIn("no se eliminó ningún registro", response)
+        self.assertEqual(bot.role_manager.roles, {})
+
     def test_role_command_removes_offline_user_by_username(self):
         data = {
             "users": {"user-123": ["vip"]},
