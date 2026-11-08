@@ -98,7 +98,7 @@ async def handle_role(bot: BaseBot, user: User, message: str) -> Optional[str]:
                 else f"el rol {delete_role}"
             )
 
-            if not in_room and not applied:
+            if applied is False:
                 missing_item = (
                     f"el rol {delete_role}"
                     if delete_role not in {None, "user"}
