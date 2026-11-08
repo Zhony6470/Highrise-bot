@@ -65,7 +65,9 @@ class RoleManager:
         ]
         return matches[0] if len(matches) == 1 else None
 
-    def _find_saved_role_key(self, user_id: str = "", username: str = "") -> str | None:
+    def _find_saved_role_key(
+        self, user_id: str = "", username: str = ""
+    ) -> str | None:
         """Resolve saved roles by stable ID, with a safe username fallback."""
         if user_id and user_id in self.roles:
             return user_id
@@ -187,7 +189,7 @@ class RoleManager:
         role: str | None = None,
         apply_privilege: bool = True,
     ) -> bool | None:
-        """Remove stored roles; return None only when room sync fails after deletion."""
+        """Quita roles guardados; None indica fallo de sincronización tras borrarlos."""
         username_key = username.strip().lstrip("@").casefold()
         key = self._find_saved_role_key(user_id, username)
         username_id = self._find_username_key(username)
@@ -215,9 +217,11 @@ class RoleManager:
         ):
             return False
 
-        remaining = [] if role in {None, "user"} else [
-            item for item in current if item != role
-        ]
+        remaining = (
+            []
+            if role in {None, "user"}
+            else [item for item in current if item != role]
+        )
 
         if remaining:
             self.roles[key] = remaining
