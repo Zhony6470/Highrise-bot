@@ -152,8 +152,8 @@ services:
         mkdir -p /app/bots/ghost_wave/data
         while true; do
           python -u -m bots.ghost_wave.main
-          code=$?
-          echo "[GHOST] Proceso finalizó con código $code; reiniciando en 2s..."
+          code=$$?
+          echo "[GHOST] Proceso finalizó con código $$code; reiniciando en 2s..."
           sleep 2
         done
 
