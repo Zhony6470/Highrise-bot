@@ -86,7 +86,11 @@ async def handle_role(bot: BaseBot, user: User, message: str) -> Optional[str]:
     try:
         if role == "delete":
             applied = await bot.role_manager.delete_role(
-                bot, target_id, username, delete_role
+                bot,
+                target_id,
+                username,
+                delete_role,
+                apply_privilege=in_room,
             )
             deleted_text = (
                 "todos los roles"
@@ -94,10 +98,16 @@ async def handle_role(bot: BaseBot, user: User, message: str) -> Optional[str]:
                 else f"el rol {delete_role}"
             )
 
+            if not in_room and not applied:
+                return (
+                    f"<#FFCC66>⚠️ No encontré roles guardados para "
+                    f"@{username}; no se eliminó ningún registro."
+                )
+
             if not in_room:
                 return (
                     f"<#66FF99>🗑️ {deleted_text.capitalize()} eliminado(s) "
-                    f"para @{username}. No queda guardado en la base de datos."
+                    f"para @{username}. Se aplicará al volver a entrar."
                 )
 
             if applied:
