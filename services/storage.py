@@ -165,7 +165,6 @@ def save_json(file_path, data):
 
     if SUPABASE_URL and SUPABASE_KEY:
         try:
-            encoded_name = quote(storage_key, safe="")
             _supabase_request(
                 "POST",
                 "bot_files",
