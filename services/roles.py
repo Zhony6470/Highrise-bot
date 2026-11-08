@@ -186,8 +186,8 @@ class RoleManager:
         username: str = "",
         role: str | None = None,
         apply_privilege: bool = True,
-    ):
-        """Quita un rol concreto o todos los roles si role es None."""
+    ) -> bool | None:
+        """Remove stored roles; return None only when room sync fails after deletion."""
         username_key = username.strip().lstrip("@").casefold()
         key = self._find_saved_role_key(user_id, username)
         username_id = self._find_username_key(username)
@@ -203,7 +203,8 @@ class RoleManager:
             self._legacy_vip_users.difference_update(legacy_keys)
             self._save_roles()
             if user_id and apply_privilege:
-                return await self._apply_room_privileges(bot, user_id, set())
+                synced = await self._apply_room_privileges(bot, user_id, set())
+                return True if synced else None
             return True
 
         current = self.get_saved_roles(user_id, username)
@@ -232,7 +233,8 @@ class RoleManager:
         if not user_id or not apply_privilege:
             return True
 
-        return await self._apply_room_privileges(bot, user_id, set(remaining))
+        synced = await self._apply_room_privileges(bot, user_id, set(remaining))
+        return True if synced else None
 
     async def apply_saved_role(self, bot, user):
         roles = set(self.get_saved_roles(user.id, user.username))
