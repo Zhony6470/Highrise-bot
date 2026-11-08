@@ -149,14 +149,11 @@ class RoleManager:
         if role not in ASSIGNABLE_ROLES:
             return False
 
-        if user_id:
-            key = user_id
-        elif username_key:
-            key = username_key
-        else:
+        existing_key = self._find_saved_role_key(user_id, username)
+        key = user_id or existing_key or username_key
+        if not key:
             return False
 
-        existing_key = self._find_saved_role_key(user_id, username)
         current = self.get_saved_roles(user_id, username)
         if role not in current:
             current.append(role)
