@@ -53,24 +53,29 @@ class RoleManager:
         self.permissions.pop(user_id, None)
         self._save_roles()
 
+    def _find_username_key(self, username: str = "") -> str | None:
+        username_key = username.strip().lstrip("@").casefold()
+        if not username_key:
+            return None
+
+        matches = [
+            key
+            for key, saved_username in self.usernames.items()
+            if saved_username.strip().lstrip("@").casefold() == username_key
+        ]
+        return matches[0] if len(matches) == 1 else None
+
     def _find_saved_role_key(self, user_id: str = "", username: str = "") -> str | None:
         """Resolve saved roles by stable ID, with a safe username fallback."""
         if user_id and user_id in self.roles:
             return user_id
 
         username_key = username.strip().lstrip("@").casefold()
-        if not username_key:
-            return None
         if username_key in self.roles:
             return username_key
 
-        matches = [
-            key
-            for key, saved_username in self.usernames.items()
-            if key in self.roles
-            and saved_username.strip().lstrip("@").casefold() == username_key
-        ]
-        return matches[0] if len(matches) == 1 else None
+        username_id = self._find_username_key(username)
+        return username_id if username_id in self.roles else None
 
     def get_saved_roles(self, user_id: str = "", username: str = "") -> list[str]:
         key = self._find_saved_role_key(user_id, username)
@@ -185,19 +190,17 @@ class RoleManager:
         """Quita un rol concreto o todos los roles si role es None."""
         username_key = username.strip().lstrip("@").casefold()
         key = self._find_saved_role_key(user_id, username)
+        username_id = self._find_username_key(username)
+        legacy_keys = {key for key in (user_id, username_id, username_key) if key}
         legacy_vip_found = bool(
-            role in {None, "user"}
-            and (
-                (user_id and user_id in self._legacy_vip_users)
-                or (username_key and username_key in self._legacy_vip_users)
-            )
+            role in {None, "user", "vip"}
+            and legacy_keys.intersection(self._legacy_vip_users)
         )
 
         if key is None:
             if not legacy_vip_found:
                 return False
-            self._legacy_vip_users.discard(user_id)
-            self._legacy_vip_users.discard(username_key)
+            self._legacy_vip_users.difference_update(legacy_keys)
             self._save_roles()
             if user_id and apply_privilege:
                 return await self._apply_room_privileges(bot, user_id, set())
@@ -217,9 +220,8 @@ class RoleManager:
             self.roles.pop(key, None)
             self.usernames.pop(key, None)
 
-        if role in {None, "user"}:
-            self._legacy_vip_users.discard(user_id)
-            self._legacy_vip_users.discard(username_key)
+        if role in {None, "user", "vip"}:
+            self._legacy_vip_users.difference_update(legacy_keys)
 
         self._save_roles()
 
@@ -263,6 +265,7 @@ class RoleManager:
         data = data if isinstance(data, dict) else {}
         data["users"] = self.roles
         data["usernames"] = self.usernames
+        data["vip_users"] = sorted(self._legacy_vip_users)
         data["permissions"] = self.permissions
         save_json(self.roles_file, data)
 
