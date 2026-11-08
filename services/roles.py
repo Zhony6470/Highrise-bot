@@ -207,7 +207,11 @@ class RoleManager:
             return True
 
         current = self.get_saved_roles(user_id, username)
-        if role not in {None, "user"} and role not in current:
+        if (
+            role not in {None, "user"}
+            and role not in current
+            and not (role == "vip" and legacy_vip_found)
+        ):
             return False
 
         remaining = [] if role in {None, "user"} else [
