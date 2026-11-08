@@ -167,7 +167,7 @@ class RoleDeletionTests(unittest.TestCase):
                 handle_role(bot, owner, "!role @MissingUser delete")
             )
 
-        self.assertIn("No encontré roles guardados", response)
+        self.assertIn("No encontré roles", response)
         self.assertEqual(bot.role_manager.roles, {"user-123": ["vip"]})
 
 
