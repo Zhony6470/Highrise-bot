@@ -8,10 +8,6 @@ from services.roles import RoleManager
 
 
 class RoleDeletionTests(unittest.TestCase):
-    def make_manager(self, users, usernames):
-        data = {"users": users, "usernames": usernames}
-        return RoleManager("roles.json"), data
-
     def test_delete_offline_user_resolves_id_from_saved_username(self):
         users = {"user-123": ["mod", "vip"]}
         usernames = {"user-123": "TargetUser"}
